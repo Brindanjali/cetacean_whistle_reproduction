@@ -1,13 +1,13 @@
 # WhistleCode plan: hiding messages in whistles
 
-Status: plan written 2026-11-17. Nothing is built.
+Status: plan written 2026-11-17 and revised the same day after a review (section 14). Nothing is built.
 
 This enhancement replaces WhistleFlow. The `whistleflow/` folder stays as it is but will not be implemented. WhistleFlow's no-images rule does not apply here, because this enhancement reuses the reproduction's spectrogram detector and VAE.
 
 How to read this document:
 
-- `[DECISION]` marks a choice made here because nothing fixes it. It is the same tag the reproduction's configs use. Every one is listed again in section 12 with its default.
-- Thresholds in section 7.5 are frozen before the final test runs, so a result cannot move its own goalpost.
+- `[DECISION]` marks a choice made here because nothing fixes it. It is the same tag the reproduction's configs use. Every one is listed again in section 13 with its default.
+- Thresholds in section 8.6 are frozen before the final test runs, so a result cannot move its own goalpost.
 - "The reproduction" means `src/whistlepipe`, `configs/`, `models/`, `preprocessed/` and the encounter audio folders. WhistleCode only imports from them and never edits them.
 - "Message encoder" is the transmitter and "message decoder" is the receiver. The VAE has its own encoder and decoder, which appear inside them: the VAE decoder makes the whistles, and the VAE encoder is one way to read them back.
 
@@ -21,207 +21,291 @@ The whistles must sound like the species, not like a modem. This is biomimetic c
 
 ```
 MESSAGE ENCODER (transmitter)
-"MEET AT DAWN" -> bytes -> + CRC-16 -> scramble with key -> Reed-Solomon -> 4-bit symbols
+"MEET AT DAWN" -> bytes -> + CRC-16 -> scramble with key + nonce -> Reed-Solomon -> 4-bit symbols
   -> whistle type from a 16-type codebook -> VAE decoder -> contour -> FM tone + envelope + harmonic
   -> each whistle placed at a key-chosen time and centre frequency, after a 3-whistle preamble -> WAV
 
 CHANNEL ("sending")
-WAV + real ocean noise from encounters 214 / 276 (real whistles included) at a set SNR
-    + multipath echoes + absorption + Doppler
+WAV -> multipath echoes -> absorption -> Doppler -> + real ocean noise from encounters 214 / 276
+       (real whistles included) at a set SNR
 
 MESSAGE DECODER (receiver)
-WAV -> whistlepipe detector + tracker -> find preamble -> expected slots from the key
+WAV -> whistlepipe detector + tracker -> find preamble -> header (length, nonce) -> expected slots
   -> pick the whistle in each slot -> classify its contour -> symbol, or "erased"
   -> Reed-Solomon (fixes errors and erasures) -> unscramble -> CRC check -> "MEET AT DAWN"
 ```
 
-## 3. Message encoder (transmitter)
+## 3. The model it depends on, and the order of work
 
-### 3.1 The shared key
+WhistleCode uses the V1 model files:
 
-Sender and receiver share a key string. `[DECISION]` The SHA-256 of the key seeds a NumPy `SeedSequence`, which spawns four independent streams:
+- the VAE checkpoint `models/vaegmm/V1_L64_b1e-4_critic_E191/checkpoints/final.pt`;
+- the GMM `gmm_K3000/gmm.npz` fitted on that checkpoint's latents.
 
-| Stream | Used for |
-|---|---|
-| scrambler | XOR mask for the header and payload bytes |
-| timing | start-to-start interval of every whistle |
-| pitch | centre frequency of every whistle |
-| variation | the random latent offset of every whistle (the receiver never needs this one) |
+Everything from the codebook (P1) onwards is tied to these exact files.
 
-The scrambler makes the bytes look random, so the whistle sequence never repeats unnaturally, even for a message like "AAAA". It is not encryption, just a shared secret.
+### 3.1 K stays at 3,000
 
-### 3.2 Frame
+The codebook needs 17 whistle types. The epoch-101 fit already has 203 components holding at least 65 whistles each, enough for a full-rank 64-dimensional covariance. A larger K would only make components smaller and closer together, because the median component already holds 10 whistles and 220 hold fewer than 2. Distinct types come from selection (section 5), not from K. A smaller K is not needed either, unless the section 5 filter finds fewer than 17 candidates.
+
+### 3.2 If training is resumed to epoch 150
+
+The planned resume of the remaining 49 epochs happens in the reproduction, not in `whistlecode/`. As phase M (section 9) it must finish before P1:
+
+1. **Before resuming,** rename or remove `checkpoints/final.pt` in the run folder Colab resumes from. `train_vae` writes `final.pt` only if it does not exist yet. `post_training/finalize_run.py` already made it from epoch 101, so it would otherwise silently stay at epoch 101 while `train_info.json` says "complete".
+2. Resume on Colab with the same configuration (`BATCH = 5772`). This takes about 1.75 A100 hours at the measured 128 s per epoch.
+3. On the laptop:
+   - copy the new `last.pt` and `final.pt`;
+   - encode the latents again;
+   - refit the GMM at K = 3,000;
+   - recompute the component features;
+   - redo Table 1, Table 3, Fig. 12 and Figs. 7-10. Table 6 does not change, because the architecture is the same.
+
+   The epoch-101 results stay in git history.
+
+### 3.3 Pinning
+
+`codebook.json` records the SHA-256 of `final.pt` and `gmm.npz`. Every WhistleCode command checks both hashes and refuses to run if the model has changed since the codebook was built `[DECISION]`. A changed model always means rebuilding the codebook.
+
+P0 contains no model, so it does not depend on any of this.
+
+## 4. Message encoder (transmitter)
+
+### 4.1 The shared key and the nonce
+
+Sender and receiver share a key string. Every message also carries a random 1-byte nonce in its header `[DECISION]`. Without a nonce, every message under the same key would repeat the same rhythm and reuse the same scrambler stream.
+
+| Stream | Seeded from | Used for |
+|---|---|---|
+| header scrambler, preamble and header timing and pitch | SHA-256(key) | the first 15 whistles |
+| payload scrambler | SHA-256(key, nonce) | XOR mask for the payload bytes |
+| payload timing | SHA-256(key, nonce) | start-to-start interval of every payload whistle |
+| payload pitch | SHA-256(key, nonce) | centre frequency of every payload whistle |
+| variation | SHA-256(key, nonce) | the random latent offset of every whistle (the receiver never needs this one) |
+
+`[DECISION]` Each seed feeds a NumPy `SeedSequence`, which spawns the streams. The scrambler makes the bytes look random, so the whistle sequence never repeats unnaturally, even for a message like "AAAA". It is not encryption, just a shared secret.
+
+The preamble and header still share one rhythm per key, about 11 s. Section 12 lists this as a remaining limitation.
+
+### 4.2 Frame
 
 | Part | Content | Whistles |
 |---|---|---|
 | Preamble | 3 repeats of the reserved signature whistle | 3 |
-| Header | payload length L (1 byte), scrambled, protected by Reed-Solomon RS(5, 1): 4 parity bytes, correcting 2 wrong or 4 erased bytes | 10 |
-| Payload | L message bytes + CRC-16, scrambled, then Reed-Solomon with `nsym = max(8, ceil(k / 2))` parity bytes, where k = L + 2 | 2 x (k + nsym) |
+| Header | payload length L (1 byte) and nonce (1 byte), scrambled with the key-only stream, protected by Reed-Solomon RS(6, 2): 4 parity bytes, correcting 2 wrong or 4 erased bytes | 12 |
+| Payload | L message bytes + CRC-16, scrambled with the key-and-nonce stream, then Reed-Solomon with `nsym = max(8, ceil(k / 2))` parity bytes, where k = L + 2 | 2 x (k + nsym) |
 
 - Text is encoded as UTF-8. `[DECISION]` The longest payload is 140 bytes, so the payload always fits one Reed-Solomon codeword (n <= 213 <= 255) and needs no interleaver.
 - `[DECISION]` The CRC is CRC-16/CCITT. It catches the rare case where Reed-Solomon "corrects" to a wrong codeword.
 - Each byte becomes two 4-bit symbols, high nibble first. Each symbol is one whistle.
 - Reed-Solomon with `nsym` parity bytes fixes any mix of e wrong bytes and f erased bytes with 2e + f <= nsym. An erased whistle (a missed or ambiguous one) costs half as much as a wrong one, which is why the receiver marks doubtful whistles as erased instead of guessing.
 
-### 3.3 Schedule from the key
+### 4.3 Schedule from the key
 
-- `[DECISION]` Start-to-start intervals are drawn uniformly from 0.55-0.95 s. The codebook's whistles last 150-450 ms (section 4), so consecutive whistles never overlap.
+- `[DECISION]` Start-to-start intervals are drawn uniformly from 0.55-0.95 s. The codebook's whistles last 150-450 ms (section 5), so consecutive whistles never overlap.
 - `[DECISION]` Each whistle's centre frequency is drawn from the centre frequencies of the encounter-191 training whistles (`preprocessed/encounter_191/images.csv`, the same source `infer.training_centre_frequencies` reads), restricted to 5-12 kHz. Because every codebook type spans at most 5 kHz (+/- 2.5 kHz around its centre), every whistle stays within 2.5-14.5 kHz whatever symbol it carries.
-- Timing and pitch do not depend on the symbols. The receiver re-creates both from the key, so it knows when each whistle comes and roughly at what pitch. This works like frequency hopping and lets it ignore real animals whistling at other times or pitches.
+- Timing and pitch do not depend on the symbols. The receiver re-creates both from the key and the nonce, so it knows when each whistle comes and roughly at what pitch. This works like frequency hopping and lets it ignore real animals whistling at other times or pitches.
 
-### 3.4 Making one whistle
+### 4.4 Making one whistle
 
 For symbol s in slot i:
 
-1. Sample a latent from the type's GMM component: z = mu_s + tau * L_s * eps, where L_s is the Cholesky factor of the component covariance and eps comes from the variation stream. `[DECISION]` tau = 0.5 to start; the final value is chosen by measurement (section 7.3). With tau > 0, repeated symbols never sound identical.
+1. Sample a latent from the type's GMM component: z = mu_s + tau * L_s * eps, where L_s is the Cholesky factor of the component covariance and eps comes from the variation stream. `[DECISION]` tau = 0.5 to start; the final value is chosen by measurement (E5). This variation is only meaningful because every codebook component holds at least 65 whistles (section 5). With tau > 0, repeated symbols never sound identical.
 2. Decode z with the VAE decoder to a 128 x 128 image, then take its contour with `sonify.image_contour` (threshold 0.05).
 3. Synthesise a phase-continuous FM tone at fc_i + contour offset. Add:
-   - the amplitude envelope of the synthetic generator (Tukey window with a slow amplitude ripple), ported from `src/whistlepipe/synth/whistles.py`;
+   - the amplitude envelope of the synthetic generator (Tukey window with a slow amplitude ripple), ported from `src/whistlepipe/synth/whistles.py`. `[DECISION]` The Tukey taper is drawn from 0.15-0.3 instead of the generator's 0.15-0.6, so the fade-in lasts at most 68 ms and the detector does not find the start late.
    - `[DECISION]` a 2nd harmonic at -12 dB.
 
    `[DECISION]` The sample rate is 96 kHz and the output is a float32 WAV.
-4. **Self-check:** the transmitter classifies its own clean whistle with the receiver's classifier. If the whistle is ambiguous or classified wrongly, it draws a new eps, up to 20 times, and otherwise falls back to the type's mean (tau = 0).
+4. **Self-check:** the transmitter classifies the whistle's own contour (from step 2, without running the detector) with classifier A. If the contour is ambiguous or classified wrongly, it draws a new eps, up to 20 times, and otherwise falls back to the type's mean (tau = 0).
 5. Place the whistle at its slot start time t_i.
 
-### 3.5 Worked example
+### 4.5 Worked example
 
-"HI" is 2 bytes. With 2 CRC bytes k = 4 and nsym = 8, so the payload is 12 bytes = 24 whistles. With the 10 header and 3 preamble whistles that makes 37 whistles, about 28 s at a mean interval of 0.75 s.
+"HI" is 2 bytes. With 2 CRC bytes k = 4 and nsym = 8, so the payload is 12 bytes = 24 whistles. With the 12 header and 3 preamble whistles that makes 39 whistles, about 29 s at a mean interval of 0.75 s.
 
-A 20-character sentence: k = 22, nsym = 11, so 33 bytes = 66 whistles, plus 13, giving 79 whistles, about a minute. That is roughly 3 bits per second of payload, normal for covert communication that imitates animals. Section 7.3 measures the faster options.
+A 20-character sentence: k = 22, nsym = 11, so 33 bytes = 66 whistles, plus 15, giving 81 whistles, about a minute. That is about 2.5-3 bits per second of payload, normal for covert communication that imitates animals. E4 measures a faster option.
 
-## 4. The whistle alphabet (codebook)
+## 5. The whistle alphabet (codebook)
 
-Built once, from the V1 model (`models/vaegmm/V1_L64_b1e-4_critic_E191/checkpoints/final.pt` and `gmm_K3000/gmm.npz`).
+Built once from the final model (section 3), with K = 3,000.
 
-1. **Candidates.** Decode the mean of each of the 3,000 components and extract its contour. Also decode 32 samples per component to measure how stable its shape is.
-2. **Filter.** `[DECISION]` Keep a component when:
+1. **Eligible components.** `[DECISION]` Only components holding at least 65 whistles (N_k >= 65). Smaller components have covariances stuck at the ridge, so the variation in section 4.4 would do nothing and a shape-stability check would pass trivially. The epoch-101 fit has 203 such components.
+2. **Filter.** Decode each eligible component's mean and 32 samples, extract the contours, and `[DECISION]` keep a component when:
    - its mean decode gives one clean contour, with no gaps longer than 3 columns;
    - its duration is 150-450 ms;
    - its frequency span is 300 Hz to 5 kHz;
-   - its samples stay close to its mean (median DTW distance below the 50th percentile of all components);
-   - its weight pi_k is above the median, because common types sound natural.
-3. **Select 16 + 1.** Compute DTW distances between the candidate contours and pick 17 by greedy max-min selection, starting from the heaviest component. The most distinctive of the 17 becomes the signature whistle (preamble only) and the other 16 carry symbols 0-15.
-4. **Confusion test.** Send each type 200 times through the channel at 5 dB SNR on encounter-214 noise and classify it. Swap out the type with the most confusions for the next-best candidate, and repeat until no pair is confused more than 2 % of the time, or for 10 rounds.
-5. **Outputs:**
+   - its samples stay close to its mean (median DTW distance below the median over all eligible components).
+3. **One confusion pass.** Send every remaining candidate 50 times through the channel at 5 dB SNR on encounter-214 noise. Classify each received whistle against all candidates with classifier A, which gives one confusion table.
+4. **Select 16 + 1.** Pick 17 types greedily so that the worst confusion between any two chosen types is as low as possible, breaking ties by the larger DTW distance. The candidate least confused with the other 16 becomes the signature whistle (preamble only), and the other 16 carry symbols 0-15.
+5. **Verify.** Send each of the 17 types 200 times under the same conditions. If any pair is confused more than 2 % of the time, replace the worse type of that pair with the next candidate and verify again.
+6. **Outputs:**
    - `codebook.npz`: component ids, mean latents, Cholesky factors, template contours, symbol mapping;
-   - `codebook.json`: lineage (model hashes, settings);
+   - `codebook.json`: lineage (model hashes, settings, the confusion table);
    - a gallery: each type's contour plot and WAV.
 
-**Fallback.** If fewer than 17 candidates pass the filter, because the V1 decodes are too blurry, the types come from medoids of real contours in `preprocessed/encounter_191` instead. The rest of the plan is unchanged, except that the VAE is not used at transmit time.
+The same procedure builds the M = 8, 32 and 64 codebooks for E4. If fewer than 65 candidates survive the filter, E4 stops at the largest M available.
 
-## 5. The channel ("sending")
+**Fallback.** If fewer than 17 candidates survive, because the decodes are too blurry, the types come from medoids of real contours in `preprocessed/encounter_191` instead. The rest of the plan is unchanged, except that the VAE is not used at transmit time and tau has no meaning.
+
+## 6. The channel ("sending")
+
+The channel acts on the signal in this order: multipath, absorption, Doppler, then noise. The noise is added last because it was recorded at the hydrophone and has already been through the sea.
 
 | Effect | How |
 |---|---|
-| Noise | Real channel-0 audio, resampled 500 to 96 kHz (polyphase 24/125) and high-passed at 2 kHz with the reproduction's 4th-order zero-phase Butterworth. **Encounter 214** for tuning, **encounter 276** for the final test. Encounter 191 is never used as noise, because the VAE trained on it. The noise contains real whistles, a realistic source of interference. Each file is tagged "quiet" or "busy" by its old-detector whistle count (from `preprocessed/`), as metadata for breakdowns. |
-| SNR | Narrowband, as in the synthetic generator: each whistle is scaled so that its level in its own 93.75 Hz bin is the target SNR above the median noise level in that bin. Swept from -5 to +25 dB in 2.5 dB steps. |
 | Multipath | Image method: direct, surface (reflection -0.9), bottom (0.4) and surface-bottom paths. `[DECISION]` Water depth 50-1,000 m, source depth 5-30 m, receiver depth 5-50 m, range 0.2 / 0.5 / 1 / 2 km. Amplitude falls as 1/path length; delays are applied as fractional delays. |
 | Absorption | Thorp's frequency-dependent loss over each path's length. |
 | Doppler | Time-scaling by 1/(1 + v/c) with c = 1,500 m/s, v drawn from +/- 3 m/s. |
+| Noise | Real channel-0 audio, resampled 500 to 96 kHz (polyphase 24/125) and high-passed at 2 kHz with the reproduction's 4th-order zero-phase Butterworth. **Encounter 214** for tuning, **encounter 276** for the final test. Encounter 191 is never used as noise, because the VAE trained on it. The noise contains real whistles, a realistic source of interference. Each file is tagged "quiet" or "busy" by its old-detector whistle count (from `preprocessed/`), as metadata for breakdowns. |
+| SNR | Narrowband, as in the synthetic generator. Each whistle's direct path is scaled so that its level in its own 93.75 Hz bin is the target SNR above the median noise level in that bin; the echoes keep their relative gains. Swept from -5 to +25 dB in 2.5 dB steps. |
 | Air test (optional) | Play the WAV through the laptop speaker and record it with the laptop microphone, as a real demonstration. |
+
+`[DECISION]` The "clean" condition (E1) is never digital silence. It uses faint white noise at 40 dB SNR. In pure silence the detector's local noise floor drops to about -240 dB, so the faint spread of energy around a whistle would look strong. The detector never saw that in training, and the tracker drops frames where more than 30 % of the band is active.
 
 Messages longer than one noise file use consecutive files of the same encounter (files follow each other with no gaps).
 
-## 6. Message decoder (receiver)
+## 7. Message decoder (receiver)
 
-1. **Detect.** Run the reproduction's S1-S7 chain (`whistlepipe.infer.preprocess`, with ridgenet-v2c and its tracker) on the received WAV. This gives every whistle track with its start time, frame-by-frame frequency contour and centre frequency. `[DECISION]` Long recordings are processed in 60 s blocks with a 2 s overlap, and duplicate tracks in the overlaps are merged.
+1. **Detect.** Run the reproduction's S1-S7 chain (`whistlepipe.infer.preprocess`, with ridgenet-v2c and its tracker) on the received WAV. This gives every whistle track with its start time, frame-by-frame frequency contour and centre frequency.
+   - `[DECISION]` Long recordings are processed in 60 s blocks with a 2 s overlap, and duplicate tracks in the overlaps are merged.
+   - Every trial's tracks are cached. Tuning the classifiers, erasure thresholds and slot windows reuses them and never reruns the detector.
 2. **Synchronise.**
    - Every track that classifies as the signature whistle is a candidate preamble start.
    - For each candidate, check whether the other two preamble slots (from the key's timing) also hold signature-like tracks.
    - Accept the best candidate with at least 2 of 3. This fixes the time origin t0.
-3. **Slot matching.** For each expected slot, take the track that starts within +/- 80 ms of the expected time `[DECISION]` and whose centre lies within +/- 1.5 kHz of the expected pitch `[DECISION]`.
-   - If several qualify, take the one with the closest start; ties go to the longer track.
-   - An empty slot is marked **erased**.
-   - A running linear fit of observed against expected start times, over confident matches only, corrects clock drift from Doppler.
-4. **Classify.** Two classifiers are built. The one with the lower symbol error on encounter-214 noise becomes the default; both are reported.
-   - **A, DTW templates:** DTW distance between the track's contour (relative to its own centre) and each of the 16 template contours, plus a duration-difference term.
-   - **B, VAE encoder + GMM:** build the track's S8 image, encode it with the VAE encoder, and take the GMM posterior restricted to the 16 chosen components.
+3. **Header.** Match and classify the 12 header slots (steps 4 and 5) and decode RS(6, 2). This gives the length and the nonce, and from the nonce the payload's slot times and pitches. If the header fails, the message is lost.
+4. **Slot matching.** For each expected slot, take a track that:
+   - starts between 60 ms before and 150 ms after the expected time `[DECISION]` (late starts are the common error, and the next whistle starts at least 550 ms later, so the windows never overlap);
+   - has its centre within +/- 1.5 kHz of the expected pitch `[DECISION]`.
 
-   In both, `[DECISION]` a call is marked erased when it is ambiguous: for A, best distance / second-best > 0.8; for B, top posterior < 0.6. Both values are tuned on encounter 214.
-5. **Repair and check.**
-   - Decode the header. If it fails, the message is lost.
-   - Decode the payload with Reed-Solomon, passing the erased positions, then unscramble.
-   - Check the CRC. Only a passing CRC releases the text.
-6. **Report:** the text (or "failed"), whistles detected, slots matched, erasures, bytes corrected, CRC result, and the time and frequency of every slot.
+   If several qualify, take the one with the closest start; ties go to the longer track. An empty slot is marked **erased**. A running linear fit of observed against expected start times, over confident matches only, corrects clock drift from Doppler.
+5. **Classify.** Two classifiers are built. The one with the lower symbol error on encounter-214 noise becomes the default; both are reported.
+   - **A, DTW templates:** DTW distance between the track's contour (relative to its own centre) and each of the 16 template contours, plus a duration-difference term. `[DECISION]` Erased when best distance / second-best > 0.8.
+   - **B, VAE encoder + GMM:** build the track's S8 image, encode it with the VAE encoder, and score it under the 16 chosen GMM components. The S8 image is a clean re-rendering of the detected contour, not the noisy spectrogram, so B sees exactly the information A sees and differs only in how it measures distance. It is kept as the reproduction-native comparison. Because the component covariances are narrow, its posteriors sit near 0 or 1 and cannot flag doubt. `[DECISION]` B therefore erases a call when the log-likelihood gap between the best and second-best component is below 10 nats (starting value).
 
-## 7. Evaluation
+   Both erasure thresholds are tuned on encounter 214.
+6. **Repair and check.** Decode the payload with Reed-Solomon, passing the erased positions, then unscramble. Check the CRC. Only a passing CRC releases the text.
+7. **Report:** the text (or "failed"), whistles detected, slots matched, erasures, bytes corrected, CRC result, and the time and frequency of every slot.
+
+## 8. Evaluation
 
 Every test message is generated, so the true text is known. No listening labels are needed.
 
-### 7.1 Test messages
+### 8.1 Test messages
 
-`[DECISION]` 200 messages: 150 random-byte payloads of 4-64 bytes and 50 English sentences. Each trial uses a new random key and a new channel draw.
+`[DECISION]`
 
-### 7.2 Reliability measures
+- **Sweep set:** 50 messages per test point, random payloads of 8-32 bytes (about a minute of audio each).
+- **Full set:** 200 messages, 150 random-byte payloads of 4-64 bytes and 50 English sentences. Used only for E1 and the frozen final run.
 
-- Sync success rate.
+Each trial uses a new random key, a new nonce and a new channel draw.
+
+### 8.2 Reliability measures
+
+- Sync success rate and header success rate.
 - Symbol error rate (among whistles not erased) and erasure rate.
 - Byte error rate before Reed-Solomon.
 - **Message success rate:** exact text and CRC passed.
 - **False accepts:** CRC passed but the text is wrong. Must be 0.
 - Throughput: payload bits per second of airtime.
-- **No-message test:** run the receiver on noise-only files with random keys. Any accepted message is a false alarm. Must be 0.
+- **No-message test:** run the receiver on 50 minutes of noise-only audio from encounter 276 with random keys. Any accepted message is a false alarm. Must be 0.
 
-### 7.3 Experiments
+### 8.3 Experiments
 
-| ID | What varies | Noise |
-|---|---|---|
-| E1 | Clean loopback (no noise, no channel) | none |
-| E2 | SNR -5 to +25 dB, quiet vs busy files | 214, then 276 |
-| E3 | Multipath range and Doppler, at SNR 5, 10 and 20 dB | 214, then 276 |
-| E4 | Codebook size M = 8 / 16 / 32 / 64: speed vs reliability | 214 |
-| E5 | Variation tau = 0 / 0.25 / 0.5 / 1: naturalness vs reliability | 214 |
-| E6 | Classifier A vs B | 214, then 276 |
-| E7 | Covertness (7.4) | 276 |
-| E8 | Baseline modem (7.4) | 214, then 276 |
+| ID | What varies | Noise | Messages |
+|---|---|---|---|
+| E1 | Clean (40 dB white noise, no channel effects) | white | full set |
+| E2 | SNR -5 to +25 dB (13 points), quiet vs busy files | 214, then 276 | sweep set |
+| E3 | Multipath range (4) x SNR 5, 10, 20 dB; Doppler drawn per trial | 214, then 276 | sweep set |
+| E4 | Codebook size M = 8 / 16 / 32 / 64 x 5 SNRs (0-20 dB): speed vs reliability | 214 | sweep set |
+| E5 | Variation tau = 0 / 0.25 / 0.5 / 1 x 5 SNRs: naturalness vs reliability | 214 | sweep set |
+| E6 | Classifier A vs B, on the cached E2 tracks | 214, then 276 | (reuses E2) |
+| E7 | Covertness (8.5), on the coded whistles detected in E2 | 276 | (reuses E2) |
+| E8 | Baseline modem (8.5), 13 SNRs | 214, then 276 | sweep set |
+| Final | Frozen settings, SNR 10 dB, no multipath | 276 | full set |
 
-Defaults (M, tau, classifier, erasure thresholds, slot tolerances) are chosen on encounter 214, written into `config.toml` and frozen. Only then does the encounter-276 test run.
+Defaults (M, tau, classifier, erasure thresholds, slot windows) are chosen on encounter 214, written into `config.toml` and frozen. Only then do the encounter-276 runs start.
 
 Possible later upgrades, each measured before adoption:
 
 - larger M (E4);
-- 1-2 extra bits per whistle from the centre frequency band;
+- 1-2 extra bits per whistle from the centre-frequency band;
 - overlapping whistles.
 
-### 7.4 Covertness and the baseline
+### 8.4 Computing budget
 
-Covertness asks whether the coded whistles can be told apart from real ones. Each measure compares coded whistles, as detected by the receiver, with real whistles from encounter 276.
+The detector (S2-S9) takes about 5-10 s per minute of audio on the laptop: 0.6-1.5 s per 8 s clip in the two saved runs in `runs/infer/`.
+
+| Work | Audio | Detector time |
+|---|---|---|
+| P1 confusion pass (<= 203 candidates x 50) | about 2 h | 10-20 min |
+| P1 verification (17 x 200) | about 45 min | 4-7 min |
+| E4 codebook verifications (8 + 32 + 64 types x 200) | about 4.3 h | 20-45 min |
+| E1 (200 messages) | about 5 h | 25-50 min |
+| E2 (13 x 2 x 50, two encounters) | about 43 h | 3.5-7 h |
+| E3 (12 x 50, two encounters) | about 20 h | 1.7-3.3 h |
+| E4 and E5 (20 x 50 each, one encounter) | about 33 h | 2.8-5.6 h |
+| E8 (13 x 50, two encounters) | about 22 h | 1.8-3.6 h |
+| Final run + no-message test | about 6 h | 0.5-1 h |
+| **Total** | | **about 11-23 h**, run unattended (overnight) |
+
+E6 and E7 reuse the E2 tracks and cost no detector time.
+
+### 8.5 Covertness and the baseline
+
+Covertness asks whether the coded whistles can be told apart from real ones. Each measure compares coded whistles, as detected by the receiver in E2, with real whistles from encounter 276. Two real references are used:
+
+- **all** real whistles;
+- **in-range** real whistles: those within the codebook's limits (duration 150-450 ms, span 0.3-5 kHz, centre 5-12 kHz).
+
+Against all whistles a classifier can win from the limits alone. The in-range comparison isolates whether the shapes themselves look real.
 
 - **Feature distance:** Wasserstein-1 distance for each of the reproduction's 7 contour features (L, f_min, f_max, df, f_start, f_end, f_c).
 - **Likelihood:** mean GMM log-likelihood of the VAE-encoded latents, coded vs real.
 - **Discriminator:** a classifier (scikit-learn gradient boosting) trained to tell coded from real on the per-whistle features. 5-fold cross-validated ROC AUC: 0.5 means indistinguishable, 1.0 means obvious.
+- **Not measured:** sequence-level cues. The coded stream is one steady whistler that never overlaps itself, while the recordings are choruses. Per-whistle tests cannot see this; the write-up states it as a limitation.
 
-**Baseline modem:** identical framing, key, schedule and receiver, but each symbol is a 300 ms constant tone at one of 16 frequencies between 5 and 12 kHz (16-FSK), classified by its mean frequency. It should be at least as reliable and clearly artificial. Comparing it with WhistleCode shows the price paid for sounding natural.
+**Baseline modem:** identical framing, key, nonce, schedule and receiver, but each symbol is a 300 ms constant tone at one of 16 frequencies between 5 and 12 kHz (16-FSK), classified by its mean frequency. It should be at least as reliable and clearly artificial. Comparing it with WhistleCode shows the price paid for sounding natural.
 
-### 7.5 Pass marks `[DECISION]`, frozen before the encounter-276 test
+### 8.6 Pass marks `[DECISION]`, frozen before the encounter-276 runs
 
 | Test | Pass mark |
 |---|---|
-| E1 clean loopback | 100 % of the 200 messages exact |
-| E2 encounter 276, SNR 10 dB, no multipath | >= 95 % of messages exact |
+| E1 clean | 100 % of the 200 messages exact |
+| Final run: encounter 276, SNR 10 dB, no multipath | >= 95 % of messages exact |
 | False accepts and no-message false alarms | 0 |
-| E7 discriminator AUC (chosen tau) | <= 0.75 |
+| E7 discriminator AUC against in-range real whistles (chosen tau) | <= 0.75 |
 
 A failed mark is reported as failed, with the measured value; it is never rewritten as a pass.
 
-## 8. Phases
+## 9. Phases
 
 | Phase | Work | Done when |
 |---|---|---|
-| P0 | Folder, `config.toml`, key streams, framing (UTF-8, CRC, scrambler, header), Reed-Solomon, unit tests | Bytes -> symbols -> bytes round trip passes, including with erasures and errors up to the RS limit |
-| P1 | Codebook: candidates, filter, selection, confusion test, gallery | `codebook.npz` + gallery |
-| P2 | Transmitter: schedule, preamble, synthesis, self-check, `send` command | A message becomes a WAV |
-| P3 | Channel: noise at SNR, multipath, absorption, Doppler, `channel` command | A WAV goes through any channel setting |
-| P4 | Receiver: detect, sync, slots, classifier A, Reed-Solomon, CRC, `receive` command | **E1 passes: working send -> channel -> receive demo** |
-| P5 | Classifier B, sweeps E2-E6, tune on 214, freeze, test on 276 | Reliability curves and tables |
-| P6 | Covertness E7 and baseline E8 | Covertness table |
+| M | Only if training is resumed (section 3.2), in the reproduction: rename `final.pt`, resume to epoch 150, then on the laptop re-encode, refit the GMM at K = 3,000, recompute the component features and redo the reproduction's evaluations | New `final.pt` and `gmm.npz` in place; the reproduction's tables and figures redone |
+| P0 | Folder, `config.toml`, key and nonce streams, framing (UTF-8, CRC, scrambler, header), Reed-Solomon, unit tests | Bytes -> symbols -> bytes round trip passes, including with erasures and errors up to the RS limit |
+| P1 | Codebook: eligibility, filter, confusion pass, selection, verification, gallery, hash pinning | `codebook.npz` + gallery |
+| P2 | Transmitter: schedule, preamble, header, synthesis, self-check, `send` command | A message becomes a WAV |
+| P3 | Channel: multipath, absorption, Doppler, noise at SNR, `channel` command | A WAV goes through any channel setting |
+| P4 | Receiver: detect with track cache, sync, header, slots, classifier A, Reed-Solomon, CRC, `receive` command | **E1 passes: working send -> channel -> receive demo** |
+| P5 | Classifier B, sweeps E2-E6, tune on 214, freeze, encounter-276 runs | Reliability curves and tables |
+| P6 | Covertness E7, baseline E8, no-message test | Covertness table |
 | P7 | README, figures, results; optional air test; optional "send a message" panel on the project web page | Write-up |
 
-Effort: about 1.5 days of work for P0-P4 and 1-1.5 days for P5-P7. Everything runs on the laptop (RTX 5060, 8 GB). No Colab units and no model training are needed; the only fitted model is the covertness discriminator, which takes seconds.
+Order: P0 can be built at any time. P1 and everything after it wait for M if training is resumed.
+
+Effort:
+
+- **M:** about 1.75 A100 hours on Colab, then under an hour on the laptop.
+- **P0-P4:** about 1.5 days of work.
+- **P5-P7:** about 1.5 days of work, plus 11-23 hours of unattended detector time (section 8.4).
+
+No model is trained in WhistleCode itself; the only fitted model is the covertness discriminator, which takes seconds.
 
 P0-P4 is the part to have first: it is a complete, demonstrable system. P5-P7 measure and explain it.
 
-## 9. Folder layout and commands
+## 10. Folder layout and commands
 
 ```
 whistlecode/
@@ -230,31 +314,31 @@ whistlecode/
   config.toml        every parameter with its tag
   whistlecode.py     command-line entry point (adds src/ to sys.path, like whistle.py)
   wcode/
-    keys.py          key -> random streams
+    keys.py          key and nonce -> random streams
     framing.py       text <-> bytes, CRC, scrambler, header, symbols
     fec.py           Reed-Solomon wrapper with erasures
-    codebook.py      build, check and load the codebook
+    codebook.py      build, check, pin and load the codebook
     synth.py         contour -> audio (envelope and harmonic ported from the synthetic generator)
-    schedule.py      slot times and pitches from the key
+    schedule.py      slot times and pitches from the key and nonce
     transmitter.py   message -> WAV
-    channel.py       noise, SNR, multipath, absorption, Doppler
+    channel.py       multipath, absorption, Doppler, noise, SNR
     classify.py      classifiers A (DTW) and B (VAE encoder + GMM)
-    receiver.py      WAV -> message
+    receiver.py      WAV -> message, with the track cache
     baseline.py      16-FSK modem
-    evaluate.py      experiments E1-E8
+    evaluate.py      experiments E1-E8 and the final run
   tests/
-  outputs/           gitignored (codebook gallery, WAVs, results)
+  outputs/           gitignored (codebook gallery, WAVs, track cache, results)
 ```
 
 | Command | Does |
 |---|---|
-| `build-codebook` | Section 4 |
+| `build-codebook` | Section 5 |
 | `send "TEXT" --key K --out msg.wav` | Message -> WAV |
 | `channel msg.wav --noise 276 --snr 10 [--range 1 --doppler 1.5] --out rx.wav` | Sends the WAV through the simulated channel |
 | `receive rx.wav --key K` | WAV -> message and report |
 | `evaluate E2` (etc.) | Runs one experiment |
 
-## 10. Reuse, boundaries and requirements
+## 11. Reuse, boundaries and requirements
 
 **Imported from the reproduction (read-only):**
 
@@ -263,11 +347,11 @@ whistlecode/
 - `whistlepipe.sonify.image_contour`;
 - the VAE model, `GaussianMixtureEM` and `vaegmm.features`.
 
-**Ported (copied, with an equivalence test against the original):** the envelope part of `src/whistlepipe/synth/whistles.py`.
+**Ported (copied, with an equivalence test against the original):** the envelope part of `src/whistlepipe/synth/whistles.py`. The only intended difference is the narrower taper range (section 4.4).
 
-**Never edited:** `src/`, `configs/`, `models/`, `preprocessed/`, the encounter audio folders, `web/` (until the optional P7 panel, and only with your go-ahead), `whistleflow/`.
+**Never edited by WhistleCode:** `src/`, `configs/`, `models/`, `preprocessed/`, the encounter audio folders, `web/` (until the optional P7 panel, and only with your go-ahead), `whistleflow/`. Phase M changes `models/` through the reproduction's own commands, not through WhistleCode.
 
-**Model files needed:** the V1 `final.pt` and `gmm_K3000/gmm.npz`. `gmm.npz` is about 100 MB and is not in git, so any other machine needs it copied over.
+**Model files needed:** the V1 `final.pt` and `gmm_K3000/gmm.npz`, matching the hashes in `codebook.json`. `gmm.npz` is about 100 MB and is not in git, so any other machine needs it copied over.
 
 **Installs (each needs your approval first):**
 
@@ -276,46 +360,78 @@ whistlecode/
 
 **Data:** only the three local encounters (191 for the codebook and centre frequencies, 214 and 276 for noise). No downloads.
 
-## 11. Risks
+## 12. Risks
 
 | Risk | Effect | Mitigation |
 |---|---|---|
-| V1 decodes are blurry (Table 1 PSNR 32.8 dB vs the paper's 44.5) | Some components give broken contours | The section 4 filter; fallback to real-contour medoids |
+| The model changes after the codebook is built (training resume) | The codebook no longer matches the decoder and encoder | Phase M first; hash pinning (section 3.3) refuses a mismatched model |
+| Decodes are blurry (epoch-101 Table 1 PSNR 32.8 dB vs the paper's 44.5) | Some components give broken contours | Eligibility and filter (section 5); fallback to real-contour medoids |
 | Real whistles land in a slot | Wrong symbols | Key-based time and pitch windows, Reed-Solomon, erasure on ambiguity; measured separately on busy files |
-| Preamble missed | Whole message lost | 3 signature whistles, 2 of 3 enough; sync rate reported on its own |
-| Detector splits a whistle into two tracks at low SNR | Wrong or missing symbol | Slot matching prefers the closest start, then the longer track; ambiguous calls are erased |
-| Low speed (about 3 bit/s) | Long airtime | Inherent to the approach; E4 and the frequency-band bits are the measured upgrade path |
+| Preamble or header missed | Whole message lost | 3 signature whistles, 2 of 3 enough; header can lose 4 of 6 bytes; sync and header rates reported on their own |
+| Detector finds a start late or splits a whistle at low SNR | Wrong or missing symbol | Shorter fade-in, asymmetric slot window, closest-start then longest-track rule, erasure on ambiguity |
+| Detector time | Long evaluation runs | Sweep set of 50 short messages, track cache, unattended overnight runs (section 8.4) |
+| Low speed (about 2.5-3 bit/s) | Long airtime | Inherent to the approach; E4 and the centre-frequency bits are the measured upgrade path |
 | Doppler drift over long messages | Slots slide out of their windows | Running drift correction from confident matches |
+| Preamble and header rhythm repeats per key | 15 whistles with the same timing in every message under one key | Accepted; a new key changes it. Stated as a limitation |
+| Sequence-level giveaway (one steady whistler, no overlaps) | Covertness weaker than per-whistle scores suggest | Stated as a limitation (section 8.5) |
 
 **Ethics:** this project is simulation only (plus the optional air test). Playing synthetic whistles near wild animals would need permits; the README will say so.
 
-## 12. Parameters
+## 13. Parameters
 
 All `[DECISION]` unless stated.
 
 | Parameter | Default | Set in |
 |---|---|---|
-| Key -> streams | SHA-256 -> NumPy `SeedSequence`, 4 streams | 3.1 |
-| Max payload | 140 bytes | 3.2 |
-| CRC | CRC-16/CCITT | 3.2 |
-| Payload parity | max(8, ceil(k / 2)) bytes | 3.2 |
-| Header code | RS(5, 1) | 3.2 |
-| Bits per whistle | 4 (M = 16), high nibble first | 3.2, E4 |
-| Preamble | 3 signature whistles, 2 of 3 to sync | 3.2, 6 |
-| Interval (start to start) | uniform 0.55-0.95 s | 3.3 |
-| Centre frequency | encounter-191 distribution, 5-12 kHz | 3.3 |
-| Variation tau | 0.5 (set by E5) | 3.4 |
-| Self-check redraws | 20, then tau = 0 | 3.4 |
-| Harmonic | 2nd at -12 dB | 3.4 |
-| Sample rate | 96 kHz, float32 WAV | 3.4 |
-| Codebook duration | 150-450 ms | 4 |
-| Codebook span | 300 Hz - 5 kHz | 4 |
-| Confusion test | 200 sends per type, 5 dB, 214 noise, <= 2 % per pair | 4 |
-| Noise for tuning / test | encounter 214 / 276 | 5 |
-| SNR definition | narrowband, per 93.75 Hz bin | 5 |
-| Receiver blocks | 60 s with 2 s overlap | 6 |
-| Slot time window | +/- 80 ms | 6 |
-| Slot pitch window | +/- 1.5 kHz | 6 |
-| Erasure rule | A: distance ratio > 0.8; B: posterior < 0.6 (tuned on 214) | 6 |
-| Test messages | 150 random (4-64 bytes) + 50 sentences | 7.1 |
-| Pass marks | section 7.5 | 7.5 |
+| GMM components K | 3,000 (unchanged) | 3.1 |
+| Model pinning | SHA-256 of `final.pt` and `gmm.npz` in `codebook.json` | 3.3 |
+| Key -> streams | SHA-256(key) for preamble and header; SHA-256(key, nonce) for the payload; NumPy `SeedSequence` | 4.1 |
+| Nonce | 1 random byte per message, in the header | 4.1 |
+| Max payload | 140 bytes | 4.2 |
+| CRC | CRC-16/CCITT | 4.2 |
+| Payload parity | max(8, ceil(k / 2)) bytes | 4.2 |
+| Header code | RS(6, 2): length + nonce | 4.2 |
+| Bits per whistle | 4 (M = 16), high nibble first | 4.2, E4 |
+| Preamble | 3 signature whistles, 2 of 3 to sync | 4.2, 7 |
+| Interval (start to start) | uniform 0.55-0.95 s | 4.3 |
+| Centre frequency | encounter-191 distribution, 5-12 kHz | 4.3 |
+| Variation tau | 0.5 (set by E5) | 4.4 |
+| Envelope taper | Tukey 0.15-0.3 | 4.4 |
+| Harmonic | 2nd at -12 dB | 4.4 |
+| Self-check | classifier A on the contour, 20 redraws, then tau = 0 | 4.4 |
+| Sample rate | 96 kHz, float32 WAV | 4.4 |
+| Codebook eligibility | N_k >= 65 | 5 |
+| Codebook duration | 150-450 ms | 5 |
+| Codebook span | 300 Hz - 5 kHz | 5 |
+| Confusion pass | 50 sends per candidate, 5 dB, 214 noise | 5 |
+| Verification | 200 sends per type, <= 2 % confusion per pair | 5 |
+| Channel order | multipath, absorption, Doppler, then noise | 6 |
+| SNR definition | narrowband, per 93.75 Hz bin, on the direct path | 6 |
+| Clean condition | 40 dB SNR white noise, never digital silence | 6 |
+| Noise for tuning / test | encounter 214 / 276 | 6 |
+| Receiver blocks | 60 s with 2 s overlap | 7 |
+| Slot time window | -60 ms to +150 ms around the expected start | 7 |
+| Slot pitch window | +/- 1.5 kHz | 7 |
+| Erasure, classifier A | distance ratio > 0.8 (tuned on 214) | 7 |
+| Erasure, classifier B | log-likelihood gap < 10 nats (tuned on 214) | 7 |
+| Sweep set | 50 messages of 8-32 bytes per point | 8.1 |
+| Full set | 150 random (4-64 bytes) + 50 sentences | 8.1 |
+| No-message test | 50 min of encounter-276 noise | 8.2 |
+| Covertness references | all and in-range real whistles of encounter 276 | 8.5 |
+| Pass marks | section 8.6 | 8.6 |
+
+## 14. Revision history
+
+- **2026-11-17, first version.**
+- **2026-11-17, after review:**
+  - Added the model dependency, the K = 3,000 decision, the training-resume steps with the `final.pt` trap, and hash pinning (section 3, phase M).
+  - Codebook components must hold at least 65 whistles. The 10-round swap test became one confusion pass plus a verification.
+  - Classifier B is described as seeing the same contour as A, and erases on a log-likelihood gap instead of a posterior.
+  - Slot window -60/+150 ms; envelope taper 0.15-0.3.
+  - The clean test uses a 40 dB noise floor, not silence.
+  - Per-message nonce (header RS(6, 2), 12 whistles).
+  - Channel order fixed: noise is added last.
+  - The self-check classifies the contour directly.
+  - Sweep set of 50 short messages, track cache and a computing budget (section 8.4).
+  - Covertness also against in-range real whistles; the sequence-level limitation is stated.
+  - No-message test added.
