@@ -25,7 +25,11 @@ SUPPORTED = {
 RS_MAX_N = 255                                     # GF(2^8): at most 255 bytes per codeword
 
 
-class ConfigError(RuntimeError):
+class WhistleCodeError(RuntimeError):
+    """Base of the errors the command line reports as one line (config, model files, codebook)."""
+
+
+class ConfigError(WhistleCodeError):
     pass
 
 

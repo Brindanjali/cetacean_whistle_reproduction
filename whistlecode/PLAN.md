@@ -1,6 +1,6 @@
 # WhistleCode plan: hiding messages in whistles
 
-Status: plan written 2026-11-17 and revised twice the same day (section 14). P0 (keys, framing, Reed-Solomon, tests, the `frame` and `roundtrip` commands) was built on 2026-11-18. Nothing else is built yet.
+Status: plan written 2026-11-17 and revised twice the same day (section 14). P0 (keys, framing, Reed-Solomon, tests, the `frame` and `roundtrip` commands) and P1 (the codebook, with the pieces of P2-P4 it needs: whistle synthesis, noise and SNR, the detector wrapper and classifier A) were built on 2026-11-18. P1 changed some plan values after measuring them; section 14 lists the changes.
 
 This enhancement replaces WhistleFlow. The `whistleflow/` folder stays as it is but will not be implemented. WhistleFlow's no-images rule does not apply here, because this enhancement reuses the reproduction's spectrogram detector and VAE.
 
@@ -143,7 +143,7 @@ The preamble and header still share one rhythm per key, about 11 s. Section 12 l
 
 ### 4.3 Schedule from the key
 
-- `[DECISION]` Start-to-start intervals are drawn uniformly from 0.55-0.95 s. The codebook's whistles last 150-450 ms (section 5), so consecutive whistles never overlap.
+- `[DECISION]` Start-to-start intervals are drawn uniformly from 0.55-0.95 s. The codebook's whistles last 100-450 ms (section 5), so consecutive whistles never overlap.
 - `[DECISION]` Each whistle's centre frequency is drawn from the centre frequencies of the encounter-191 training whistles (`preprocessed/encounter_191/images.csv`, the same source `infer.training_centre_frequencies` reads), restricted to 5-12 kHz. Because every codebook type spans at most 5 kHz (+/- 2.5 kHz around its centre), every whistle stays within 2.5-14.5 kHz whatever symbol it carries.
 - Timing and pitch do not depend on the symbols. The receiver re-creates both from the key and the nonce, so it knows when each whistle comes and roughly at what pitch. This works like frequency hopping and lets it ignore real animals whistling at other times or pitches.
 
@@ -151,7 +151,7 @@ The preamble and header still share one rhythm per key, about 11 s. Section 12 l
 
 For symbol s in slot i:
 
-1. Sample a latent from the type's GMM component: z = mu_s + tau * L_s * eps, where L_s is the Cholesky factor of the component covariance and eps comes from the variation stream. `[DECISION]` tau = 0.5 to start; the final value is chosen by measurement (E5). This variation is only meaningful because every codebook component holds at least 65 whistles (section 5). With tau > 0, repeated symbols never sound identical.
+1. Sample a latent from the type's GMM component: z = mu_s + tau * L_s * eps, where L_s is the Cholesky factor of the component covariance and eps comes from the variation stream. `[DECISION]` tau = 0.5 to start; the final value is chosen by measurement (E5). This variation is only meaningful because every codebook component holds at least 32 whistles (section 5), so its covariance has at least 31 directions of real variation rather than the ridge alone. With tau > 0, repeated symbols never sound identical.
 2. Decode z with the VAE decoder to a 128 x 128 image, then take its contour with `sonify.image_contour` (threshold 0.05).
 3. Synthesise a phase-continuous FM tone at fc_i + contour offset. Add:
    - the amplitude envelope of the synthetic generator (Tukey window with a slow amplitude ripple), ported from `src/whistlepipe/synth/whistles.py`. `[DECISION]` The Tukey taper is drawn from 0.15-0.3 instead of the generator's 0.15-0.6, so the fade-in lasts at most 68 ms and the detector does not find the start late.
@@ -171,13 +171,13 @@ A 20-character sentence: k = 22, nsym = 11, so 33 bytes = 66 whistles, plus 15, 
 
 Built from the model in use (section 3.2): first on the development model, then rebuilt on the final model. K = 3,000.
 
-1. **Eligible components.** `[DECISION]` Only components holding at least 65 whistles (N_k >= 65). Smaller components have covariances stuck at the ridge, so the variation in section 4.4 would do nothing and a shape-stability check would pass trivially. The epoch-101 fit has 203 such components.
+1. **Eligible components.** `[DECISION]` Only components holding at least 32 whistles (N_k >= 32). Smaller components have covariances stuck at the ridge, so the variation in section 4.4 would do nothing and a shape-stability check would pass trivially. The epoch-101 fit has 539 such components. (The first version required 65 whistles; on epoch 101 that left only 20 components after the shape filter, too few to choose 17 from. At 32 the covariance still has at least 31 directions of real variation.)
 2. **Filter.** Decode each eligible component's mean and 32 samples, extract the contours, and `[DECISION]` keep a component when:
    - its mean decode gives one clean contour, with no gaps longer than 3 columns;
-   - its duration is 150-450 ms;
+   - its duration is 100-450 ms (the mean decodes are short, median 128 ms, and 100 ms whistles were detected at 10 dB);
    - its frequency span is 300 Hz to 5 kHz;
    - its samples stay close to its mean (median DTW distance below the median over all eligible components).
-3. **One confusion pass.** Send every remaining candidate 50 times through the channel at 5 dB SNR on encounter-214 noise. Classify each received whistle against all candidates with classifier A, which gives one confusion table.
+3. **One confusion pass.** Send every remaining candidate 50 times through the channel at 10 dB SNR on encounter-214 noise (even-index files). Classify each received whistle against all candidates with classifier A, which gives one confusion table. `[DECISION]` Candidates detected in less than 80 % of their sends are dropped. (The first version used 5 dB, where the detector found almost no whistles in the readiness probe.)
 4. **Select 16 + 1.** Pick 17 types greedily so that the worst confusion between any two chosen types is as low as possible, breaking ties by the larger DTW distance. The candidate least confused with the other 16 becomes the signature whistle (preamble only), and the other 16 carry symbols 0-15.
 5. **Verify.** Send each of the 17 types 200 times under the same conditions. If any pair is confused more than 2 % of the time, replace the worse type of that pair with the next candidate and verify again.
 6. **Outputs:**
@@ -222,7 +222,11 @@ Messages longer than one noise file use consecutive files of the same encounter 
 
    If several qualify, take the one with the closest start; ties go to the longer track. An empty slot is marked **erased**. A running linear fit of observed against expected start times, over confident matches only, corrects clock drift from Doppler.
 5. **Classify.** Two classifiers are built. The one with the lower symbol error on encounter-214 noise becomes the default; both are reported.
-   - **A, DTW templates:** DTW distance between the track's contour (relative to its own centre) and each of the 16 template contours, plus a duration-difference term. `[DECISION]` Erased when best distance / second-best > 0.8.
+   - **A, DTW templates:** DTW distance between the track's contour and each template contour, plus a duration term. Measured on encounter-214 noise at 10 dB (17 types x 40 sends) during P1:
+     - `[DECISION]` The track's offsets are measured from the centre frequency the key gives for its slot, not from the track's own mid-range. The detector trims faint ends (median 21 ms shorter at 10 dB), which shifts a re-centred track; correct calls rose from 59 % to 79 %.
+     - `[DECISION]` The duration term is asymmetric: 0.5 Hz per ms when the track is shorter than the template, 2 Hz per ms when it is longer.
+     - `[DECISION]` Erased when best distance / second-best > 0.85.
+     - Together these lowered the repair budget used per whistle (2e + f) from 0.29 to 0.21 at 10 dB.
    - **B, VAE encoder + GMM:** build the track's S8 image, encode it with the VAE encoder, and score it under the 16 chosen GMM components. The S8 image is a clean re-rendering of the detected contour, not the noisy spectrogram, so B sees exactly the information A sees and differs only in how it measures distance. It is kept as the reproduction-native comparison. Because the component covariances are narrow, its posteriors sit near 0 or 1 and cannot flag doubt. `[DECISION]` B therefore erases a call when the log-likelihood gap between the best and second-best component is below 10 nats (starting value).
 
    Both erasure thresholds are tuned on encounter 214.
@@ -305,7 +309,7 @@ E6 and E7 reuse the E2 tracks and cost no detector time. The budget is for the f
 Covertness asks whether the coded whistles can be told apart from real ones. Each measure compares coded whistles, as detected by the receiver in E2, with real whistles from encounter 276. Two real references are used:
 
 - **all** real whistles;
-- **in-range** real whistles: those within the codebook's limits (duration 150-450 ms, span 0.3-5 kHz, centre 5-12 kHz).
+- **in-range** real whistles: those within the codebook's limits (duration 100-450 ms, span 0.3-5 kHz, centre 5-12 kHz).
 
 Against all whistles a classifier can win from the limits alone. The in-range comparison isolates whether the shapes themselves look real.
 
@@ -462,10 +466,10 @@ All `[DECISION]` unless stated.
 | Harmonic | 2nd at -12 dB | 4.4 |
 | Self-check | classifier A on the contour, 20 redraws, then tau = 0 | 4.4 |
 | Sample rate | 96 kHz, float32 WAV | 4.4 |
-| Codebook eligibility | N_k >= 65 | 5 |
-| Codebook duration | 150-450 ms | 5 |
+| Codebook eligibility | N_k >= 32 | 5 |
+| Codebook duration | 100-450 ms | 5 |
 | Codebook span | 300 Hz - 5 kHz | 5 |
-| Confusion pass | 50 sends per candidate, 5 dB, 214 noise | 5 |
+| Confusion pass | 50 sends per candidate, 10 dB, 214 noise (even-index files); drop candidates detected < 80 % | 5 |
 | Verification | 200 sends per type, <= 2 % confusion per pair | 5 |
 | Channel order | multipath, absorption, Doppler, then noise | 6 |
 | SNR definition | narrowband, per 93.75 Hz bin, on the direct path | 6 |
@@ -474,7 +478,9 @@ All `[DECISION]` unless stated.
 | Receiver blocks | 60 s with 2 s overlap | 7 |
 | Slot time window | -60 ms to +150 ms around the expected start | 7 |
 | Slot pitch window | +/- 1.5 kHz | 7 |
-| Erasure, classifier A | distance ratio > 0.8 (tuned on 214) | 7 |
+| Classifier A input | track offsets from the slot's expected centre frequency | 7 |
+| Classifier A duration term | 0.5 Hz/ms if the track is shorter, 2 Hz/ms if longer | 7 |
+| Erasure, classifier A | distance ratio > 0.85 (re-tuned on 214 in P5) | 7 |
 | Erasure, classifier B | log-likelihood gap < 10 nats (tuned on 214) | 7 |
 | Sweep set | 50 messages of 8-32 bytes per point | 8.1 |
 | E2 smoke subset (development model) | SNR 5, 10, 20 dB x 10 messages, quiet 214 files | 8.3 |
@@ -509,3 +515,8 @@ All `[DECISION]` unless stated.
   - Section 4.1 now describes the key derivation as built: per-stream SHA-256 seeds and counter-mode scrambler bytes, not one NumPy seed.
   - The CRC variant is named exactly: CRC-16/CCITT-FALSE.
   - The 1-byte minimum payload and the erased-byte fill are listed in section 13.
+- **2026-11-18, P1 built (measured changes):**
+  - Codebook eligibility lowered from N_k >= 65 to N_k >= 32, and the minimum duration from 150 to 100 ms: with the first values only 20 components passed the shape filter on epoch 101.
+  - Confusion pass and verification at 10 dB instead of 5 dB (the detector misses almost every whistle at 0-5 dB); candidates detected < 80 % are dropped.
+  - Classifier A measures a track from its slot's known centre frequency, uses an asymmetric duration term, and erases above a distance ratio of 0.85.
+  - P1 needed parts of later phases, built now: whistle synthesis (P2), real noise and narrowband SNR (P3), the detector wrapper and slot matching (P4), classifier A (P4).

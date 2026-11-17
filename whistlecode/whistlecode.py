@@ -1,6 +1,15 @@
 """WhistleCode command line (PLAN.md section 10). Run from anywhere; nothing needs installing beyond requirements.txt.
 
-P0 commands (no audio yet):
+P1 commands (the whistle alphabet):
+
+    python whistlecode/whistlecode.py build-codebook [--quick]
+        choose the 16 symbol types and the signature whistle from the VAE-GMM (PLAN.md section 5); about 20-40 min.
+        --quick: a few sends only, written to whistlecode/outputs/codebook_quick, to check that everything runs
+
+    python whistlecode/whistlecode.py show-codebook [--quick]
+        list the codebook's types and verification results (refuses a codebook built from other model files)
+
+P0 commands (no audio):
 
     python whistlecode/whistlecode.py frame "HI" --key reef42 [--nonce 7]
         show how a message is framed: bytes, parity, whistle symbols, whistle count, rough airtime
@@ -22,7 +31,7 @@ sys.path.insert(0, str(HERE.parent / "src"))
 import numpy as np  # noqa: E402
 
 from wcode import framing  # noqa: E402
-from wcode.config import ConfigError, default_config, payload_parity  # noqa: E402
+from wcode.config import ConfigError, WhistleCodeError, default_config, payload_parity  # noqa: E402,F401
 
 
 def _fmt(symbols) -> str:
@@ -100,11 +109,41 @@ def cmd_roundtrip(args) -> int:
     return 0 if ok else 1
 
 
+def cmd_build_codebook(args) -> int:
+    from wcode import codebook
+
+    info = codebook.build(default_config(), quick=args.quick, log=lambda m: print(m, flush=True))
+    return 0 if info["verification"]["passed"] else 1
+
+
+def cmd_show_codebook(args) -> int:
+    from wcode import codebook
+
+    cfg = default_config()
+    cb = codebook.load(cfg, codebook.out_dir(cfg, args.quick))
+    v = cb.info["verification"]
+    print(f"codebook built {cb.info['created_utc']} from {cb.info['model']['checkpoint']} "
+          f"(sha256 {cb.info['model']['checkpoint_sha256'][:12]}...){'  [QUICK]' if cb.info['quick'] else ''}")
+    print(f"verification: {'PASSED' if v['passed'] else 'FAILED'}, worst pair {v['worst_pair']:.1%}, "
+          f"errors {v['error_rate']:.1%}, erasures {v['erasure_rate']:.1%} ({v['sends_per_type']} sends per type)")
+    print(" symbol  component   N_k  duration  span_Hz  detected  correct  erased  worst_pair")
+    for t in [*cb.info["types"], cb.info["signature"]]:
+        sym = "sig" if t["symbol"] is None else f"{t['symbol']:x}"
+        print(f"  {sym:>5}  {t['component']:9d}  {t['nk']:5.0f}  {t['duration_ms']:6.0f} ms  {t['span_hz']:7.0f}"
+              f"  {t['detection_rate']:8.1%}  {t['accuracy']:7.1%}  {t['erasure_rate']:6.1%}  {t['worst_pair']:9.1%}")
+    return 0
+
+
 def main(argv=None) -> int:
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(errors="replace")       # Windows consoles cannot print every character
-    p = argparse.ArgumentParser(prog="whistlecode", description="WhistleCode: hide text messages in whistles (P0: framing only)")
+    p = argparse.ArgumentParser(prog="whistlecode", description="WhistleCode: hide text messages in whistles")
     sub = p.add_subparsers(dest="cmd", required=True)
+    for name, fn, hlp in (("build-codebook", cmd_build_codebook, "choose the whistle types (PLAN.md section 5)"),
+                          ("show-codebook", cmd_show_codebook, "list the codebook's types and verification")):
+        s = sub.add_parser(name, help=hlp)
+        s.add_argument("--quick", action="store_true", help="the quick check build in outputs/codebook_quick")
+        s.set_defaults(fn=fn)
     for name, fn, hlp in (("frame", cmd_frame, "show how a message is framed into whistle symbols"),
                           ("roundtrip", cmd_roundtrip, "frame, damage whistles, decode")):
         s = sub.add_parser(name, help=hlp)
@@ -121,7 +160,7 @@ def main(argv=None) -> int:
     args = p.parse_args(argv)
     try:
         return args.fn(args)
-    except (framing.FramingError, ValueError, ConfigError) as e:
+    except (framing.FramingError, ValueError, WhistleCodeError) as e:     # config, model-file and codebook errors
         print(f"error: {e}", file=sys.stderr)
         return 2
 
