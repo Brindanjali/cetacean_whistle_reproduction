@@ -1,0 +1,40 @@
+# =============================================================================
+# WhistleCode configuration (see PLAN.md; section numbers below refer to it)
+#
+# Tags, as in the reproduction's configs:
+#   [PLAN]      fixed by PLAN.md
+#   [DECISION]  chosen here because nothing fixes it; listed in PLAN.md section 13 where it affects behaviour
+#
+# Sections are added phase by phase. P0 holds the key streams, framing and error correction only.
+# =============================================================================
+schema_version = 1
+
+[keys]                       # PLAN 4.1
+domain        = "whistlecode/v1"   # [DECISION] prefix hashed into every seed and mask, so other uses of a key never collide
+nonce_bytes   = 1                  # [PLAN] one random byte per message, carried in the header
+header_streams  = ["scrambler", "timing", "pitch"]                 # [PLAN] seeded from the key only
+payload_streams = ["scrambler", "timing", "pitch", "variation"]    # [PLAN] seeded from the key and the nonce
+# [DECISION] byte masks (scrambler) come from SHA-256 in counter mode, so they never depend on the NumPy version;
+#            continuous draws (timing, pitch, variation) come from NumPy PCG64 generators seeded by SHA-256.
+
+[framing]                    # PLAN 4.2
+text_encoding      = "utf-8"       # [PLAN]
+min_payload_bytes  = 1             # [DECISION] an empty message has nothing to send
+max_payload_bytes  = 140           # [PLAN] k + nsym <= 213 <= 255: one Reed-Solomon codeword, no interleaver
+crc                = "CRC-16/CCITT-FALSE"   # [DECISION] poly 0x1021, init 0xFFFF, no reflection, no final XOR ("123456789" -> 0x29B1)
+crc_bytes          = 2
+bits_per_symbol    = 4             # [PLAN] M = 16 whistle types; E4 may change it later
+symbol_order       = "high_nibble_first"    # [PLAN]
+n_preamble         = 3             # [PLAN] signature whistles before the header
+header_data_bytes  = 2             # [PLAN] payload length + nonce
+
+[fec]                        # PLAN 4.2
+library              = "reedsolo"  # [PLAN] approved and installed 2026-11-18
+library_version      = "1.7.0"     # [DECISION] pinned; load_config() refuses another version
+header_parity        = 4           # [PLAN] RS(6, 2): fixes 2 wrong or 4 erased bytes
+payload_parity_min   = 8           # [PLAN] nsym = max(8, ceil(k / 2)), k = payload + CRC bytes
+payload_parity_ratio = 0.5         # [PLAN]
+erased_fill          = 0           # [DECISION] value written into erased byte positions before decoding (ignored by the decoder)
+
+[schedule]                   # PLAN 4.3 (used from P2; here only for airtime estimates)
+interval_s = [0.55, 0.95]          # [PLAN] start-to-start interval, uniform
