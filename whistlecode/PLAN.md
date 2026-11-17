@@ -1,6 +1,6 @@
 # WhistleCode plan: hiding messages in whistles
 
-Status: plan written 2026-11-17 and revised the same day after a review (section 14). Nothing is built.
+Status: plan written 2026-11-17 and revised twice the same day (section 14). Nothing is built.
 
 This enhancement replaces WhistleFlow. The `whistleflow/` folder stays as it is but will not be implemented. WhistleFlow's no-images rule does not apply here, because this enhancement reuses the reproduction's spectrogram detector and VAE.
 
@@ -42,32 +42,67 @@ WhistleCode uses the V1 model files:
 - the VAE checkpoint `models/vaegmm/V1_L64_b1e-4_critic_E191/checkpoints/final.pt`;
 - the GMM `gmm_K3000/gmm.npz` fitted on that checkpoint's latents.
 
-Everything from the codebook (P1) onwards is tied to these exact files.
+WhistleCode always reads `final.pt`, never `last.pt`, because `final.pt` only changes once a training run is completely finished. The code does not depend on which model it uses. Everything built from the model (the codebook, the tuned thresholds and the results) is tied to these exact files.
 
 ### 3.1 K stays at 3,000
 
 The codebook needs 17 whistle types. The epoch-101 fit already has 203 components holding at least 65 whistles each, enough for a full-rank 64-dimensional covariance. A larger K would only make components smaller and closer together, because the median component already holds 10 whistles and 220 hold fewer than 2. Distinct types come from selection (section 5), not from K. A smaller K is not needed either, unless the section 5 filter finds fewer than 17 candidates.
 
-### 3.2 If training is resumed to epoch 150
+### 3.2 Development model and final model
 
-The planned resume of the remaining 49 epochs happens in the reproduction, not in `whistlecode/`. As phase M (section 9) it must finish before P1:
+`[DECISION]` WhistleCode is built in two stages:
 
-1. **Before resuming,** rename or remove `checkpoints/final.pt` in the run folder Colab resumes from. `train_vae` writes `final.pt` only if it does not exist yet. `post_training/finalize_run.py` already made it from epoch 101, so it would otherwise silently stay at epoch 101 while `train_info.json` says "complete".
-2. Resume on Colab with the same configuration (`BATCH = 5772`). This takes about 1.75 A100 hours at the measured 128 s per epoch.
-3. On the laptop:
-   - copy the new `last.pt` and `final.pt`;
+- **Development model, epoch 101:** the current `final.pt`, a byte copy of the epoch-101 `last.pt` (SHA-256 `fcb1a2e6...`), with the current `gmm_K3000/gmm.npz`. P1-P4 are built and debugged on it.
+- **Final model, epoch 150:** the `final.pt` of the resumed run (section 3.3), with a GMM refitted on its latents. The full evaluation (P5-P7) runs on it, once.
+
+| Carries over from the development model | Redone on the final model (section 3.4) |
+|---|---|
+| All the code: framing, error correction, transmitter, channel, receiver, both classifiers, evaluation scripts, tests | The codebook, the tuned thresholds, every result |
+
+Rules for the development model:
+
+- **Smoke tests only:** E1 and the E2 smoke subset (section 8.3). The overnight sweeps, the freezing of settings and the encounter-276 runs wait for the final model, so the 11-23 hours of detector time (section 8.4) are spent once.
+- **No keeper demo recordings.** The final codebook will have different whistle types, so message WAVs made with the development codebook will not decode afterwards.
+
+If training is not resumed after all, the development model is the final model: skip sections 3.3 and 3.4 and go straight to P5.
+
+### 3.3 Training resume to epoch 150 (phase M)
+
+The resume of the remaining 49 epochs happens in the reproduction, not in `whistlecode/`.
+
+1. **Resume on Colab** from the Drive run folder `G:\My Drive\whistle_vaegmm_E191\runs\V1_L64_b1e-4_critic_E191`, with the same configuration (`BATCH = 5772`) and the code bundle already on Drive. This takes about 1.75 A100 hours at the measured 128 s per epoch. What a check on 2026-11-17 found:
+   - The Drive `last.pt` is byte-identical to the local one.
+   - The Drive checkpoints folder has **no** `final.pt`, and the Drive `train_info.json` still says "running". So the resumed run writes a proper epoch-150 `final.pt` and closes `train_info.json` itself.
+   - The `final.pt` trap exists only in the local folder. `train_vae` writes `final.pt` only if it does not exist yet, and `post_training/finalize_run.py` made a local one from epoch 101. Never resume from the local folder without renaming that file first.
+   - The resume checks only that the run spec matches. The partial epoch-102 log line at the end of the Drive log is harmless, because only epoch summaries are read.
+2. **Copy** the new `final.pt`, `last.pt` and `train_info.json` from Drive to the local run folder, replacing the epoch-101 files.
+3. **On the laptop,** with the reproduction's own commands:
    - encode the latents again;
-   - refit the GMM at K = 3,000;
+   - refit the GMM at K = 3,000, before anything rebuilds the codebook;
    - recompute the component features;
    - redo Table 1, Table 3, Fig. 12 and Figs. 7-10. Table 6 does not change, because the architecture is the same.
 
-   The epoch-101 results stay in git history.
+   The epoch-101 results stay in git history. The epoch-101 backups in the Drive run folder (`eval`, `figures`, `gmm_K3000*`) become out of date at this point.
 
-### 3.3 Pinning
+### 3.4 The swap in WhistleCode (phase S)
 
-`codebook.json` records the SHA-256 of `final.pt` and `gmm.npz`. Every WhistleCode command checks both hashes and refuses to run if the model has changed since the codebook was built `[DECISION]`. A changed model always means rebuilding the codebook.
+After phase M:
 
-P0 contains no model, so it does not depend on any of this.
+1. Rebuild the codebook (section 5): about 30-45 minutes, including the confusion pass.
+2. Rerun E1 to confirm the system still works end to end.
+3. Run P5-P7 on the final model. P5 includes the tuning on encounter 214: classifier choice, erasure thresholds, slot windows and tau. Classifier B's margin depends directly on the GMM, so none of the development-model values are kept.
+
+### 3.5 Pinning
+
+`[DECISION]` The chain of files is checked by hash:
+
+- `build-codebook` checks that the GMM was fitted on latents of this `final.pt`. `latents_mu.json` records the checkpoint's SHA-256, and `gmm.json` records the latents' SHA-256.
+- `codebook.json` then records the SHA-256 of `final.pt` and `gmm.npz`.
+- Every other WhistleCode command refuses to run if either file has changed since the codebook was built.
+
+This makes the swap safe. Once the new `final.pt` arrives, nothing runs until the codebook is rebuilt, and the in-between state (new VAE, old GMM) is caught as well.
+
+P0 and P3 contain no model, so they do not depend on any of this.
 
 ## 4. Message encoder (transmitter)
 
@@ -128,7 +163,7 @@ A 20-character sentence: k = 22, nsym = 11, so 33 bytes = 66 whistles, plus 15, 
 
 ## 5. The whistle alphabet (codebook)
 
-Built once from the final model (section 3), with K = 3,000.
+Built from the model in use (section 3.2): first on the development model, then rebuilt on the final model. K = 3,000.
 
 1. **Eligible components.** `[DECISION]` Only components holding at least 65 whistles (N_k >= 65). Smaller components have covariances stuck at the ridge, so the variation in section 4.4 would do nothing and a shape-stability check would pass trivially. The epoch-101 fit has 203 such components.
 2. **Filter.** Decode each eligible component's mean and 32 samples, extract the contours, and `[DECISION]` keep a component when:
@@ -225,7 +260,14 @@ Each trial uses a new random key, a new nonce and a new channel draw.
 | E8 | Baseline modem (8.5), 13 SNRs | 214, then 276 | sweep set |
 | Final | Frozen settings, SNR 10 dB, no multipath | 276 | full set |
 
-Defaults (M, tau, classifier, erasure thresholds, slot windows) are chosen on encounter 214, written into `config.toml` and frozen. Only then do the encounter-276 runs start.
+All of the table above runs on the final model. Defaults (M, tau, classifier, erasure thresholds, slot windows) are chosen on encounter 214, written into `config.toml` and frozen. Only then do the encounter-276 runs start.
+
+On the development model only two smoke tests run `[DECISION]`:
+
+- E1;
+- the **E2 smoke subset:** SNR 5, 10 and 20 dB, 10 sweep-set messages each, on quiet encounter-214 files.
+
+Together they take under an hour of detector time.
 
 Possible later upgrades, each measured before adoption:
 
@@ -250,7 +292,7 @@ The detector (S2-S9) takes about 5-10 s per minute of audio on the laptop: 0.6-1
 | Final run + no-message test | about 6 h | 0.5-1 h |
 | **Total** | | **about 11-23 h**, run unattended (overnight) |
 
-E6 and E7 reuse the E2 tracks and cost no detector time.
+E6 and E7 reuse the E2 tracks and cost no detector time. The budget is for the final model. The development-model smoke tests and the P1 runs on the development model add about 1.5 hours.
 
 ### 8.5 Covertness and the baseline
 
@@ -281,24 +323,32 @@ A failed mark is reported as failed, with the measured value; it is never rewrit
 
 ## 9. Phases
 
-| Phase | Work | Done when |
-|---|---|---|
-| M | Only if training is resumed (section 3.2), in the reproduction: rename `final.pt`, resume to epoch 150, then on the laptop re-encode, refit the GMM at K = 3,000, recompute the component features and redo the reproduction's evaluations | New `final.pt` and `gmm.npz` in place; the reproduction's tables and figures redone |
-| P0 | Folder, `config.toml`, key and nonce streams, framing (UTF-8, CRC, scrambler, header), Reed-Solomon, unit tests | Bytes -> symbols -> bytes round trip passes, including with erasures and errors up to the RS limit |
-| P1 | Codebook: eligibility, filter, confusion pass, selection, verification, gallery, hash pinning | `codebook.npz` + gallery |
-| P2 | Transmitter: schedule, preamble, header, synthesis, self-check, `send` command | A message becomes a WAV |
-| P3 | Channel: multipath, absorption, Doppler, noise at SNR, `channel` command | A WAV goes through any channel setting |
-| P4 | Receiver: detect with track cache, sync, header, slots, classifier A, Reed-Solomon, CRC, `receive` command | **E1 passes: working send -> channel -> receive demo** |
-| P5 | Classifier B, sweeps E2-E6, tune on 214, freeze, encounter-276 runs | Reliability curves and tables |
-| P6 | Covertness E7, baseline E8, no-message test | Covertness table |
-| P7 | README, figures, results; optional air test; optional "send a message" panel on the project web page | Write-up |
+| Phase | Model | Work | Done when |
+|---|---|---|---|
+| P0 | none | Folder, `config.toml`, key and nonce streams, framing (UTF-8, CRC, scrambler, header), Reed-Solomon, unit tests | Bytes -> symbols -> bytes round trip passes, including with erasures and errors up to the RS limit |
+| P1 | development | Codebook: eligibility, filter, confusion pass, selection, verification, gallery, hash pinning | `codebook.npz` + gallery |
+| P2 | development | Transmitter: schedule, preamble, header, synthesis, self-check, `send` command | A message becomes a WAV |
+| P3 | none | Channel: multipath, absorption, Doppler, noise at SNR, `channel` command | A WAV goes through any channel setting |
+| P4 | development | Receiver: detect with track cache, sync, header, slots, both classifiers, Reed-Solomon, CRC, `receive` command; E1 and the E2 smoke subset | **E1 passes: working send -> channel -> receive demo** |
+| M | (reproduction) | Training resume to epoch 150 on Colab, then on the laptop re-encode, refit the GMM at K = 3,000, recompute the component features and redo the reproduction's evaluations (section 3.3) | New `final.pt` and `gmm.npz` in place; the reproduction's tables and figures redone |
+| S | final | Swap: rebuild the codebook, rerun E1 (section 3.4) | Codebook pinned to the epoch-150 files; E1 passes |
+| P5 | final | Sweeps E2-E6, tune on 214, freeze, encounter-276 runs | Reliability curves and tables |
+| P6 | final | Covertness E7, baseline E8, no-message test | Covertness table |
+| P7 | final | README, figures, results; optional air test; optional "send a message" panel on the project web page | Write-up |
 
-Order: P0 can be built at any time. P1 and everything after it wait for M if training is resumed.
+Order:
+
+- P0-P4 can be built now, on the development model.
+- M can run at any time, in parallel, because it touches only the reproduction.
+- S needs both P4 and M.
+- P5-P7 come after S.
+- If training is not resumed, skip M and S.
 
 Effort:
 
-- **M:** about 1.75 A100 hours on Colab, then under an hour on the laptop.
 - **P0-P4:** about 1.5 days of work.
+- **M:** about 1.75 A100 hours on Colab, then under an hour on the laptop.
+- **S:** about 1-1.5 hours, mostly unattended.
 - **P5-P7:** about 1.5 days of work, plus 11-23 hours of unattended detector time (section 8.4).
 
 No model is trained in WhistleCode itself; the only fitted model is the covertness discriminator, which takes seconds.
@@ -364,7 +414,8 @@ whistlecode/
 
 | Risk | Effect | Mitigation |
 |---|---|---|
-| The model changes after the codebook is built (training resume) | The codebook no longer matches the decoder and encoder | Phase M first; hash pinning (section 3.3) refuses a mismatched model |
+| The model changes after the codebook is built (training resume) | The codebook no longer matches the decoder and encoder | Planned: phase S rebuilds the codebook on the final model; hash pinning (section 3.5) refuses a mismatched model and catches a new VAE with an old GMM |
+| Heavy runs done on the development model | 11-23 hours of detector time spent twice | Development model limited to smoke tests (section 3.2) |
 | Decodes are blurry (epoch-101 Table 1 PSNR 32.8 dB vs the paper's 44.5) | Some components give broken contours | Eligibility and filter (section 5); fallback to real-contour medoids |
 | Real whistles land in a slot | Wrong symbols | Key-based time and pitch windows, Reed-Solomon, erasure on ambiguity; measured separately on busy files |
 | Preamble or header missed | Whole message lost | 3 signature whistles, 2 of 3 enough; header can lose 4 of 6 bytes; sync and header rates reported on their own |
@@ -384,7 +435,10 @@ All `[DECISION]` unless stated.
 | Parameter | Default | Set in |
 |---|---|---|
 | GMM components K | 3,000 (unchanged) | 3.1 |
-| Model pinning | SHA-256 of `final.pt` and `gmm.npz` in `codebook.json` | 3.3 |
+| Model file read | `final.pt`, never `last.pt` | 3 |
+| Development model | epoch 101 (`final.pt` SHA-256 `fcb1a2e6...`), smoke tests only | 3.2 |
+| Final model | epoch 150 from the resumed run, GMM refitted | 3.3, 3.4 |
+| Model pinning | checkpoint -> latents -> GMM chain checked by `build-codebook`; SHA-256 of `final.pt` and `gmm.npz` in `codebook.json` | 3.5 |
 | Key -> streams | SHA-256(key) for preamble and header; SHA-256(key, nonce) for the payload; NumPy `SeedSequence` | 4.1 |
 | Nonce | 1 random byte per message, in the header | 4.1 |
 | Max payload | 140 bytes | 4.2 |
@@ -415,6 +469,7 @@ All `[DECISION]` unless stated.
 | Erasure, classifier A | distance ratio > 0.8 (tuned on 214) | 7 |
 | Erasure, classifier B | log-likelihood gap < 10 nats (tuned on 214) | 7 |
 | Sweep set | 50 messages of 8-32 bytes per point | 8.1 |
+| E2 smoke subset (development model) | SNR 5, 10, 20 dB x 10 messages, quiet 214 files | 8.3 |
 | Full set | 150 random (4-64 bytes) + 50 sentences | 8.1 |
 | No-message test | 50 min of encounter-276 noise | 8.2 |
 | Covertness references | all and in-range real whistles of encounter 276 | 8.5 |
@@ -435,3 +490,10 @@ All `[DECISION]` unless stated.
   - Sweep set of 50 short messages, track cache and a computing budget (section 8.4).
   - Covertness also against in-range real whistles; the sequence-level limitation is stated.
   - No-message test added.
+- **2026-11-17, build now, swap later:**
+  - WhistleCode is built on the epoch-101 model as a development model, with smoke tests only.
+  - The epoch-150 model becomes the final model: new phase S rebuilds the codebook, then P5-P7 run once on it.
+  - Recorded the Drive check: no `final.pt` on Drive, so the Colab resume is clean, and the trap is local only.
+  - WhistleCode reads `final.pt`, never `last.pt`.
+  - `build-codebook` checks the checkpoint -> latents -> GMM chain.
+  - Sections 3.2-3.5 were rewritten and the phase table reordered.
