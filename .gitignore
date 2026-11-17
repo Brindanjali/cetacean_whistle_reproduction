@@ -62,6 +62,10 @@ web/media4k/*.mp4
 web/data/
 colab/dist/
 
+# Cluster bundle: the zip is rebuilt by python cluster/make_cluster_bundle.py
+cluster/dist/
+cluster/offline/
+
 # Local tooling and unpublished explainer pages
 .claude/
 docs/*.html
