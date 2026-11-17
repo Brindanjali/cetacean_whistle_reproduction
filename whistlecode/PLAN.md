@@ -118,7 +118,13 @@ Sender and receiver share a key string. Every message also carries a random 1-by
 | payload pitch | SHA-256(key, nonce) | centre frequency of every payload whistle |
 | variation | SHA-256(key, nonce) | the random latent offset of every whistle (the receiver never needs this one) |
 
-`[DECISION]` Each seed feeds a NumPy `SeedSequence`, which spawns the streams. The scrambler makes the bytes look random, so the whistle sequence never repeats unnaturally, even for a message like "AAAA". It is not encryption, just a shared secret.
+`[DECISION]` How the streams are derived (as built in P0, `wcode/keys.py`):
+
+- Every stream has its own SHA-256 seed, taken over length-prefixed parts: the domain string `whistlecode/v1`, the part (header or payload), the stream name, the key and, for the payload, the nonce. The streams are therefore independent, and adding a stream later never shifts an existing one.
+- The scrambler bytes come from SHA-256 in counter mode, so they never depend on the NumPy version.
+- Timing, pitch and variation draws come from NumPy PCG64 generators seeded with the stream's digest.
+
+The scrambler makes the bytes look random, so the whistle sequence never repeats unnaturally, even for a message like "AAAA". It is not encryption, just a shared secret.
 
 The preamble and header still share one rhythm per key, about 11 s. Section 12 lists this as a remaining limitation.
 
@@ -130,8 +136,8 @@ The preamble and header still share one rhythm per key, about 11 s. Section 12 l
 | Header | payload length L (1 byte) and nonce (1 byte), scrambled with the key-only stream, protected by Reed-Solomon RS(6, 2): 4 parity bytes, correcting 2 wrong or 4 erased bytes | 12 |
 | Payload | L message bytes + CRC-16, scrambled with the key-and-nonce stream, then Reed-Solomon with `nsym = max(8, ceil(k / 2))` parity bytes, where k = L + 2 | 2 x (k + nsym) |
 
-- Text is encoded as UTF-8. `[DECISION]` The longest payload is 140 bytes, so the payload always fits one Reed-Solomon codeword (n <= 213 <= 255) and needs no interleaver.
-- `[DECISION]` The CRC is CRC-16/CCITT. It catches the rare case where Reed-Solomon "corrects" to a wrong codeword.
+- Text is encoded as UTF-8. `[DECISION]` The longest payload is 140 bytes, so the payload always fits one Reed-Solomon codeword (n <= 213 <= 255) and needs no interleaver. The shortest is 1 byte; an empty message is refused.
+- `[DECISION]` The CRC is CRC-16/CCITT-FALSE (polynomial 0x1021, initial value 0xFFFF, no reflection, no final XOR; check value 0x29B1 for "123456789"). It catches the rare case where Reed-Solomon "corrects" to a wrong codeword.
 - Each byte becomes two 4-bit symbols, high nibble first. Each symbol is one whistle.
 - Reed-Solomon with `nsym` parity bytes fixes any mix of e wrong bytes and f erased bytes with 2e + f <= nsym. An erased whistle (a missed or ambiguous one) costs half as much as a wrong one, which is why the receiver marks doubtful whistles as erased instead of guessing.
 
@@ -439,10 +445,12 @@ All `[DECISION]` unless stated.
 | Development model | epoch 101 (`final.pt` SHA-256 `fcb1a2e6...`), smoke tests only | 3.2 |
 | Final model | epoch 150 from the resumed run, GMM refitted | 3.3, 3.4 |
 | Model pinning | checkpoint -> latents -> GMM chain checked by `build-codebook`; SHA-256 of `final.pt` and `gmm.npz` in `codebook.json` | 3.5 |
-| Key -> streams | SHA-256(key) for preamble and header; SHA-256(key, nonce) for the payload; NumPy `SeedSequence` | 4.1 |
+| Key -> streams | one SHA-256 seed per stream over domain `whistlecode/v1`, part, stream name, key (and the nonce for the payload); scrambler bytes from SHA-256 in counter mode; other draws from NumPy PCG64 | 4.1 |
 | Nonce | 1 random byte per message, in the header | 4.1 |
 | Max payload | 140 bytes | 4.2 |
-| CRC | CRC-16/CCITT | 4.2 |
+| Min payload | 1 byte (an empty message is refused) | 4.2 |
+| CRC | CRC-16/CCITT-FALSE | 4.2 |
+| Erased byte fill | 0, written into erased positions before decoding (the decoder ignores it) | 4.2 |
 | Payload parity | max(8, ceil(k / 2)) bytes | 4.2 |
 | Header code | RS(6, 2): length + nonce | 4.2 |
 | Bits per whistle | 4 (M = 16), high nibble first | 4.2, E4 |
@@ -497,3 +505,7 @@ All `[DECISION]` unless stated.
   - WhistleCode reads `final.pt`, never `last.pt`.
   - `build-codebook` checks the checkpoint -> latents -> GMM chain.
   - Sections 3.2-3.5 were rewritten and the phase table reordered.
+- **2026-11-18, after the P0 review:**
+  - Section 4.1 now describes the key derivation as built: per-stream SHA-256 seeds and counter-mode scrambler bytes, not one NumPy seed.
+  - The CRC variant is named exactly: CRC-16/CCITT-FALSE.
+  - The 1-byte minimum payload and the erased-byte fill are listed in section 13.

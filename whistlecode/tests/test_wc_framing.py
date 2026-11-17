@@ -54,6 +54,16 @@ def test_known_frame(cfg):
     assert fr.symbols.min() >= 0 and fr.symbols.max() <= 15
 
 
+def test_encode_parts_take_key_then_nonce(cfg):
+    fr = framing.encode("HI", "reef42", 7, cfg)
+    assert framing.encode_header(2, "reef42", 7, cfg) == fr.header_codeword
+    assert framing.encode_payload("HI", "reef42", 7, cfg) == fr.payload_codeword
+    with pytest.raises(ValueError):
+        framing.encode_header(2, 7, "reef42", cfg)            # the old (nonce, key) order is refused
+    with pytest.raises(ValueError):
+        framing.encode_payload("HI", 7, "reef42", cfg)
+
+
 def test_random_nonce_when_not_given(cfg):
     nonces = {framing.encode("HI", "k", cfg=cfg).nonce for _ in range(200)}
     assert len(nonces) > 50

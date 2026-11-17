@@ -35,3 +35,23 @@ def test_roundtrip_fails_cleanly(cli, capsys):
 def test_bad_message(cli, capsys):
     assert cli.main(["frame", "x" * 141, "--key", "k"]) == 2
     assert "error:" in capsys.readouterr().err
+
+
+def test_roundtrip_repeatable_without_nonce(cli, capsys):
+    args = ["roundtrip", "MEET AT DAWN", "--key", "k", "--wrong", "1", "--erased", "3", "--seed", "5"]
+    cli.main(args)
+    first = capsys.readouterr().out
+    cli.main(args)
+    assert capsys.readouterr().out == first
+    cli.main(args[:-1] + ["6"])
+    assert capsys.readouterr().out != first
+
+
+def test_config_error_is_one_line(cli, capsys, monkeypatch):
+    def broken():
+        raise cli.ConfigError("whistlecode config: reedsolo 9.9 is installed but config.toml pins 1.7.0")
+
+    monkeypatch.setattr(cli, "default_config", broken)
+    assert cli.main(["frame", "HI", "--key", "k"]) == 2
+    err = capsys.readouterr().err
+    assert err.startswith("error: whistlecode config:") and "Traceback" not in err

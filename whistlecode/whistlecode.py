@@ -6,7 +6,8 @@ P0 commands (no audio yet):
         show how a message is framed: bytes, parity, whistle symbols, whistle count, rough airtime
 
     python whistlecode/whistlecode.py roundtrip "MEET AT DAWN" --key reef42 --wrong 3 --erased 5 [--seed 0]
-        frame a message, damage some whistle symbols (wrong or erased), decode, and report what was repaired
+        frame a message, damage some whistle symbols (wrong or erased), decode, and report what was repaired;
+        without --nonce the nonce comes from --seed, so the same command always gives the same result
 """
 from __future__ import annotations
 
@@ -21,7 +22,7 @@ sys.path.insert(0, str(HERE.parent / "src"))
 import numpy as np  # noqa: E402
 
 from wcode import framing  # noqa: E402
-from wcode.config import default_config, payload_parity  # noqa: E402
+from wcode.config import ConfigError, default_config, payload_parity  # noqa: E402
 
 
 def _fmt(symbols) -> str:
@@ -64,7 +65,8 @@ def cmd_frame(args) -> int:
 def cmd_roundtrip(args) -> int:
     cfg = default_config()
     rng = np.random.default_rng(args.seed)
-    fr = framing.encode(args.message, args.key, args.nonce, cfg)
+    nonce = int(rng.integers(256)) if args.nonce is None else args.nonce     # same --seed, same run
+    fr = framing.encode(args.message, args.key, nonce, cfg)
     sent = fr.symbols
     nh = len(fr.header_symbols)
     pool = {"all": np.arange(len(sent)), "header": np.arange(nh), "payload": np.arange(nh, len(sent))}[args.where]
@@ -108,7 +110,8 @@ def main(argv=None) -> int:
         s = sub.add_parser(name, help=hlp)
         s.add_argument("message", help="text to send")
         s.add_argument("--key", required=True, help="shared key")
-        s.add_argument("--nonce", type=int, default=None, help="0-255; random when left out")
+        s.add_argument("--nonce", type=int, default=None,
+                       help="0-255; when left out, random for frame and drawn from --seed for roundtrip")
         s.set_defaults(fn=fn)
         if name == "roundtrip":
             s.add_argument("--wrong", type=int, default=0, help="whistles classified as the wrong symbol")
@@ -118,7 +121,7 @@ def main(argv=None) -> int:
     args = p.parse_args(argv)
     try:
         return args.fn(args)
-    except (framing.FramingError, ValueError) as e:
+    except (framing.FramingError, ValueError, ConfigError) as e:
         print(f"error: {e}", file=sys.stderr)
         return 2
 

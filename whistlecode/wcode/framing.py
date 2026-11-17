@@ -144,14 +144,19 @@ def message_bytes(message: bytes | str, cfg: dict | None = None) -> bytes:
     return data
 
 
-def encode_header(length: int, nonce: int, key: str, cfg: dict | None = None) -> bytes:
+def encode_header(length: int, key: str, nonce: int, cfg: dict | None = None) -> bytes:
+    """[length, nonce] -> header codeword. Argument order as in encode(): data, key, nonce."""
     cfg = cfg or default_config()
+    check_key(key)
     data = bytes([_check_length(length, cfg), check_nonce(nonce)])
     return fec.encode(xor(data, mask(HEADER, key, len(data), cfg=cfg)), int(cfg["fec"]["header_parity"]))
 
 
-def encode_payload(payload: bytes, nonce: int, key: str, cfg: dict | None = None) -> bytes:
+def encode_payload(payload: bytes | str, key: str, nonce: int, cfg: dict | None = None) -> bytes:
+    """message + CRC -> scrambled payload codeword. Argument order as in encode(): data, key, nonce."""
     cfg = cfg or default_config()
+    check_key(key)
+    check_nonce(nonce)
     payload = message_bytes(payload, cfg)
     data = payload + crc16(payload).to_bytes(2, "big")
     k = len(data)
@@ -165,8 +170,8 @@ def encode(message: bytes | str, key: str, nonce: int | None = None, cfg: dict |
     payload = message_bytes(message, cfg)
     nonce = new_nonce() if nonce is None else check_nonce(nonce)
     return Frame(payload=payload, nonce=nonce,
-                 header_codeword=encode_header(len(payload), nonce, key, cfg),
-                 payload_codeword=encode_payload(payload, nonce, key, cfg),
+                 header_codeword=encode_header(len(payload), key, nonce, cfg),
+                 payload_codeword=encode_payload(payload, key, nonce, cfg),
                  n_preamble=int(cfg["framing"]["n_preamble"]))
 
 
