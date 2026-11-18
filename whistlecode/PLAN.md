@@ -1,6 +1,6 @@
 # WhistleCode plan: hiding messages in whistles
 
-Status: plan written 2026-11-17 and revised twice the same day (section 14). P0 (keys, framing, Reed-Solomon, tests, the `frame` and `roundtrip` commands) and P1 (the codebook, with the pieces of P2-P4 it needs: whistle synthesis, noise and SNR, the detector wrapper and classifier A) were built on 2026-11-18. P1 changed some plan values after measuring them; section 14 lists the changes.
+Status: plan written 2026-11-17 and revised twice the same day (section 14). P0 (keys, framing, Reed-Solomon, tests, the `frame` and `roundtrip` commands) and P1 (the codebook, with the pieces of P2-P4 it needs: whistle synthesis, noise and SNR, the detector wrapper and classifier A) were built on 2026-11-18, followed by P2 (the transmitter and the `send` command). P1 changed some plan values after measuring them; section 14 lists the changes.
 
 This enhancement replaces WhistleFlow. The `whistleflow/` folder stays as it is but will not be implemented. WhistleFlow's no-images rule does not apply here, because this enhancement reuses the reproduction's spectrogram detector and VAE.
 
@@ -146,10 +146,11 @@ The preamble and header still share one rhythm per key, about 11 s. Section 12 l
 - `[DECISION]` Start-to-start intervals are drawn uniformly from 0.55-0.95 s. The codebook's whistles last 100-450 ms (section 5), so consecutive whistles never overlap.
 - `[DECISION]` Each whistle's centre frequency is drawn from the centre frequencies of the encounter-191 training whistles (`preprocessed/encounter_191/images.csv`, the same source `infer.training_centre_frequencies` reads), restricted to 5-12 kHz. Because every codebook type spans at most 5 kHz (+/- 2.5 kHz around its centre), every whistle stays within 2.5-14.5 kHz whatever symbol it carries.
 - Timing and pitch do not depend on the symbols. The receiver re-creates both from the key and the nonce, so it knows when each whistle comes and roughly at what pitch. This works like frequency hopping and lets it ignore real animals whistling at other times or pitches.
+- As built (`wcode/schedule.py`): the 15 preamble and header slots come from the key alone, and the payload slots from the key and nonce, starting one drawn interval after the last header slot. Each pitch is an index into the sorted pool of centre frequencies, so sender and receiver must share that pool.
 
 ### 4.4 Making one whistle
 
-For symbol s in slot i:
+For each slot i, with the type of its symbol (the signature whistle in the preamble):
 
 1. Sample a latent from the type's GMM component: z = mu_s + tau * L_s * eps, where L_s is the Cholesky factor of the component covariance and eps comes from the variation stream. `[DECISION]` tau = 0.5 to start; the final value is chosen by measurement (E5). This variation is only meaningful because every codebook component holds at least 32 whistles (section 5), so its covariance has at least 31 directions of real variation rather than the ridge alone. With tau > 0, repeated symbols never sound identical.
 2. Decode z with the VAE decoder to a 128 x 128 image, then take its contour with `sonify.image_contour` (threshold 0.05).
@@ -158,8 +159,10 @@ For symbol s in slot i:
    - `[DECISION]` a 2nd harmonic at -12 dB.
 
    `[DECISION]` The sample rate is 96 kHz and the output is a float32 WAV.
-4. **Self-check:** the transmitter classifies the whistle's own contour (from step 2, without running the detector) with classifier A. If the contour is ambiguous or classified wrongly, it draws a new eps, up to 20 times, and otherwise falls back to the type's mean (tau = 0).
-5. Place the whistle at its slot start time t_i.
+4. **Self-check:** the transmitter classifies the whistle's own contour (from step 2, without running the detector) with classifier A, among all 17 types. `[DECISION]` The shape must also stay within the codebook's duration, span and gap limits. If it fails, the transmitter draws a new eps, up to 20 times, and otherwise falls back to the type's mean (tau = 0).
+5. Place the whistle at its slot start time t_i. `[DECISION]` The WAV has 0.5 s of silence before the first whistle and after the last, and its peak is -3 dBFS; the channel sets the SNR afterwards.
+
+All the variation, including the envelope, comes from the message's variation stream, so the same message, key and nonce always give the same audio.
 
 ### 4.5 Worked example
 
@@ -393,7 +396,7 @@ whistlecode/
 | Command | Does |
 |---|---|
 | `build-codebook` | Section 5 |
-| `send "TEXT" --key K --out msg.wav` | Message -> WAV |
+| `send "TEXT" --key K --out msg.wav [--nonce N] [--tau T] [--manifest] [--force]` | Message -> WAV. `--manifest` adds a .json of the slots, without the key or the text |
 | `channel msg.wav --noise 276 --snr 10 [--range 1 --doppler 1.5] --out rx.wav` | Sends the WAV through the simulated channel |
 | `receive rx.wav --key K` | WAV -> message and report |
 | `evaluate E2` (etc.) | Runs one experiment |
@@ -464,8 +467,9 @@ All `[DECISION]` unless stated.
 | Variation tau | 0.5 (set by E5) | 4.4 |
 | Envelope taper | Tukey 0.15-0.3 | 4.4 |
 | Harmonic | 2nd at -12 dB | 4.4 |
-| Self-check | classifier A on the contour, 20 redraws, then tau = 0 | 4.4 |
+| Self-check | classifier A on the contour among all 17 types, plus the codebook's duration, span and gap limits; 20 redraws, then tau = 0 | 4.4 |
 | Sample rate | 96 kHz, float32 WAV | 4.4 |
+| WAV padding and level | 0.5 s before and after; peak -3 dBFS | 4.4 |
 | Codebook eligibility | N_k >= 32 | 5 |
 | Codebook duration | 100-450 ms | 5 |
 | Codebook span | 300 Hz - 5 kHz | 5 |
@@ -520,3 +524,6 @@ All `[DECISION]` unless stated.
   - Confusion pass and verification at 10 dB instead of 5 dB (the detector misses almost every whistle at 0-5 dB); candidates detected < 80 % are dropped.
   - Classifier A measures a track from its slot's known centre frequency, uses an asymmetric duration term, and erases above a distance ratio of 0.85.
   - P1 needed parts of later phases, built now: whistle synthesis (P2), real noise and narrowband SNR (P3), the detector wrapper and slot matching (P4), classifier A (P4).
+- **2026-11-18, P2 built:**
+  - `wcode/schedule.py`, `wcode/transmitter.py` and the `send` command. The self-check also enforces the codebook's duration, span and gap limits.
+  - First measurement on the development model: 8 messages of 12 bytes per setting in encounter-214 noise, read at the known slots (no synchronisation yet). At tau = 0.5, 7 of 8 messages decoded at each of 10, 15 and 20 dB. tau = 0.25 looked similar and tau = 1 was worse at 10 dB (4 of 8). The sample is small; E5 sets the final tau.

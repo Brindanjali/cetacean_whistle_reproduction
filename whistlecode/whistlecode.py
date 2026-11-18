@@ -1,5 +1,11 @@
 """WhistleCode command line (PLAN.md section 10). Run from anywhere; nothing needs installing beyond requirements.txt.
 
+P2 command (the transmitter):
+
+    python whistlecode/whistlecode.py send "MEET AT DAWN" --key reef42 --out msg.wav [--nonce 7] [--tau 0.5] [--manifest] [--force]
+        turn a message into a 96 kHz float32 WAV of whistles. --manifest also writes msg.json (slot times, pitches
+        and types; never the key or the text). An existing file is kept unless --force is given
+
 P1 commands (the whistle alphabet):
 
     python whistlecode/whistlecode.py build-codebook [--quick]
@@ -134,6 +140,25 @@ def cmd_show_codebook(args) -> int:
     return 0
 
 
+def cmd_send(args) -> int:
+    from wcode import transmitter
+
+    out = Path(args.out)
+    if out.suffix.lower() != ".wav":
+        raise ValueError(f"the output must be a .wav file, got {out.name}")
+    if out.exists() and not args.force:
+        raise ValueError(f"{out} already exists; use another name or --force")
+    tx = transmitter.Transmitter(default_config()).send(args.message, args.key, args.nonce, args.tau)
+    path = transmitter.write_wav(out, tx, manifest=args.manifest, overwrite=args.force)
+    c = framing.frame_counts(tx.frame.length)
+    print(f"message  : {tx.frame.length} bytes, nonce {tx.frame.nonce}")
+    print(f"whistles : {c['preamble']} preamble + {c['header']} header + {c['payload']} payload = {c['total']}")
+    print(f"shapes   : tau = {tx.tau:g}; {tx.n_redrawn} redrawn by the self-check, {tx.n_fell_back} fell back to the type's mean")
+    print(f"audio    : {tx.duration_s:.1f} s at {tx.fs} Hz")
+    print(f"written  : {path}" + (f" and {path.with_suffix('.json').name}" if args.manifest else ""))
+    return 0
+
+
 def main(argv=None) -> int:
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(errors="replace")       # Windows consoles cannot print every character
@@ -144,6 +169,15 @@ def main(argv=None) -> int:
         s = sub.add_parser(name, help=hlp)
         s.add_argument("--quick", action="store_true", help="the quick check build in outputs/codebook_quick")
         s.set_defaults(fn=fn)
+    s = sub.add_parser("send", help="turn a message into a WAV of whistles")
+    s.add_argument("message", help="text to send")
+    s.add_argument("--key", required=True, help="shared key")
+    s.add_argument("--out", required=True, help="output .wav file")
+    s.add_argument("--nonce", type=int, default=None, help="0-255; random when left out")
+    s.add_argument("--tau", type=float, default=None, help="latent variation; default from config.toml, 0 = the mean shapes")
+    s.add_argument("--manifest", action="store_true", help="also write a .json of the slots (no key, no text)")
+    s.add_argument("--force", action="store_true", help="replace an existing output file")
+    s.set_defaults(fn=cmd_send)
     for name, fn, hlp in (("frame", cmd_frame, "show how a message is framed into whistle symbols"),
                           ("roundtrip", cmd_roundtrip, "frame, damage whistles, decode")):
         s = sub.add_parser(name, help=hlp)

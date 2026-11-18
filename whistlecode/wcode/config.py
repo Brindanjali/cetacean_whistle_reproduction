@@ -69,6 +69,13 @@ def validate(cfg: dict, check_library: bool = True) -> None:
         need("scrambler" in names, f"keys.{part} must include 'scrambler'")
     need(isinstance(k.get("domain"), str) and k["domain"], "keys.domain must be a non-empty string")
     need(fe.get("library") == SUPPORTED["library"], "only the reedsolo library is supported")
+    tx = cfg.get("transmit", {})
+    need(float(tx.get("tau", 0.0)) >= 0.0, "transmit.tau must be >= 0")
+    need(int(tx.get("self_check_redraws", 0)) >= 0, "transmit.self_check_redraws must be >= 0")
+    need(float(tx.get("peak_dbfs", -3.0)) <= 0.0, "transmit.peak_dbfs must be <= 0")
+    if "schedule" in cfg and "codebook" in cfg:
+        need(float(cfg["schedule"]["interval_s"][0]) * 1000 > float(cfg["codebook"]["duration_ms"][1]),
+             "the shortest start-to-start interval must exceed the longest whistle, or whistles would overlap")
     if check_library:
         try:
             have = metadata.version("reedsolo")

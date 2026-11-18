@@ -41,6 +41,13 @@ interval_s = [0.55, 0.95]          # [PLAN] start-to-start interval, uniform
 start_s    = 0.5                   # [DECISION] first whistle of a test segment
 end_margin_s = 0.5                 # [DECISION] the last whistle of a test segment ends this long before the segment's end
 
+[transmit]                   # PLAN 4.4
+tau                = 0.5           # [PLAN] latent variation of each whistle; 0 = always the type's mean (final value set by E5)
+self_check_redraws = 20            # [PLAN] new latents tried after the first draw, then the type's mean is used
+lead_in_s          = 0.5           # [DECISION] silence before the first whistle of a WAV
+tail_s             = 0.5           # [DECISION] silence after the last whistle of a WAV
+peak_dbfs          = -3.0          # [DECISION] peak level of the WAV; the channel sets the SNR afterwards
+
 [model]                      # PLAN 3 (paths relative to the repository root)
 run_dir      = "models/vaegmm/V1_L64_b1e-4_critic_E191"
 checkpoint   = "final.pt"          # [PLAN] never last.pt
