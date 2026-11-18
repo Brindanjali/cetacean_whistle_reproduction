@@ -1,6 +1,6 @@
 # WhistleCode plan: hiding messages in whistles
 
-Status: plan written 2026-11-17 and revised twice the same day (section 14). P0 (keys, framing, Reed-Solomon, tests, the `frame` and `roundtrip` commands) and P1 (the codebook, with the pieces of P2-P4 it needs: whistle synthesis, noise and SNR, the detector wrapper and classifier A) were built on 2026-11-18, followed by P2 (the transmitter and the `send` command). P1 changed some plan values after measuring them; section 14 lists the changes. The code built so far uses message format v1. A shorter format v2 is planned (section 4.6, phase F) and is not built yet.
+Status: plan written 2026-11-17 and revised twice the same day (section 14). P0 (keys, framing, Reed-Solomon, tests, the `frame` and `roundtrip` commands) and P1 (the codebook, with the pieces of P2-P4 it needs: whistle synthesis, noise and SNR, the detector wrapper and classifier A) were built on 2026-11-18, followed by P2 (the transmitter and the `send` command). P1 changed some plan values after measuring them; section 14 lists the changes. The code built so far uses message format v1. Format v2 is planned (section 4.6, phase F) and is not built. Its gate test F1 ran on 2026-11-18 and failed, so the format code is on hold.
 
 This enhancement replaces WhistleFlow. The `whistleflow/` folder stays as it is but will not be implemented. WhistleFlow's no-images rule does not apply here, because this enhancement reuses the reproduction's spectrogram detector and VAE.
 
@@ -254,6 +254,27 @@ These figures assume that pitch bits, stretched shapes and cover whistles do not
 - **Pitch bits are unreliable:** format v2 drops pitch bits and GF(64) and keeps the byte code with the borrowed rhythm and the compact alphabet. "MEET AT DAWN" then needs 51 data whistles, about 70-85 s.
 - **Stretched shapes cannot be read:** data whistles keep their codebook lengths. The rhythm score then rises to about 0.66, which fails the 0.60 pass mark, and the write-up reports that failure.
 
+**Gate result, 2026-11-18: FAILED** on wrong pitch and on message success; rhythm passed. About 3,200 data whistles per SNR, on the epoch-101 codebook (`experiments/f1_gate.py`). The 20 dB column is not part of the gate.
+
+| Measure | 10 dB | 15 dB | 20 dB |
+|---|---|---|---|
+| Whistles lost / wrong, format v1 | 11.6 % / 4.1 % | 6.3 % / 2.0 % | 6.7 % / 2.6 % |
+| Whistles lost / wrong, v2 with the true pitch given | 21.6 % / 10.3 % | 17.9 % / 5.8 % | 17.4 % / 5.5 % |
+| Whistles lost / wrong, v2 choosing among four pitches | 21.4 % / 11.1 % | 17.8 % / 6.3 % | 17.3 % / 5.9 % |
+| Wrong pitch (limit 1 %) | 2.52 %, fail | 1.41 %, fail | 1.30 % |
+| Predicted success, 12 characters, v1 -> v2 | 56 % -> 35 %, fail | 94 % -> 73 %, fail | 90 % -> 77 % |
+| Predicted success, 20 characters, v1 -> v2 | 44 % -> 20 %, fail | 94 % -> 63 %, fail | 89 % -> 68 % |
+| Predicted success, 60 characters, v1 -> v2 | 35 % -> 4 %, fail | 98 % -> 45 %, fail | 96 % -> 52 % |
+| Rhythm score on quiet noise (limit 0.60) | 0.55, pass | 0.56, pass | 0.61 |
+| Rhythm score on all noise (for information) | 0.66 | 0.66 | 0.69 |
+
+What the result means:
+
+- **Pitch bits are not the main problem.** Even with the true pitch given, v2 loses almost three times as many whistles as v1 at 15 dB. The losses come from the stretched shapes, the cover whistles, or both; this test cannot separate them.
+- **The byte-code fallback is not applied.** With the measured rates it would be worse than the format tested: 34 % predicted success for 12 characters at 15 dB, against 73 %.
+- **Not yet tried:** the codebook was chosen for its original lengths, and the erasure threshold was not tuned for stretched shapes.
+- **F2 is on hold** until a further test separates the effect of stretching from the effect of the cover whistles.
+
 ## 5. The whistle alphabet (codebook)
 
 Built from the model in use (section 3.2): first on the development model, then rebuilt on the final model. K = 3,000.
@@ -478,6 +499,8 @@ whistlecode/
     receiver.py      WAV -> message, with the track cache
     baseline.py      straight-line chirp modem
     evaluate.py      experiments E1-E9 and the final run
+  experiments/
+    f1_gate.py       gate test F1 for format v2
   tests/
   outputs/           gitignored (codebook gallery, WAVs, track cache, results)
 ```
@@ -654,3 +677,6 @@ Format v2 values (section 4.6). They replace the v1 values above once phase F is
   - Format v2 now plays real whistle timing from a bank of encounters 191 and 214. Data whistles keep the real start and length, and colliding cover whistles move in pitch. Under these rules the rhythm scores 0.50.
   - "MEET AT DAWN" now takes about 41-51 s instead of the 16 s first calculated, because fewer real whistles can carry data.
   - Added the rhythm test E9 with a pass mark of 0.60, extended gate test F1, and re-estimated the evaluation at about 5-8 hours of detector time.
+- **2026-11-18, gate test F1 run: FAILED (section 4.6):**
+  - Wrong pitch was 2.52 % at 10 dB and 1.41 % at 15 dB (limit 1 %), and predicted message success fell below format v1. The rhythm passed on quiet noise (0.55 and 0.56).
+  - Most of the loss remains with the true pitch given, so it comes from stretched shapes, cover whistles, or both. F2 is on hold until they are separated.
