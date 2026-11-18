@@ -10,8 +10,8 @@ def test_plan_values(cfg):
     assert cfg["framing"]["bits_per_symbol"] == 4
     assert cfg["fec"]["header_parity"] == 4
     assert cfg["fec"]["library_version"] == "1.7.0"
-    assert cfg["keys"]["header_streams"] == ["scrambler", "timing", "pitch"]
-    assert cfg["keys"]["payload_streams"] == ["scrambler", "timing", "pitch", "variation"]
+    assert cfg["keys"]["header_streams"] == ["scrambler", "timing", "pitch", "position"]
+    assert cfg["keys"]["payload_streams"] == ["scrambler", "timing", "pitch", "variation", "position"]
 
 
 @pytest.mark.parametrize("k, nsym", [(3, 8), (4, 8), (16, 8), (17, 9), (22, 11), (142, 71)])

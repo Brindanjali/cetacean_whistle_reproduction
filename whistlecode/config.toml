@@ -12,8 +12,9 @@ schema_version = 1
 [keys]                       # PLAN 4.1
 domain        = "whistlecode/v1"   # [DECISION] prefix hashed into every seed and mask, so other uses of a key never collide
 nonce_bytes   = 1                  # [PLAN] one random byte per message, carried in the header
-header_streams  = ["scrambler", "timing", "pitch"]                 # [PLAN] seeded from the key only
-payload_streams = ["scrambler", "timing", "pitch", "variation"]    # [PLAN] seeded from the key and the nonce
+header_streams  = ["scrambler", "timing", "pitch", "position"]                 # [PLAN] seeded from the key only
+payload_streams = ["scrambler", "timing", "pitch", "variation", "position"]    # [PLAN] seeded from the key and the nonce
+                                   # "position" (format v2) picks where in the rhythm bank a message sits
 # [DECISION] byte masks (scrambler) come from SHA-256 in counter mode, so they never depend on the NumPy version;
 #            continuous draws (timing, pitch, variation) come from NumPy PCG64 generators seeded by SHA-256.
 
@@ -27,6 +28,18 @@ bits_per_symbol    = 4             # [PLAN] M = 16 whistle types; E4 may change 
 symbol_order       = "high_nibble_first"    # [PLAN]
 n_preamble         = 3             # [PLAN] signature whistles before the header
 header_data_bytes  = 2             # [PLAN] payload length + nonce
+
+[format2]                    # PLAN 4.6, message format v2
+alphabet             = "ABCDEFGHIJKLMNOPQRSTUVWXYZ .,?!-"   # [PLAN] 5 bits per character; any other text is sent as raw UTF-8
+min_length           = 1           # [DECISION] characters (compact) or bytes (raw)
+max_length           = 140         # [PLAN]
+header_data_symbols  = 3           # [PLAN] mode, spare, length, nonce = 18 bits
+header_parity        = 4           # [PLAN] RS(7, 3) over GF(64): fixes 2 wrong or 4 lost whistles
+payload_parity_min   = 8           # [PLAN] parity = max(8, ceil(data symbols / 2)) per block
+payload_parity_ratio = 0.5         # [PLAN]
+max_block_symbols    = 63          # [PLAN] GF(64): at most 63 symbols per code block
+soft_spare_parity    = 2           # [DECISION] retries that mark doubtful whistles as lost leave this many parity symbols unused
+soft_max_combinations = 16         # [DECISION] most block repairs checked against the CRC, which keeps false messages rare
 
 [fec]                        # PLAN 4.2
 library              = "reedsolo"  # [PLAN] approved and installed 2026-11-18
@@ -47,6 +60,39 @@ self_check_redraws = 20            # [PLAN] new latents tried after the first dr
 lead_in_s          = 0.5           # [DECISION] silence before the first whistle of a WAV
 tail_s             = 0.5           # [DECISION] silence after the last whistle of a WAV
 peak_dbfs          = -3.0          # [DECISION] peak level of the WAV; the channel sets the SNR afterwards
+
+[bank]                       # PLAN 4.6, the rhythm bank of real whistle times, lengths, pitches and contours
+encounters         = [191, 214]    # [PLAN] encounter 276 stays out as the unseen real reference
+window_s           = 44.0          # [PLAN] a stretch counts as active with at least min_whistles in this window
+min_whistles       = 10            # [PLAN]
+min_silence_s      = 1.0           # [PLAN] messages start and stop only at a real silence this long
+data_length_s      = [0.10, 0.45]  # [PLAN] a real whistle of this length can carry data
+slot_early_s       = 0.06          # [PLAN] no other whistle may start this long before a data whistle ...
+slot_late_s        = 0.15          # [PLAN] ... or this long after it
+min_data_spacing_s = 0.35          # [PLAN] data whistles start at least max(this, real length + data_after_s) apart
+data_after_s       = 0.10          # [PLAN]
+max_join_gap_s     = 3.0           # [DECISION] longest silence left where two stretches of the bank are joined
+out_dir            = "whistlecode/outputs/bank"   # relative to the repository root
+sha256             = "27ca3ddeadd21abbcd8fbcdf88ac3623183608b470b22d0bc66153de1a0f717f"   # [PLAN] sender and receiver must hold this exact bank
+
+[sender]                     # PLAN 4.6, format v2 transmitter
+data_amplitude          = 0.05     # [DECISION] fundamental of a data whistle in the WAV, so the channel can set the SNR from the WAV alone
+cover_extra_db          = [0.0, 10.0]   # [DECISION] cover whistles are as loud as the data whistles, or up to 10 dB louder (as in gate F1)
+collision_hz            = 1000.0   # [PLAN] a cover whistle this close in pitch to a data whistle moves
+follow_s                = 0.10     # [PLAN] ... also when it starts this soon after that data whistle ends
+cover_move_clearance_hz = 1500.0   # [DECISION] a moved cover whistle keeps this far from the data whistles it overlaps
+cover_pitch_range_hz    = [3000.0, 17000.0]   # [DECISION] where moved cover whistles may go
+cover_move_tries        = 30       # [DECISION]
+
+[receiver]                   # PLAN 7, format v2 receiver
+pitch_window_hz     = 500.0        # [PLAN] a track further than this from every candidate pitch is not a match
+sync_bin_s          = 0.02         # [DECISION] resolution of the search for the frame's start
+sync_tolerance_s    = 0.06         # [DECISION] a track this close to a known whistle time counts as matching it
+sync_preamble_weight = 3.0         # [DECISION] the three signature whistles count more than cover whistles
+sync_candidates     = 8            # [DECISION] frame starts tried, best first, until the CRC passes
+track_choice        = "best_shape" # [DECISION] when several tracks fit a slot, read the one closest to a codebook shape ("nearest" = closest in time)
+soft_repair         = true         # [DECISION] retry failed repairs with the most doubtful whistles marked as lost
+max_header_readings = 3            # [DECISION] valid header readings tried per frame start
 
 [model]                      # PLAN 3 (paths relative to the repository root)
 run_dir      = "models/vaegmm/V1_L64_b1e-4_critic_E191"
@@ -73,6 +119,9 @@ noise_channel   = 0                # [PLAN] hydrophone channel of the noise reco
 noise_cache_dir = "whistlecode/outputs/cache/noise"   # [DECISION] resampled, high-passed noise as float32 .npy (relative to the repo root)
 snr_bin_hz      = 93.75            # [PLAN] narrowband SNR per S4 bin
 max_snr_db      = 40.0             # [DECISION] cap: the detector missed a whistle about 67 dB above the noise (readiness probe)
+noise_encounter = 214              # [PLAN] tuning noise; encounter 276 is kept for the final test, and 191 is never noise
+pad_s           = 2.0              # [DECISION] noise added around the message; the message starts at a random time inside it
+level_window_s  = 60.0             # [DECISION] noise used to measure the level the SNR refers to
 
 [detect]                     # PLAN 7 steps 1 and 4
 slot_early_ms   = 60.0             # [PLAN] a track may start this much before the expected time

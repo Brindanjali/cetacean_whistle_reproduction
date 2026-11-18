@@ -1,10 +1,16 @@
 """WhistleCode command line (PLAN.md section 10). Run from anywhere; nothing needs installing beyond requirements.txt.
 
-P2 command (the transmitter):
+The message pipeline (format v2):
 
     python whistlecode/whistlecode.py send "MEET AT DAWN" --key reef42 --out msg.wav [--nonce 7] [--tau 0.5] [--manifest] [--force]
-        turn a message into a 96 kHz float32 WAV of whistles. --manifest also writes msg.json (slot times, pitches
-        and types; never the key or the text). An existing file is kept unless --force is given
+        hide a message in a 96 kHz float32 WAV of whistles. --manifest also writes msg.json (slot times, pitches and
+        symbols; never the key or the text). An existing file is kept unless --force is given
+
+    python whistlecode/whistlecode.py channel msg.wav --snr 15 --out heard.wav [--encounter 214] [--seed 0] [--force]
+        play the WAV into real ocean noise at a set SNR
+
+    python whistlecode/whistlecode.py receive heard.wav --key reef42
+        find the message in a recording and print it; exit code 1 if no message passes its CRC
 
 P1 commands (the whistle alphabet):
 
@@ -15,7 +21,7 @@ P1 commands (the whistle alphabet):
     python whistlecode/whistlecode.py show-codebook [--quick]
         list the codebook's types and verification results (refuses a codebook built from other model files)
 
-P0 commands (no audio):
+P0 commands (no audio, format v1):
 
     python whistlecode/whistlecode.py frame "HI" --key reef42 [--nonce 7]
         show how a message is framed: bytes, parity, whistle symbols, whistle count, rough airtime
@@ -140,22 +146,66 @@ def cmd_show_codebook(args) -> int:
     return 0
 
 
-def cmd_send(args) -> int:
-    from wcode import transmitter
-
-    out = Path(args.out)
+def _check_output(out: Path, force: bool) -> None:
     if out.suffix.lower() != ".wav":
         raise ValueError(f"the output must be a .wav file, got {out.name}")
-    if out.exists() and not args.force:
+    if out.exists() and not force:
         raise ValueError(f"{out} already exists; use another name or --force")
-    tx = transmitter.Transmitter(default_config()).send(args.message, args.key, args.nonce, args.tau)
-    path = transmitter.write_wav(out, tx, manifest=args.manifest, overwrite=args.force)
-    c = framing.frame_counts(tx.frame.length)
-    print(f"message  : {tx.frame.length} bytes, nonce {tx.frame.nonce}")
-    print(f"whistles : {c['preamble']} preamble + {c['header']} header + {c['payload']} payload = {c['total']}")
+
+
+def cmd_send(args) -> int:
+    from wcode import format2, sender
+
+    out = Path(args.out)
+    _check_output(out, args.force)
+    tx = sender.Sender(default_config()).send(args.message, args.key, args.nonce, args.tau)
+    path = sender.write_wav(out, tx, manifest=args.manifest, overwrite=args.force)
+    fr = tx.frame
+    unit = "characters, compact" if fr.mode == format2.COMPACT else "bytes, raw"
+    print(f"message  : {fr.length} {unit}, nonce {fr.nonce}")
+    print(f"whistles : 3 preamble + {len(fr.header_symbols)} header + {len(fr.payload_symbols)} payload = {len(tx.data)} data"
+          f", {tx.n_cover} cover ({tx.n_cover_moved} moved to avoid a data whistle)")
     print(f"shapes   : tau = {tx.tau:g}; {tx.n_redrawn} redrawn by the self-check, {tx.n_fell_back} fell back to the type's mean")
     print(f"audio    : {tx.duration_s:.1f} s at {tx.fs} Hz")
     print(f"written  : {path}" + (f" and {path.with_suffix('.json').name}" if args.manifest else ""))
+    return 0
+
+
+def cmd_channel(args) -> int:
+    import soundfile as sf
+
+    from wcode import channel, schedule
+
+    out = Path(args.out)
+    _check_output(out, args.force)
+    cfg = default_config()
+    x, fs = sf.read(args.input, dtype="float32", always_2d=True)
+    rx = channel.through_channel(x[:, 0], fs, args.snr, schedule.pitch_pool(cfg), args.encounter, args.seed, cfg)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    sf.write(str(out), rx.audio, rx.fs, subtype="FLOAT", format="WAV")
+    print(f"channel  : {rx.snr_db:g} dB SNR in encounter-{rx.encounter} noise ({len(rx.noise_files)} file(s))")
+    print(f"audio    : {len(rx.audio) / rx.fs:.1f} s; the message starts {rx.offset_s:.2f} s in")
+    print(f"written  : {out}")
+    return 0
+
+
+def cmd_receive(args) -> int:
+    from wcode import format2, receiver
+
+    r = receiver.Receiver(default_config()).receive_file(args.input, args.key)
+    print(f"tracks   : {r.n_tracks} whistles detected")
+    if r.offset_s is not None:
+        print(f"frame    : found {r.offset_s:.2f} s in ({r.sync_votes:.0f} matching whistles, attempt {r.attempts})")
+    for name, part in (("header", r.header), ("payload", r.body)):
+        if part is not None:
+            n = len(part.symbols)
+            print(f"{name:<9}: {n - part.n_missed - part.n_doubtful} of {n} whistles read, {part.n_missed} missed, {part.n_doubtful} doubtful")
+    if not r.ok:
+        print(f"result   : FAILED at {r.stage} ({r.detail})")
+        return 1
+    print(f"repairs  : {r.n_repaired_wrong} wrong and {r.n_repaired_lost} lost whistles repaired")
+    shown = r.text if r.text is not None else r.payload.hex()
+    print(f"message  : {shown!r} ({'compact' if r.mode == format2.COMPACT else 'raw'}, nonce {r.nonce})")
     return 0
 
 
@@ -178,6 +228,18 @@ def main(argv=None) -> int:
     s.add_argument("--manifest", action="store_true", help="also write a .json of the slots (no key, no text)")
     s.add_argument("--force", action="store_true", help="replace an existing output file")
     s.set_defaults(fn=cmd_send)
+    s = sub.add_parser("channel", help="play a WAV into real ocean noise at a set SNR")
+    s.add_argument("input", help="the WAV written by send")
+    s.add_argument("--snr", type=float, required=True, help="narrowband SNR of the data whistles, in dB")
+    s.add_argument("--out", required=True, help="output .wav file")
+    s.add_argument("--encounter", type=int, default=None, help="noise recording; default from config.toml (214)")
+    s.add_argument("--seed", type=int, default=0, help="chooses the noise and where the message starts")
+    s.add_argument("--force", action="store_true", help="replace an existing output file")
+    s.set_defaults(fn=cmd_channel)
+    s = sub.add_parser("receive", help="find and read the message in a recording")
+    s.add_argument("input", help="the recording (.wav)")
+    s.add_argument("--key", required=True, help="shared key")
+    s.set_defaults(fn=cmd_receive)
     for name, fn, hlp in (("frame", cmd_frame, "show how a message is framed into whistle symbols"),
                           ("roundtrip", cmd_roundtrip, "frame, damage whistles, decode")):
         s = sub.add_parser(name, help=hlp)

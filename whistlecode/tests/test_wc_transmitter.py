@@ -197,7 +197,7 @@ def test_send_command(tx_real, tmp_path, capsys):
     out = tmp_path / "msg.wav"
     args = ["send", "HI", "--key", "reef42", "--nonce", "7", "--tau", "0", "--out", str(out), "--manifest"]
     assert cli.main(args) == 0
-    assert "3 preamble + 12 header + 24 payload = 39" in capsys.readouterr().out
+    assert "3 preamble + 7 header + 13 payload = 23 data" in capsys.readouterr().out
     assert out.exists() and out.with_suffix(".json").exists()
     before = out.read_bytes()
     assert cli.main(args) == 2                                           # refuses to overwrite

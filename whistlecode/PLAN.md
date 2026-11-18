@@ -1,6 +1,6 @@
 # WhistleCode plan: hiding messages in whistles
 
-Status: plan written 2026-11-17 and revised twice the same day (section 14). P0 (keys, framing, Reed-Solomon, tests, the `frame` and `roundtrip` commands) and P1 (the codebook, with the pieces of P2-P4 it needs: whistle synthesis, noise and SNR, the detector wrapper and classifier A) were built on 2026-11-18, followed by P2 (the transmitter and the `send` command). P1 changed some plan values after measuring them; section 14 lists the changes. The code built so far uses message format v1. The idea was finalised on 2026-11-18 (next section). Format v2 is not built, and building it waits for the owner's decision.
+Status: plan written 2026-11-17 and revised twice the same day (section 14). P0 (keys, framing, Reed-Solomon, tests, the `frame` and `roundtrip` commands) and P1 (the codebook, with the pieces of P2-P4 it needs: whistle synthesis, noise and SNR, the detector wrapper and classifier A) were built on 2026-11-18, followed by P2 (the transmitter and the `send` command). P1 changed some plan values after measuring them; section 14 lists the changes. The idea was finalised on 2026-11-18 (next section), and the complete format v2 pipeline was built the same day: `send`, `channel` and `receive` now use format v2. The `frame` and `roundtrip` commands still show format v1.
 
 This enhancement replaces WhistleFlow. The `whistleflow/` folder stays as it is but will not be implemented. WhistleFlow's no-images rule does not apply here, because this enhancement reuses the reproduction's spectrogram detector and VAE.
 
@@ -36,7 +36,7 @@ RECEIVE  WAV -> whistlepipe detector and tracker -> find the 3-whistle start sig
 | Key | The shared key and a per-message nonce choose the bank position, pitches and scrambling |
 | Decoder | Classifier A: compares each detected whistle with the 16 shapes |
 
-Measured in the final gate run: about 3,200 data whistles per SNR in real encounter-214 noise, on the epoch-101 model. Message success is predicted from the measured whistle error rates; no complete message has been decoded in this format yet.
+Measured in the final gate run: about 3,200 data whistles per SNR in real encounter-214 noise, on the epoch-101 model. Message success in this table is predicted from the measured whistle error rates. Complete messages were decoded later; see "Pipeline results" below.
 
 | Measure | 10 dB | 15 dB | 20 dB (outside the gate) |
 |---|---|---|---|
@@ -64,6 +64,28 @@ Measured in the final gate run: about 3,200 data whistles per SNR in real encoun
 4. **End-to-end run:** text in, audio file, text out; then fix what it gets wrong.
 
 **Left until the pipeline works:** multipath, absorption and Doppler; classifier B; the chirp baseline modem; the full evaluation sweeps; the epoch-150 model swap.
+
+### Pipeline results (2026-11-18)
+
+All four build steps are done. Each trial sent one message with its own key through real encounter-214 noise, and the receiver knew only the key (`experiments/e2e_run.py`, results in `outputs/e2e_final/`). There were 10 messages per cell, on the epoch-101 model.
+
+| Exact messages | 12 characters | 20 characters | 60 characters | All | Whistles lost / wrong |
+|---|---|---|---|---|---|
+| 10 dB | 8/10 | 7/10 | 6/10 | 21/30 | 18.6 % / 5.3 % |
+| 15 dB | 10/10 | 10/10 | 9/10 | 29/30 | 8.4 % / 4.1 % |
+| 20 dB | 7/10 | 10/10 | 10/10 | 27/30 | 7.9 % / 4.0 % |
+
+- **Overall:** 77 of 90 messages came back exact. The frame was found in all 90 recordings.
+- **False messages:** no wrong text was accepted, and none of the 10 recordings without a message reported one. A separate check on the same recordings found no false message in 300 tries on empty recordings and 270 tries with a wrong key.
+- **Two receiver fixes after the first run (73 of 90):** when several tracks fit a slot, the receiver reads the one closest to a codebook shape, and when a repair fails it retries with the most doubtful whistles marked as lost. They were chosen on these same recordings, so 77 of 90 is slightly optimistic, and a gain of 4 messages is within chance at this sample size.
+- **Where the errors come from:** they are spread evenly over the 16 shapes, and the slot time and pitch windows are not too tight. Most missed whistles have no detector track near their slot.
+
+Known gaps:
+
+- **Messages take longer than planned.** The median recording for 12 characters is 66-88 s, against the 41-51 s estimated in section 4.6. Sparse bank stretches and the joins between stretches add the time.
+- **20 dB is not better than 15 dB** for whistle errors. About 4 % of whistles stay wrong even in light noise.
+- **The SNR differs slightly from the gate test.** The channel plays the whole message at one gain, as a real source would, so individual whistles sit above or below the target where the noise spectrum is uneven.
+- **Not tested yet:** multipath, absorption, Doppler, encounter-276 noise and the epoch-150 model.
 
 ## 1. The idea
 
@@ -228,7 +250,7 @@ All the variation, including the envelope, comes from the message's variation st
 
 A 20-character sentence: k = 22, nsym = 11, so 33 bytes = 66 whistles, plus 15, giving 81 whistles, about a minute. That is about 2.5-3 bits per second of payload, normal for covert communication that imitates animals. Section 4.6 is the faster format.
 
-### 4.6 Compact format v2 (planned in phase F, not built)
+### 4.6 Compact format v2 (built 2026-11-18)
 
 "MEET AT DAWN" takes 59 whistles and about 44 s in format v1. Only 24 of those whistles carry the text; the other 35 are parity (16), CRC (4), header (12) and preamble (3). Format v2 makes four changes.
 

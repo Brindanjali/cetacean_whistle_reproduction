@@ -57,3 +57,16 @@ def whistle(contour: Contour, fc_hz: float, rng: np.random.Generator, cfg: dict 
     phase = 2 * np.pi * np.cumsum(f) / fs
     x = np.cos(phase) + 10 ** (float(s["harmonic2_db"]) / 20) * np.cos(2 * phase)
     return x * envelope(rng, len(x), fs, s["taper"], s["ripple_depth"], s["ripple_rate_hz"])
+
+
+def cover_whistle(contour: Contour, fc_hz: float, rng: np.random.Generator, cfg: dict | None = None,
+                  fs: float | None = None) -> np.ndarray:
+    """A cover whistle: as whistle(), without the harmonic when a high real whistle's harmonic would not fit."""
+    s = (cfg or default_config())["synth"]
+    fs = float(fs or s["fs_hz"])
+    f = instantaneous_hz(contour, fc_hz, fs)
+    phase = 2 * np.pi * np.cumsum(f) / fs
+    x = np.cos(phase)
+    if f.max() * 2 < 0.98 * fs / 2:
+        x = x + 10 ** (float(s["harmonic2_db"]) / 20) * np.cos(2 * phase)
+    return x * envelope(rng, len(x), fs, s["taper"], s["ripple_depth"], s["ripple_rate_hz"])

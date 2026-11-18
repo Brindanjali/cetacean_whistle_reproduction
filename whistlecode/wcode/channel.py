@@ -1,17 +1,22 @@
 """The channel (PLAN.md section 6).
 
-Built so far (P1 needs it for the confusion pass): real ocean noise from the encounter recordings and narrowband SNR.
-P3 adds multipath, absorption and Doppler, which act on the signal before the noise is added.
+Built so far: real ocean noise from the encounter recordings and narrowband SNR. Multipath, absorption and Doppler come
+later and act on the signal before the noise is added.
 
 Noise: channel 0 of a raw 500 kHz file, resampled to the synthesis rate and high-passed at 2 kHz with the
 reproduction's own filter. The result is cached as float32 .npy (gitignored), so each file is decoded once.
 
 Narrowband SNR, as in the synthetic generator: a whistle's level in its own 93.75 Hz bin (at its mean frequency)
 is the target SNR above the median noise level in that bin.
+
+through_channel() plays a whole message into the noise with one gain, as a real source would. [DECISION] Its SNR is the
+median over the pitches a data whistle can have, so individual whistles sit a little above or below the target wherever the
+noise spectrum is uneven.
 """
 from __future__ import annotations
 
 import os
+from dataclasses import dataclass
 from pathlib import Path
 
 import numpy as np
@@ -83,3 +88,52 @@ def amplitude_for_snr(snr_db: float, f_mean_hz: float, levels: np.ndarray, fs: f
     snr = min(float(snr_db), float(c["max_snr_db"]))
     k = int(np.clip(round(f_mean_hz / bin_hz), 0, len(levels) - 1))
     return 10 ** (snr / 20) * float(levels[k]) / (_window(fs, bin_hz).sum() / 2)
+
+
+@dataclass(frozen=True)
+class Received:
+    audio: np.ndarray           # float32, the message inside real noise
+    fs: int
+    snr_db: float
+    gain: float                 # applied to the transmitted WAV
+    offset_s: float             # where the WAV starts in the recording
+    encounter: int
+    noise_files: list
+
+
+def noise_stretch(encounter: int, n: int, rng: np.random.Generator, cfg: dict | None = None, pcfg=None) -> tuple[np.ndarray, list]:
+    """n samples of consecutive noise from a random place in an encounter."""
+    cfg = cfg or default_config()
+    files = noise_files(encounter)
+    i = int(rng.integers(len(files)))
+    parts, used, total = [], [], 0
+    while total < n:
+        path = files[i % len(files)]
+        i += 1
+        parts.append(load_noise(path, cfg, pcfg))
+        used.append(path.name)
+        total += len(parts[-1])
+    x = np.concatenate(parts)
+    s0 = int(rng.integers(0, len(x) - n + 1))
+    return x[s0:s0 + n].astype(np.float64), used
+
+
+def through_channel(audio: np.ndarray, fs: int, snr_db: float, pitches_hz: np.ndarray, encounter: int | None = None, seed: int = 0,
+                    cfg: dict | None = None, pcfg=None) -> Received:
+    """Play a format v2 WAV into real noise. pitches_hz: the pitches the SNR refers to (the sender's pitch pool)."""
+    cfg = cfg or default_config()
+    c = cfg["channel"]
+    encounter = int(c["noise_encounter"] if encounter is None else encounter)
+    if encounter == int(cfg["synth"]["fc_source_encounter"]):
+        raise ValueError(f"encounter {encounter} trained the VAE, so it is never used as noise")
+    if int(fs) != int(cfg["synth"]["fs_hz"]):
+        raise ValueError(f"the channel works at {cfg['synth']['fs_hz']} Hz, got {fs} Hz")
+    rng = np.random.default_rng(int(seed))
+    pad = int(round(float(c["pad_s"]) * fs))
+    x, used = noise_stretch(encounter, len(audio) + 2 * pad, rng, cfg, pcfg)
+    levels = bin_levels(x[:int(float(c["level_window_s"]) * fs)], fs, float(c["snr_bin_hz"]))
+    want = np.median([amplitude_for_snr(snr_db, float(f), levels, fs, cfg) for f in np.quantile(pitches_hz, np.linspace(0.02, 0.98, 25))])
+    gain = float(want) / float(cfg["sender"]["data_amplitude"])
+    s0 = int(rng.integers(0, 2 * pad + 1))
+    x[s0:s0 + len(audio)] += gain * np.asarray(audio, dtype=np.float64)
+    return Received(x.astype(np.float32), int(fs), float(snr_db), gain, s0 / fs, encounter, used)
