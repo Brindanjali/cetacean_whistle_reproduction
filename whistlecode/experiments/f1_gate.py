@@ -10,9 +10,12 @@ Adopted only if all of these hold at 10 and 15 dB:
   b. predicted v2 message success for 12, 20 and 60 characters is at least that of v1;
   c. the rhythm of the detected tracks scores at most 0.60 against real whistles.
 
-    python whistlecode/experiments/f1_gate.py [--quick]
+    python whistlecode/experiments/f1_gate.py [--quick] [--own-length]
 
-Results: whistlecode/outputs/f1_gate/results.json (gitignored).
+--own-length runs the same test with the limits unchanged, but data whistles keep their own lengths instead of being stretched
+to the real whistles' lengths, and are read with classifier A's length clue.
+
+Results: whistlecode/outputs/f1_gate/results.json, or f1_gate_own_length/ (gitignored).
 """
 from __future__ import annotations
 
@@ -301,7 +304,8 @@ def measure_v1(snr: float, sends: int, tx, shapes, noise: Noise, det, rng, cfg, 
 
 
 # ---------------------------------------------------------------------------------------------- format v2 trial
-def measure_v2(snr: float, sends: int, banks: dict, tx, shapes, noise: Noise, det, rng, cfg, log) -> tuple[dict, list[dict]]:
+def measure_v2(snr: float, sends: int, banks: dict, tx, shapes, noise: Noise, det, rng, cfg, log,
+               own_length: bool = False) -> tuple[dict, list[dict]]:
     fs = float(cfg["synth"]["fs_hz"])
     templates = [t.contour for t in tx.cb.types]
     lead = float(S["stretch_start_s"])
@@ -337,11 +341,11 @@ def measure_v2(snr: float, sends: int, banks: dict, tx, shapes, noise: Noise, de
             band = int(rng.integers(4))
             n = frames_of(off[i] - on[i], b.hop)
             base = shapes[s][int(rng.integers(len(shapes[s])))]
-            c = Contour(stretch(base.offset_hz, n), b.hop)
+            c = base if own_length else Contour(stretch(base.offset_hz, n), b.hop)
             a = channel.amplitude_for_snr(snr, cand[band] + float(c.offset_hz.mean()), levels, fs, cfg)
             add(x, lead + on[i], a * synth.whistle(c, float(cand[band]), rng, cfg, fs), fs)
             info.append({"start": lead + on[i], "shape": s, "band": band, "cand": cand, "frames": n, "fc": float(cand[band]),
-                         "on": on[i], "off": off[i]})
+                         "on": on[i], "off": on[i] + c.n_frames * c.hop_s if own_length else off[i]})
         lo_p, hi_p = S["cover_pitch_range_hz"]
         for j in np.where(~is_data)[0]:
             f = b.freq[idx[j]]
@@ -393,6 +397,8 @@ def measure_v2(snr: float, sends: int, banks: dict, tx, shapes, noise: Noise, de
         hit = np.array([r[key] is not None for r in rows])
         q = [r[key] for r in rows if r[key] is not None]
         frames = np.array([r["frames"] for r in rows])[hit]
+        if own_length:
+            return hit, classify.distances([Contour(a, templates[0].hop_s) for a in q], templates, cfg)
         return hit, stretched_distances(q, frames, templates, cfg)
 
     hit_a, dist_a = read("qa")
@@ -422,12 +428,13 @@ def measure_v2(snr: float, sends: int, banks: dict, tx, shapes, noise: Noise, de
 # ---------------------------------------------------------------------------------------------- main
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    ap.add_argument("--quick", action="store_true", help="a small check run at 15 dB, written to outputs/f1_gate_quick")
+    ap.add_argument("--quick", action="store_true", help="a small check run at 15 dB, written to a *_quick folder")
+    ap.add_argument("--own-length", action="store_true", help="data whistles keep their own lengths instead of being stretched")
     args = ap.parse_args()
     sys.stdout.reconfigure(errors="replace")
     t_all = time.perf_counter()
     cfg = default_config()
-    out = PROJECT_ROOT / "whistlecode" / "outputs" / ("f1_gate_quick" if args.quick else "f1_gate")
+    out = PROJECT_ROOT / "whistlecode" / "outputs" / ("f1_gate" + ("_own_length" if args.own_length else "") + ("_quick" if args.quick else ""))
     out.mkdir(parents=True, exist_ok=True)
     lines = []
 
@@ -461,7 +468,7 @@ def main() -> int:
         t0 = time.perf_counter()
         log(f"\n=== {snr:g} dB ===")
         v1 = measure_v1(snr, sends, tx, shapes, noise, det, rng, cfg, log)
-        v2, c = measure_v2(snr, sends, banks, tx, shapes, noise, det, rng, cfg, log)
+        v2, c = measure_v2(snr, sends, banks, tx, shapes, noise, det, rng, cfg, log, own_length=args.own_length)
         coded += c
         results[f"{snr:g}"] = {"v1": v1, "v2": v2}
         log(f"  finished in {time.perf_counter() - t0:.0f} s")
@@ -491,7 +498,7 @@ def main() -> int:
             f"{score_all if score_all is None else round(score_all, 3)} on all noise  [{'pass' if ok_rhythm else 'FAIL'}]")
     adopted = all(verdict.values())
     log(f"\nGATE: {'PASSED' if adopted else 'FAILED'}  (pitch {verdict['pitch']}, message success {verdict['success']}, rhythm {verdict['rhythm']})")
-    summary = {"quick": args.quick, "created_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), "settings": S, "adopted": adopted,
+    summary = {"quick": args.quick, "own_length": args.own_length, "created_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), "settings": S, "adopted": adopted,
                "verdict": verdict, "codebook_sha256": tx.codebook_sha256, "results": results,
                "minutes": round((time.perf_counter() - t_all) / 60, 1)}
     (out / "results.json").write_text(json.dumps(summary, indent=1), encoding="utf-8")

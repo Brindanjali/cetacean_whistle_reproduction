@@ -1,6 +1,6 @@
 # WhistleCode plan: hiding messages in whistles
 
-Status: plan written 2026-11-17 and revised twice the same day (section 14). P0 (keys, framing, Reed-Solomon, tests, the `frame` and `roundtrip` commands) and P1 (the codebook, with the pieces of P2-P4 it needs: whistle synthesis, noise and SNR, the detector wrapper and classifier A) were built on 2026-11-18, followed by P2 (the transmitter and the `send` command). P1 changed some plan values after measuring them; section 14 lists the changes. The code built so far uses message format v1. Format v2 is planned (section 4.6, phase F) and is not built. Its gate test F1 ran on 2026-11-18 and failed, so the format code is on hold.
+Status: plan written 2026-11-17 and revised twice the same day (section 14). P0 (keys, framing, Reed-Solomon, tests, the `frame` and `roundtrip` commands) and P1 (the codebook, with the pieces of P2-P4 it needs: whistle synthesis, noise and SNR, the detector wrapper and classifier A) were built on 2026-11-18, followed by P2 (the transmitter and the `send` command). P1 changed some plan values after measuring them; section 14 lists the changes. The code built so far uses message format v1. The idea was finalised on 2026-11-18 (next section). Format v2 is not built, and building it waits for the owner's decision.
 
 This enhancement replaces WhistleFlow. The `whistleflow/` folder stays as it is but will not be implemented. WhistleFlow's no-images rule does not apply here, because this enhancement reuses the reproduction's spectrogram detector and VAE.
 
@@ -10,6 +10,60 @@ How to read this document:
 - Thresholds in section 8.6 are frozen before the final test runs, so a result cannot move its own goalpost.
 - "The reproduction" means `src/whistlepipe`, `configs/`, `models/`, `preprocessed/` and the encounter audio folders. WhistleCode only imports from them and never edits them.
 - "Message encoder" is the transmitter and "message decoder" is the receiver. The VAE has its own encoder and decoder, which appear inside them: the VAE decoder makes the whistles, and the VAE encoder is one way to read them back.
+
+## Final idea (2026-11-18)
+
+**A text message is hidden in a stretch of real-sounding false killer whale whistling. Some whistles carry the message, the rest are cover, and a receiver holding the shared key turns the audio back into the exact text.** Where this section differs from older text below, this section wins.
+
+```
+SEND     text -> compact bits + CRC-16 -> scramble with the key -> Reed-Solomon over 6-bit symbols
+              -> each symbol = one whistle: 16 shapes (4 bits) x 4 pitches (2 bits)
+              -> placed at real whistle times from the rhythm bank, among cover whistles -> WAV
+
+CHANNEL  WAV + real ocean noise at a set SNR
+
+RECEIVE  WAV -> whistlepipe detector and tracker -> find the 3-whistle start signal -> read the header
+              -> read each data slot's pitch and shape -> Reed-Solomon repair -> unscramble -> CRC check -> text
+```
+
+| Part | Final decision |
+|---|---|
+| Text | 5 bits per character for A-Z, space and `. , ? ! -`; raw UTF-8 for anything else |
+| Error correction | CRC-16, then Reed-Solomon over GF(64), so one whistle is one code symbol |
+| Whistle alphabet | The current 16 shapes from the VAE-GMM, **at their own lengths**, plus 1 signature whistle. Shapes are not stretched |
+| Pitch | Four key-chosen candidates per slot, following the real pitch distribution |
+| Timing | Real whistle times from a bank of encounters 191 and 214; about 1 played whistle in 4 carries data |
+| Key | The shared key and a per-message nonce choose the bank position, pitches and scrambling |
+| Decoder | Classifier A: compares each detected whistle with the 16 shapes |
+
+Measured in the final gate run: about 3,200 data whistles per SNR in real encounter-214 noise, on the epoch-101 model. Message success is predicted from the measured whistle error rates; no complete message has been decoded in this format yet.
+
+| Measure | 10 dB | 15 dB | 20 dB (outside the gate) |
+|---|---|---|---|
+| Whistles lost / wrong | 15.1 % / 4.5 % | 8.8 % / 3.8 % | 9.4 % / 3.0 % |
+| Predicted success, 12 characters (v1 -> final) | 56 % -> 88 % | 92 % -> 97 % | 91 % -> 98 % |
+| Predicted success, 20 characters (v1 -> final) | 44 % -> 84 % | 91 % -> 96 % | 90 % -> 98 % |
+| Predicted success, 60 characters (v1 -> final) | 35 % -> 79 % | 97 % -> 96 % | 96 % -> 98 % |
+| Rhythm detection score on quiet noise (limit 0.60; v1 scores 1.00) | 0.56 | 0.55 | 0.62 |
+| Wrong pitch (limit 1 %) | 2.13 % | 1.53 % | 1.19 % |
+
+"MEET AT DAWN" needs 31 data whistles, about 41-51 s.
+
+**By its own rules the gate still FAILED, and this is recorded as measured.** These gaps stay open, to be corrected once the pipeline runs:
+
+- Wrong pitch is above the 1 % limit at 10 and 15 dB.
+- At 15 dB a 60-character message is predicted slightly below format v1 (96.2 % against 97.0 %).
+- With many real whistles already in the noise, the rhythm score is 0.66-0.67, above the 0.60 limit.
+- Whistle shape realism, loudness patterns and a hydrophone array locating one source are not covered by these results.
+
+**Build order: the complete pipeline first, then correct the mistakes it makes.**
+
+1. **Format v2:** compact alphabet, GF(64) code, frame, rhythm bank, slot schedule, transmitter.
+2. **Channel:** real noise at a set SNR, and the `channel` command.
+3. **Receiver:** start-signal search, header, slot reading, repair, and the `receive` command.
+4. **End-to-end run:** text in, audio file, text out; then fix what it gets wrong.
+
+**Left until the pipeline works:** multipath, absorption and Doppler; classifier B; the chirp baseline modem; the full evaluation sweeps; the epoch-150 model swap.
 
 ## 1. The idea
 
@@ -194,7 +248,7 @@ A 20-character sentence: k = 22, nsym = 11, so 33 bytes = 66 whistles, plus 15, 
 - **Where a message sits in the bank:** the key alone picks the stretch for the preamble and header. The key and nonce pick the stretch for the payload, which joins the first one at a real silence of at least 1 s.
 - **Every whistle of the stretch is played** at its real time and length. Cover whistles are re-synthesised from their real contours (`preprocessed/encounter_*/contours.npz`).
 - **A real whistle can carry data** if it lasts 100-450 ms, no other whistle starts from 60 ms before it to 150 ms after it, and the previous data whistle started at least max(0.35 s, its length + 0.1 s) earlier. About 26 % of the played whistles carry data.
-- **A data whistle keeps the real whistle's start and length.** Its codebook shape is stretched to that length. The receiver reads the slots and lengths from the bank, so whistle length no longer helps to tell shapes apart.
+- **A data whistle keeps the real whistle's start and its own shape's length.** The receiver reads the slot times from the bank. (Stretching each shape to the real whistle's length was tested and dropped; see the results below.)
 - **Collisions:** a cover whistle that overlaps a data whistle within 1 kHz of its pitch, or follows it within 100 ms at that pitch, moves to another pitch and keeps its time and length. About 10 % of cover whistles overlap a data whistle in this way. Dropping them instead raised the detection score to 0.71-0.78.
 
 The 0.50 is expected, because the played timing is a copy of real timing. It shows only that the rhythm is safe. Whistle shape, loudness and the fact that every whistle comes from one place are separate questions (section 8.5).
@@ -273,7 +327,28 @@ What the result means:
 - **Pitch bits are not the main problem.** Even with the true pitch given, v2 loses almost three times as many whistles as v1 at 15 dB. The losses come from the stretched shapes, the cover whistles, or both; this test cannot separate them.
 - **The byte-code fallback is not applied.** With the measured rates it would be worse than the format tested: 34 % predicted success for 12 characters at 15 dB, against 73 %.
 - **Not yet tried:** the codebook was chosen for its original lengths, and the erasure threshold was not tuned for stretched shapes.
-- **F2 is on hold** until a further test separates the effect of stretching from the effect of the cover whistles.
+- F2 was put on hold after this run. The final gate run below settled the design.
+
+**Follow-up test, 2026-11-18: stretching causes the loss, not the cover whistles.** The same 1,600 data whistles per SNR were played four ways, at real bank times, with the four-pitch format (`experiments/f1b_diagnose.py`). The repair budget is lost + 2 x wrong whistles per data whistle, with the true pitch given; lower is better.
+
+| Condition | Repair budget, 10 dB | Predicted success for 12 / 20 / 60 characters, 10 dB | Repair budget, 15 dB | Predicted success for 12 / 20 / 60 characters, 15 dB |
+|---|---|---|---|---|
+| Format v1 (reference) | 0.198 | 56 % / 44 % / 35 % | 0.103 | 94 % / 94 % / 98 % |
+| Shapes at their own length, no cover whistles | 0.181 | 94 % / 92 % / 91 % | 0.120 | 98 % / 98 % / 98 % |
+| Shapes at their own length, with cover whistles | 0.214 | 90 % / 86 % / 82 % | 0.153 | 97 % / 96 % / 96 % |
+| Stretched shapes, no cover whistles | 0.406 | 38 % / 24 % / 6 % | 0.292 | 73 % / 63 % / 46 % |
+| Stretched shapes, with cover whistles | 0.437 | 30 % / 16 % / 2 % | 0.316 | 66 % / 54 % / 33 % |
+
+- **Cover whistles cost little:** they add about 0.03 to the repair budget.
+- **Stretching more than doubles the repair budget.** Whistles stretched by almost nothing (0.75 to 1.25 times) still score 0.28 at 15 dB, against 0.12 at their own length. The likely cause is that the current 16 types are told apart partly by their length, and a stretched whistle no longer has that clue. This explanation is not yet tested.
+- **Wrong pitch stays over the 1 % limit in every condition** (1.4 % to 2.7 %), even without stretching or cover whistles. Its cost in message success is small, but the limit still stands.
+
+**Final gate run, 2026-11-18: own-length whistles.** The same test and limits as F1, with data whistles at their own lengths (`experiments/f1_gate.py --own-length`). The results are in the "Final idea" section at the top of this plan.
+
+- **Reliability recovered:** at 15 dB, predicted success for 12 characters is 97 %, against 73 % with stretched shapes.
+- **The rhythm still passes after the detector:** 0.56 at 10 dB and 0.55 at 15 dB on quiet noise. The earlier figure of about 0.66 was measured before the detector and did not hold.
+- **The gate still fails by its rules:** wrong pitch is 2.13 % at 10 dB and 1.53 % at 15 dB (limit 1 %), and a 60-character message at 15 dB is predicted at 96.2 % against 97.0 % for v1.
+- **Decision:** stretching is dropped. No further gate tests are run before the pipeline is built, and the two misses stay open as known gaps.
 
 ## 5. The whistle alphabet (codebook)
 
@@ -282,7 +357,7 @@ Built from the model in use (section 3.2): first on the development model, then 
 1. **Eligible components.** `[DECISION]` Only components holding at least 32 whistles (N_k >= 32). Smaller components have covariances stuck at the ridge, so the variation in section 4.4 would do nothing and a shape-stability check would pass trivially. The epoch-101 fit has 539 such components. (The first version required 65 whistles; on epoch 101 that left only 20 components after the shape filter, too few to choose 17 from. At 32 the covariance still has at least 31 directions of real variation.)
 2. **Filter.** Decode each eligible component's mean and 32 samples, extract the contours, and `[DECISION]` keep a component when:
    - its mean decode gives one clean contour, with no gaps longer than 3 columns;
-   - its duration is 100-450 ms (the mean decodes are short, median 128 ms, and 100 ms whistles were detected at 10 dB); in phase F the types are chosen again with their shapes stretched to real bank lengths (section 4.6);
+   - its duration is 100-450 ms (the mean decodes are short, median 128 ms, and 100 ms whistles were detected at 10 dB);
    - its frequency span is 300 Hz to 5 kHz;
    - its samples stay close to its mean (median DTW distance below the median over all eligible components).
 3. **One confusion pass.** Send every remaining candidate 50 times through the channel at 10 dB SNR on encounter-214 noise (even-index files). Classify each received whistle against all candidates with classifier A, which gives one confusion table. `[DECISION]` Candidates detected in less than 80 % of their sends are dropped. (The first version used 5 dB, where the detector found almost no whistles in the readiness probe.)
@@ -447,9 +522,9 @@ A failed mark is reported as failed, with the measured value; it is never rewrit
 | P0 | none | Folder, `config.toml`, key and nonce streams, framing (UTF-8, CRC, scrambler, header), Reed-Solomon, unit tests | Bytes -> symbols -> bytes round trip passes, including with erasures and errors up to the RS limit |
 | P1 | development | Codebook: eligibility, filter, confusion pass, selection, verification, gallery, hash pinning | `codebook.npz` + gallery |
 | P2 | development | Transmitter: schedule, preamble, header, synthesis, self-check, `send` command | A message becomes a WAV |
-| F | development | Format v2 (section 4.6). F1: the gate test for pitch bits, stretched shapes, cover whistles and rhythm. F2: rhythm bank, framing, schedule, transmitter and tests for the format the gate allows. F3: rebuild the codebook with shapes stretched to real bank lengths | Gate result recorded; message round trips pass, including damaged whistles up to the code's limit; the codebook passes verification; `send` writes a v2 WAV with the borrowed rhythm |
-| P3 | none | Channel: multipath, absorption, Doppler, noise at SNR, `channel` command | A WAV goes through any channel setting |
-| P4 | development | Receiver: detect with track cache, sync, header, slots, both classifiers, Reed-Solomon, CRC, `receive` command; E1 and the E2 smoke subset | **E1 passes: working send -> channel -> receive demo** |
+| F | development | Format v2 as finalised at the top of this plan: compact alphabet, GF(64) code, frame, rhythm bank, slot schedule, transmitter and tests. The gate runs are done, and the current codebook is kept | Message round trips pass, including damaged whistles up to the code's limit; `send` writes a v2 WAV with the borrowed rhythm |
+| P3 | none | Channel: noise at SNR and the `channel` command first; multipath, absorption and Doppler after the pipeline works | A WAV goes through the noise channel at any SNR |
+| P4 | development | Receiver: detect with track cache, sync, header, slots, classifier A, Reed-Solomon, CRC, `receive` command; E1 and the E2 smoke subset. Classifier B follows after the pipeline works | **E1 passes: working send -> channel -> receive demo** |
 | M | (reproduction) | Training resume to epoch 150 on Colab, then on the laptop re-encode, refit the GMM at K = 3,000, recompute the component features and redo the reproduction's evaluations (section 3.3) | New `final.pt` and `gmm.npz` in place; the reproduction's tables and figures redone |
 | S | final | Swap: rebuild the codebook, rerun E1 (section 3.4) | Codebook pinned to the epoch-150 files; E1 passes |
 | P5 | final | Sweeps E2-E6, tune on 214, freeze, encounter-276 runs | Reliability curves and tables |
@@ -458,8 +533,8 @@ A failed mark is reported as failed, with the measured value; it is never rewrit
 
 Order:
 
-- P0-P2 are built. F comes next, because the receiver (P4) is built around the message format.
-- P3 and P4 follow F, on the development model.
+- P0-P2 are built. F comes next, once the owner decides to build the final idea, because the receiver (P4) is built around the message format.
+- P3 and P4 follow F, on the development model. The aim is one complete working pipeline before any further tuning.
 - M can run at any time, in parallel, because it touches only the reproduction.
 - S needs both P4 and M.
 - P5-P7 come after S.
@@ -468,7 +543,7 @@ Order:
 Effort:
 
 - **P0-P4:** about 1.5 days of work.
-- **F:** about one day of work, plus about 30 minutes for the gate test and about 15 minutes for the codebook rebuild, both unattended.
+- **F:** about one day of work.
 - **M:** about 1.75 A100 hours on Colab, then under an hour on the laptop.
 - **S:** about 1-1.5 hours, mostly unattended.
 - **P5-P7:** about 1.5 days of work, plus about 5-8 hours of unattended detector time (section 8.4).
@@ -501,6 +576,7 @@ whistlecode/
     evaluate.py      experiments E1-E9 and the final run
   experiments/
     f1_gate.py       gate test F1 for format v2
+    f1b_diagnose.py  separates stretched shapes from cover whistles
   tests/
   outputs/           gitignored (codebook gallery, WAVs, track cache, results)
 ```
@@ -543,7 +619,7 @@ whistlecode/
 | Heavy runs done on the development model | The full evaluation's detector time spent twice | Development model limited to smoke tests (section 3.2) |
 | Pitch bits raise whistle errors | Format v2 protects messages less than calculated | Gate test F1 before any format code; fallback to the byte code without pitch bits (section 4.6) |
 | Cover whistles confuse the receiver or merge with a data whistle | Lost or wrong symbols | No other whistle may start inside a data slot's window; colliding cover whistles move to another pitch; gate test F1 measures the effect |
-| Stretched shapes are harder to tell apart | More wrong or erased whistles | Gate test F1; the types are chosen again with stretched shapes (F3); fallback to codebook lengths, reported as failing the rhythm pass mark |
+| Wrong pitch stays above the 1 % limit (1.53 % at 15 dB) | A few more wrong symbols | Known gap from the final gate run; the error correction absorbs it in the predicted success, and it is corrected after the pipeline works |
 | A small code (GF(64)) "repairs" to a wrong result more often | A wrong header or block | A wrong header cannot release text, and the CRC-16 over the mode, length and data rejects a wrong payload; false accepts must stay at 0 (section 8.2) |
 | Decodes are blurry (epoch-101 Table 1 PSNR 32.8 dB vs the paper's 44.5) | Some components give broken contours | Eligibility and filter (section 5); fallback to real-contour medoids |
 | Real whistles land in a slot | Wrong symbols | Key-based time and pitch windows, Reed-Solomon, erasure on ambiguity; measured separately on busy files |
@@ -618,7 +694,7 @@ Format v2 values (section 4.6). They replace the v1 values above once phase F is
 | Rhythm bank | encounters 191 and 214, 44 s stretches with at least 10 whistles; pinned by SHA-256 |
 | Bank position | key alone for the preamble and header; key and nonce for the payload, joined at a silence of at least 1 s |
 | Data slot | real whistle of 100-450 ms; no other start from -60 to +150 ms; at least max(0.35 s, length + 0.1 s) after the previous data whistle |
-| Data whistle | real start and length, codebook shape stretched to that length |
+| Data whistle | real start time, codebook shape at its own length |
 | Cover whistles | real contours at real times; moved in pitch if they collide within 1 kHz or follow within 100 ms |
 | Bits per data whistle | 6: 4 from the shape, 2 from the pitch |
 | Pitch candidates | quantiles (b + u) / 4 of the real pitch pool, b = 0-3, u from the key |
@@ -680,3 +756,10 @@ Format v2 values (section 4.6). They replace the v1 values above once phase F is
 - **2026-11-18, gate test F1 run: FAILED (section 4.6):**
   - Wrong pitch was 2.52 % at 10 dB and 1.41 % at 15 dB (limit 1 %), and predicted message success fell below format v1. The rhythm passed on quiet noise (0.55 and 0.56).
   - Most of the loss remains with the true pitch given, so it comes from stretched shapes, cover whistles, or both. F2 is on hold until they are separated.
+- **2026-11-18, follow-up test: stretching is the cause:**
+  - Cover whistles add about 0.03 to the repair budget; stretched shapes more than double it (0.120 to 0.292 at 15 dB).
+  - The next step is to choose the 16 types again for shape differences at equal length, then repeat gate test F1 with unchanged limits.
+- **2026-11-18, idea finalised (owner: no further tests, build the complete pipeline first):**
+  - Final gate run with own-length whistles: reliable, and the rhythm passes on quiet noise (0.56 and 0.55). The gate still fails on wrong pitch and on one 60-character case; both stay open as known gaps.
+  - Stretching is dropped and the current codebook is kept.
+  - The "Final idea" section at the top of this plan is now the design. Multipath, Doppler, classifier B and the baseline modem wait until the pipeline works.
