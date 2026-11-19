@@ -410,15 +410,23 @@
   }
 
   /* ================================================================== 06 · Decode */
+  const srcName = src => src.rec ? `${src.label} · ${s1(src.rec)} s`
+    : src.kind === 'file' ? `${src.file.name} · ${(src.file.size / 1048576).toFixed(1)} MB` : `${src.label}, made above`;
   function setSource(src) {
     S.src = src;
-    $('#dec-chosen').textContent = src.kind === 'file' ? `Chosen: ${src.file.name} · ${(src.file.size / 1048576).toFixed(1)} MB`
-                                                       : `Chosen: ${src.label}, made above.`;
+    // the drop zone itself names the recording it holds, so a chosen file never looks ignored
+    $('#dec-drop-t').replaceChildren('Ready: ', h('b', {}, src.label || src.file.name), ' · drop another, or ', h('u', {}, 'choose a file'));
+    $('#dec-drop').classList.add('has');
     updateDec();
   }
   const updateDec = () => {
-    const ok = S.ready && !!S.src && !S.busyDec;
-    $('#dec-run').disabled = !(ok && $('#dec-key').value); $('#dec-wrong').disabled = !ok;
+    const ok = S.ready && !!S.src && !S.busyDec && !REC.on && !REC.busy, key = $('#dec-key').value;
+    $('#dec-run').disabled = !(ok && key); $('#dec-wrong').disabled = !ok;
+    // the next step, in words: a greyed-out button alone does not say what it waits for
+    const line = $('#dec-chosen');
+    line.classList.toggle('next', !!S.src && !key);
+    line.textContent = !S.src ? 'No recording chosen yet.'
+      : `Chosen: ${srcName(S.src)} · ${key ? 'press Read it.' : 'now type the key it was hidden with, then press Read it.'}`;
   };
   function useInDecoder(src) {
     setSource(src);
@@ -554,6 +562,147 @@
     }
   }
 
+  /* ------------------------------------------------------------------ or listen: record with the microphone
+     The microphone's own sound, untouched: no echo cancelling, noise suppression or automatic gain, which would take the
+     whistles for noise. An AudioWorklet collects the samples as they arrive; Stop writes them as a 32-bit float WAV at the
+     microphone's own rate, and the recording goes to the decoder exactly like a dropped file. */
+  const TAP = `class Tap extends AudioWorkletProcessor {
+    constructor() { super(); this.buf = new Float32Array(16384); this.n = 0;
+      this.port.onmessage = () => { this.flush(); this.port.postMessage('end'); }; }
+    flush() { if (this.n) { this.port.postMessage(this.buf.slice(0, this.n)); this.n = 0; } }
+    process(inputs) {
+      const ch = inputs[0] && inputs[0][0];
+      if (ch) { if (this.n + ch.length > this.buf.length) this.flush(); this.buf.set(ch, this.n); this.n += ch.length; }
+      return true;
+    }
+  }
+  registerProcessor('wc-tap', Tap);`;
+  const REC = { on: false, busy: false, ctx: null, stream: null, tap: null, an: null, chunks: [], n: 0, fs: 0, t0: 0, peak: 0, dev: '', ended: null };
+  const canRecord = () => !!(window.isSecureContext && navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+
+  function wavFloat32(chunks, n, fs) {
+    const b = new ArrayBuffer(44 + 4 * n), v = new DataView(b), str = (o, s) => [...s].forEach((c, i) => v.setUint8(o + i, c.charCodeAt(0)));
+    str(0, 'RIFF'); v.setUint32(4, 36 + 4 * n, true); str(8, 'WAVE'); str(12, 'fmt '); v.setUint32(16, 16, true);
+    v.setUint16(20, 3, true); v.setUint16(22, 1, true); v.setUint32(24, fs, true); v.setUint32(28, 4 * fs, true);   // 3 = IEEE float, mono
+    v.setUint16(32, 4, true); v.setUint16(34, 32, true); str(36, 'data'); v.setUint32(40, 4 * n, true);
+    const out = new Float32Array(b, 44, n);
+    let o = 0;
+    for (const c of chunks) { out.set(c, o); o += c.length; }
+    return new Blob([b], { type: 'audio/wav' });
+  }
+  function recNote(parts, warn) {
+    const el = $('#rec-note');
+    el.replaceChildren(...[].concat(parts));
+    el.classList.toggle('warn', !!warn);
+  }
+  function recUi() {
+    const b = $('#rec-run');
+    b.disabled = !S.ready || REC.busy || !canRecord();
+    b.setAttribute('aria-pressed', REC.on ? 'true' : 'false');
+    $('#rec-run-t').textContent = REC.on ? ($('#dec-key').value ? 'Stop and read' : 'Stop') : REC.busy ? 'Starting…' : 'Record';
+    updateDec();
+  }
+  async function listDevices() {
+    try {
+      const ins = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === 'audioinput' && d.deviceId);
+      if (ins.length < 2) return;
+      const cur = REC.dev || (REC.stream && REC.stream.getAudioTracks()[0].getSettings().deviceId) || '';
+      $('#rec-dev').replaceChildren(...ins.map((d, i) => h('option', { value: d.deviceId, selected: d.deviceId === cur }, d.label || `Microphone ${i + 1}`)));
+      $('#rec-dev-l').hidden = false;
+    } catch (_) { /* the choice is optional */ }
+  }
+
+  async function startRec() {
+    if (!canRecord()) return;
+    stopSound();
+    REC.busy = true; recUi();
+    let stream = null, ctx = null;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ audio: { deviceId: REC.dev ? { exact: REC.dev } : undefined, channelCount: 1,
+                                                                    echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
+      ctx = new AudioContext();
+      const min = S.status.limits.min_rate_hz;
+      if (ctx.sampleRate < min) throw new Error(`this computer records at ${ctx.sampleRate / 1000} kHz; the decoder needs ${min / 1000} kHz or more`);
+      await ctx.audioWorklet.addModule(URL.createObjectURL(new Blob([TAP], { type: 'text/javascript' })));
+      const src = ctx.createMediaStreamSource(stream), tap = new AudioWorkletNode(ctx, 'wc-tap'), mute = ctx.createGain(), an = ctx.createAnalyser();
+      mute.gain.value = 0;                                  // keeps the tap running; nothing is played back
+      an.fftSize = 2048; an.smoothingTimeConstant = 0; an.minDecibels = -100; an.maxDecibels = -30;
+      src.connect(tap); tap.connect(mute); mute.connect(ctx.destination); src.connect(an);
+      tap.port.onmessage = e => {
+        if (e.data === 'end') { if (REC.ended) REC.ended(); return; }
+        const c = e.data;
+        REC.chunks.push(c); REC.n += c.length;
+        for (let i = 0; i < c.length; i++) { const a = Math.abs(c[i]); if (a > REC.peak) REC.peak = a; }
+      };
+      Object.assign(REC, { on: true, busy: false, ctx, stream, tap, an, chunks: [], n: 0, fs: ctx.sampleRate, peak: 0, t0: performance.now() });
+      await ctx.resume();
+    } catch (e) {
+      if (stream) stream.getTracks().forEach(t => t.stop());
+      if (ctx) ctx.close();
+      Object.assign(REC, { on: false, busy: false });
+      recUi();
+      return recNote(e && e.name === 'NotAllowedError' ? 'The browser was not allowed to use the microphone. Allow it from the icon in the address bar, then press Record again.'
+                                                       : `The microphone could not start: ${(e && e.message) || e}`, true);
+    }
+    recUi(); listDevices();
+    recNote('Recording. Play the message now, near this computer, at a comfortable loudness. Press Stop when it has finished.');
+    $('#rec-live').hidden = false;
+    live();
+  }
+
+  function live() {
+    const cv = $('#rec-cv'), dpr = Math.min(2, devicePixelRatio || 1);
+    cv.width = Math.max(1, Math.round(cv.clientWidth * dpr)); cv.height = Math.max(1, Math.round(cv.clientHeight * dpr));
+    const g = cv.getContext('2d'), W = cv.width, H = cv.height, an = REC.an;
+    g.fillStyle = `rgb(${LUT[0]},${LUT[1]},${LUT[2]})`; g.fillRect(0, 0, W, H);
+    const bins = new Uint8Array(an.frequencyBinCount), wave = new Float32Array(an.fftSize), binHz = REC.fs / an.fftSize;
+    const rows = Array.from({ length: H }, (_, y) => Math.min(bins.length - 1, Math.round((20000 - 19000 * y / Math.max(1, H - 1)) / binHz)));
+    const col = g.createImageData(1, H), pxPerS = W / 10, max = S.status.limits.max_seconds - 1;      // the last 10 seconds
+    let last = performance.now(), acc = 0;
+    const step = now => {
+      if (!REC.on) return;
+      acc += (now - last) / 1000 * pxPerS; last = now;
+      const dx = Math.floor(acc);
+      if (dx > 0) {
+        acc -= dx;
+        an.getByteFrequencyData(bins);
+        for (let y = 0; y < H; y++) { const v = bins[rows[y]] * 3, o = 4 * y; col.data[o] = LUT[v]; col.data[o + 1] = LUT[v + 1]; col.data[o + 2] = LUT[v + 2]; col.data[o + 3] = 255; }
+        g.drawImage(cv, -dx, 0);
+        for (let i = 0; i < dx; i++) g.putImageData(col, W - dx + i, 0);
+      }
+      an.getFloatTimeDomainData(wave);
+      let e = 0;
+      for (let i = 0; i < wave.length; i++) e += wave[i] * wave[i];
+      const db = 10 * Math.log10(e / wave.length + 1e-12), lvl = $('#rec-level');
+      lvl.style.width = `${Math.max(0, Math.min(1, (db + 70) / 70)) * 100}%`;
+      lvl.classList.toggle('loud', REC.peak >= 0.99);
+      const t = (now - REC.t0) / 1000;
+      $('#rec-time').replaceChildren(`${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')} · ${REC.fs / 1000} kHz · level ${Math.round(db)} dB`,
+        REC.peak >= 0.99 ? h('span', { class: 'warn' }, ' · too loud: it clipped; turn the sound down or move away') : '');
+      if (t >= max) { stopRec(); return; }
+      requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  }
+
+  async function stopRec() {
+    if (!REC.on) return;
+    REC.on = false; REC.busy = true; recUi();
+    await new Promise(res => { REC.ended = res; REC.tap.port.postMessage('flush'); setTimeout(res, 600); });   // the last samples
+    REC.ended = null;
+    REC.stream.getTracks().forEach(t => t.stop());
+    REC.ctx.close();
+    const secs = REC.n / REC.fs;
+    const file = secs >= 1 ? new File([wavFloat32(REC.chunks, REC.n, REC.fs)], 'microphone.wav', { type: 'audio/wav' }) : null;
+    REC.chunks = []; REC.busy = false; recUi();
+    if (!file) return recNote('That was too short to hold a message. Press Record and play the whole message.', true);
+    setSource({ kind: 'file', file, rec: secs, label: 'the microphone recording' });
+    const key = $('#dec-key').value;
+    recNote(`Recorded ${s1(secs)} s.${key ? ' Reading it now.' : ' Type the key it was hidden with, then press Read it.'}`);
+    if (key) decode(key, `Read from the microphone recording with the key “${key}”`);
+    else $('#dec-key').focus();
+  }
+
   /* ================================================================== status, wiring, index */
   function offline(...parts) {
     const st = $('#wc-status');
@@ -590,9 +739,11 @@
     showStatus(s);
     if (s.loading) (async () => {                    // jobs can start already; they wait for the loading to finish
       for (;;) { await sleep(1500); try { const t = await (await fetch('api/wc/status')).json(); showStatus(t); if (!t.loading) { S.ready = t.ready; break; } } catch (_) { break; } }
-      updateEnc(); updateDec();
+      updateEnc(); recUi();
     })();
-    onType(); updateDec();
+    onType(); recUi();
+    if (!canRecord()) recNote(['Recording needs this page over https, or opened on the computer that runs the server. Start it with ',
+                               h('code', {}, 'python whistlecode/whistlecode.py serve --lan'), ' and open the https address it prints.'], true);
   }
 
   function bind() {
@@ -602,12 +753,19 @@
     $('#enc-run').addEventListener('click', hide);
     $('#sea-run').addEventListener('click', sea);
     const drop = $('#dec-drop'), file = $('#dec-file');
-    file.addEventListener('change', () => { if (file.files[0]) setSource({ kind: 'file', file: file.files[0] }); });
+    file.addEventListener('change', () => {
+      if (!file.files[0]) return;
+      setSource({ kind: 'file', file: file.files[0] });
+      file.value = '';                                  // so choosing the same file again still counts
+      if (!$('#dec-key').value) $('#dec-key').focus();
+    });
     ['dragenter', 'dragover'].forEach(ev => drop.addEventListener(ev, () => { if (!file.disabled) drop.classList.add('over'); }));
     ['dragleave', 'drop'].forEach(ev => drop.addEventListener(ev, () => drop.classList.remove('over')));
     $('#dec-use-sent').addEventListener('click', () => S.sent && useInDecoder({ kind: 'job', job: S.sent.id, which: 'sent', label: 'the file you just made', sendId: S.sent.id }));
     $('#dec-use-heard').addEventListener('click', () => S.sea && useInDecoder({ kind: 'job', job: S.sea.id, which: 'heard', label: 'the file as heard in the sea', sendId: S.sea.sendId }));
-    $('#dec-key').addEventListener('input', updateDec);
+    $('#dec-key').addEventListener('input', recUi);                  // recUi updates the decoder's buttons too
+    $('#rec-run').addEventListener('click', () => (REC.on ? stopRec() : startRec()));
+    $('#rec-dev').addEventListener('change', e => { REC.dev = e.target.value; });
     $('#dec-key').addEventListener('keydown', e => { if (e.key === 'Enter' && !$('#dec-run').disabled) decode($('#dec-key').value); });
     $('#dec-run').addEventListener('click', () => decode($('#dec-key').value));
     $('#dec-wrong').addEventListener('click', () => { const k = newKey($('#dec-key').value); decode(k, `Read with a wrong key, “${k}”`); });
