@@ -1,0 +1,40 @@
+# The project page (the film, Try it, 05 · Encode, 06 · Decode) served from this computer and put on the internet at
+# https://whistle.<your tailnet>.ts.net by Tailscale Funnel. Steps: deploy/README.md. From the repository root:
+#
+#   docker compose -f deploy/docker-compose.yml up -d --build
+#
+# The address works only while this computer is on, awake and running Docker.
+name: whistle
+
+services:
+  tailscale:
+    image: tailscale/tailscale:v1.104.4     # [DECISION] pinned stable release (2026-10-28)
+    hostname: whistle                       # [DECISION] the address becomes https://whistle.<tailnet>.ts.net
+    environment:
+      TS_AUTHKEY: ${TS_AUTHKEY:-}           # optional (deploy/.env); without it the log prints a sign-in link (valid about a minute)
+      TS_AUTH_ONCE: "true"                  # sign in only while not signed in yet, so an auth key is used once
+      TS_STATE_DIR: /var/lib/tailscale      # keeps the sign-in across restarts
+      TS_SERVE_CONFIG: /config/serve.json   # https on 443 -> the app; "AllowFunnel" opens it to the whole internet
+      TS_USERSPACE: "true"                  # no /dev/net/tun and no extra privileges
+    volumes:
+      - tailscale-state:/var/lib/tailscale
+      - ./tailscale:/config:ro
+    ports:
+      - "127.0.0.1:${LOCAL_PORT:-8000}:8000"   # http://localhost:8000 on this computer too (the app shares this network)
+    restart: unless-stopped
+
+  app:
+    build:
+      context: .
+    image: whistle-app:cpu
+    network_mode: service:tailscale         # Tailscale reaches the app at 127.0.0.1:8000
+    depends_on:
+      - tailscale
+    volumes:
+      - ..:/app:ro                                        # the repository, read-only: code, configs, models, web/, recordings
+      - ../whistlecode/outputs:/app/whistlecode/outputs   # writable: WhistleCode jobs (outputs/web) and the noise cache
+      - ../runs:/app/runs                                 # writable: Try it jobs (runs/infer)
+    restart: unless-stopped
+
+volumes:
+  tailscale-state:

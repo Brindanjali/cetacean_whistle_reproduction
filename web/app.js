@@ -7,7 +7,7 @@
  * it is never time-scrubbed. Text lives in one fixed layer and cross-fades in
  * place, so sections only set how long each moment lasts.
  *
- * Video: two 4K files. At most two clips play at once. On Windows the
+ * Video: two 4K files (720p copies for visitors over the internet, see VIDEO). At most two clips play at once. On Windows the
  * browser decodes video on the same GPU thread that draws the page, so any
  * decoder work off screen (preroll, seeks) costs frames on screen. Hence:
  * every later clip is prerolled while the opening frame holds still, before
@@ -26,6 +26,17 @@ const curve = (K, p) => {
   return K[K.length - 1][1];
 };
 const win = (w, p) => sm(w[0], w[1], p) * (1 - sm(w[2], w[3], p));
+
+/* Which copy of the footage to play. This computer and its local network get the 4K masters (media4k/); a visitor over
+   the internet gets the 720p copies (mediaweb/, under 1 Mbit/s), because the tunnel of deploy/ (Tailscale Funnel) gave
+   about 1-1.6 Mbit/s per connection when measured on 2026-11-20, a tenth of what the 4K whale needs. ?video=4k or
+   ?video=web in the address overrides the choice. A missing web copy falls back to the 4K file. */
+const LOCAL_HOST = /^(localhost|127(\.\d+){3}|\[::1\]|10(\.\d+){3}|192\.168(\.\d+){2}|172\.(1[6-9]|2\d|3[01])(\.\d+){2})$/;
+const VIDEO = (() => {
+  const q = new URLSearchParams(location.search).get('video');
+  return q === '4k' || q === 'web' ? q : LOCAL_HOST.test(location.hostname) ? '4k' : 'web';
+})();
+const webCopy = f => f.replace(/^media4k\//, 'mediaweb/');
 
 class Film {
   constructor() {
@@ -68,9 +79,13 @@ class Film {
         v.disablePictureInPicture = true; v.loop = !!m.loop; v.poster = m.poster;
         // only the opening shot loads at once; the rest wait for warm()
         v.preload = !R && k === 0 ? 'auto' : 'none';
-        v.src = m.file;
+        let web = VIDEO === 'web' ? webCopy(m.file) : null;
+        v.src = web || m.file;
         if (m.start) v.addEventListener('loadedmetadata', () => { if (!s.wanted) v.currentTime = m.start; }, { once: true });
-        v.addEventListener('error', () => { s.dead = true; console.error('[film] video failed:', m.file); });
+        v.addEventListener('error', () => {
+          if (web) { console.warn('[film] no web copy, using the 4K file:', web); web = null; v.src = m.file; return; }
+          s.dead = true; console.error('[film] video failed:', m.file);
+        });
         el.appendChild(v); s.media = s.video = v;
       }
       s.media.style.objectPosition = `${m.pan[0]}% ${m.pan[1]}%`;
@@ -86,6 +101,16 @@ class Film {
   prepare() {
     const first = this.shots[0], later = this.shots.filter((s, k) => k > 0 && s.video);
     if (this.reduced || !first || !first.video || !later.length) { this.ready = true; return; }
+    if (VIDEO === 'web') {
+      // over a slow link the opening clip gets the connection to itself: it plays as soon as it can, and the later
+      // clips start loading once it can play through (or after 10 s), or when the scroll comes near them (playback)
+      this.ready = true;
+      let done = false;
+      const rest = () => { if (done) return; done = true; for (const s of later) if (!s.warm) this.warm(s); };
+      first.video.addEventListener('canplaythrough', rest, { once: true });
+      setTimeout(rest, 10000);
+      return;
+    }
     let left = later.length;
     const go = () => { if (this.ready) return; this.ready = true; this.dirty = true; this.wake(); };
     for (const s of later) {

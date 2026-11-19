@@ -1,0 +1,4 @@
+# The build needs only the Dockerfile and requirements-serve.txt; keep the Tailscale key out of the build context
+.env
+tailscale/
+*.md

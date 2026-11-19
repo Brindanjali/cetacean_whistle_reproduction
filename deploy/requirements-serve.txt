@@ -1,0 +1,13 @@
+# What `python whistlecode/whistlecode.py serve` needs, and nothing more (no training, evaluation or tests).
+# Pinned to the versions the server runs with on the project laptop (2026-11-19).
+# PyTorch is installed separately in the Dockerfile, from the CPU or CUDA index (build argument TORCH_INDEX).
+numpy==2.4.4
+scipy==1.17.1
+soundfile==0.13.1          # its Linux wheel carries libsndfile
+pillow==12.3.0             # spectrogram pictures
+matplotlib==3.10.8         # Try it's figures (src/whistlepipe/infer.py)
+fastapi==0.141.1
+uvicorn==0.54.0
+python-multipart==0.0.32   # uploads
+pydantic==2.13.3
+reedsolo==1.7.0            # exactly this version: whistlecode/config.toml [fec] refuses any other

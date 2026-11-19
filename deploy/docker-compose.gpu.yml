@@ -1,0 +1,18 @@
+# The same setup on the NVIDIA GPU: the CUDA 13.0 build of PyTorch, and the GPU passed into the app container.
+# Both models pick the GPU by themselves (device = "auto" in configs/inference.toml and whistlecode/config.toml).
+#
+#   docker compose -f deploy/docker-compose.yml -f deploy/docker-compose.gpu.yml up -d --build
+services:
+  app:
+    build:
+      context: .
+      args:
+        TORCH_INDEX: https://download.pytorch.org/whl/cu130
+    image: whistle-app:gpu
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]

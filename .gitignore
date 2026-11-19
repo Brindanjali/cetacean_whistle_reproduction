@@ -57,6 +57,8 @@ resources/reference_32_mca_cfar.md
 
 # Webpage footage: 4K masters are too large for git (sources and encode settings in web/CREDITS.md)
 web/media4k/*.mp4
+# ... and their 720p copies for visitors over the internet (made from the 4K clips, commands in web/README.md)
+web/mediaweb/*.mp4
 
 # Webpage: generated example excerpts and their results (python whistle.py export-web)
 web/data/
@@ -65,6 +67,9 @@ colab/dist/
 # Cluster bundle: the zip is rebuilt by python cluster/make_cluster_bundle.py
 cluster/dist/
 cluster/offline/
+
+# Docker deployment: the optional Tailscale auth key (deploy/.env.example shows the format)
+deploy/.env
 
 # Local tooling and unpublished explainer pages
 .claude/

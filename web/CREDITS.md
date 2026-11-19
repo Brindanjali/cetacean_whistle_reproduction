@@ -23,6 +23,11 @@ Encoding: H.264 High, 8-bit 4:2:0, 3840×2160, CRF 18, 1-second GOP,
 `README.md` ("Video and example files") gives the commands that re-create them
 from the sources above.
 
+`mediaweb/whale.mp4` and `mediaweb/dolphins.mp4` are 1280×720 copies of the
+same clips for visitors over the internet (H.264 High, CRF 26 capped at
+0.9 Mbit/s, same GOP and frame rates), made from the 4K files with the
+commands in `README.md`; not in git either.
+
 ## Type (`fonts/`)
 
 Cormorant Garamond (Christian Thalmann), IBM Plex Sans and IBM Plex Mono (IBM),
