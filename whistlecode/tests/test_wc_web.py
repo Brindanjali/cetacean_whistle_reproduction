@@ -92,6 +92,22 @@ def test_quiet_floor_adds_noise_only_to_digital_silence(cfg):
     assert channel.quiet_floor(noisy, fs, cfg) is not None and np.array_equal(channel.quiet_floor(noisy, fs, cfg), noisy)
 
 
+# ---------------------------------------------------------------------------------------------- serving other computers
+def test_tls_certificate_covers_the_addresses_and_is_kept(cfg, tmp_path):
+    from cryptography import x509
+
+    cfg = {**cfg, "web": {**cfg["web"], "tls_dir": str(tmp_path / "tls")}}
+    cert, key = web.tls_files(["192.168.1.20"], cfg)
+    c = x509.load_pem_x509_certificate(cert.read_bytes())
+    san = c.extensions.get_extension_for_class(x509.SubjectAlternativeName).value
+    assert {str(v) for v in san.get_values_for_type(x509.IPAddress)} == {"192.168.1.20", "127.0.0.1"}
+    assert san.get_values_for_type(x509.DNSName) == ["localhost"] and key.exists()
+    first = cert.read_bytes()
+    assert web.tls_files(["192.168.1.20"], cfg)[0].read_bytes() == first          # the same network: kept
+    assert web.tls_files(["10.0.0.5"], cfg)[0].read_bytes() != first              # a new network: made again
+    assert all(not a.startswith("127.") for a in web.lan_addresses())
+
+
 # ---------------------------------------------------------------------------------------------- the check
 def test_check_sorts_each_whistle_into_right_wrong_or_lost():
     send = {"nonce": 7, "length": 2, "whistles": [{"i": 0, "part": "start", "symbol": -1}, {"i": 1, "part": "header", "symbol": 10},
