@@ -6,8 +6,9 @@ The message pipeline (format v2):
         hide a message in a 96 kHz float32 WAV of whistles. --manifest also writes msg.json (slot times, pitches and
         symbols; never the key or the text). An existing file is kept unless --force is given
 
-    python whistlecode/whistlecode.py channel msg.wav --snr 15 --out heard.wav [--encounter 214] [--seed 0] [--force]
-        play the WAV into real ocean noise at a set SNR
+    python whistlecode/whistlecode.py channel msg.wav --snr 15 --out heard.wav [--range 1] [--doppler 1.5] [--encounter 214] [--seed 0] [--force]
+        play the WAV into real ocean noise at a set SNR. --range (km) adds echoes and absorption, with depths drawn from --seed.
+        --doppler (m/s, positive = closing) adds Doppler
 
     python whistlecode/whistlecode.py receive heard.wav --key reef42
         find the message in a recording and print it; exit code 1 if no message passes its CRC
@@ -182,18 +183,29 @@ def cmd_send(args) -> int:
 
 
 def cmd_channel(args) -> int:
+    from dataclasses import replace
+
     import soundfile as sf
 
-    from wcode import channel, schedule
+    from wcode import channel, schedule, sea
 
     out = Path(args.out)
     _check_output(out, args.force)
     cfg = default_config()
     x, fs = sf.read(args.input, dtype="float32", always_2d=True)
-    rx = channel.through_channel(x[:, 0], fs, args.snr, schedule.pitch_pool(cfg), args.encounter, args.seed, cfg)
+    state = None
+    if args.range_km is not None or args.doppler is not None:
+        state = sea.draw(np.random.default_rng(args.seed), cfg)
+        state = replace(state, range_m=1000.0 * (args.range_km or state.range_m / 1000.0), speed_mps=args.doppler or 0.0,
+                        echoes=args.range_km is not None)
+    rx = channel.through_channel(x[:, 0], fs, args.snr, schedule.pitch_pool(cfg), args.encounter, args.seed, cfg, sea=state)
     out.parent.mkdir(parents=True, exist_ok=True)
     sf.write(str(out), rx.audio, rx.fs, subtype="FLOAT", format="WAV")
     print(f"channel  : {rx.snr_db:g} dB SNR in encounter-{rx.encounter} noise ({len(rx.noise_files)} file(s))")
+    if state is not None:
+        echoes = (f"range {state.range_m / 1000:g} km, water {state.water_depth_m:.0f} m, source {state.source_depth_m:.0f} m, "
+                  f"hydrophone {state.receiver_depth_m:.0f} m" if state.echoes else "no echoes")
+        print(f"sea      : {echoes}; closing at {state.speed_mps:g} m/s")
     print(f"audio    : {len(rx.audio) / rx.fs:.1f} s; the message starts {rx.offset_s:.2f} s in")
     print(f"written  : {out}")
     return 0
@@ -245,7 +257,9 @@ def main(argv=None) -> int:
     s.add_argument("--snr", type=float, required=True, help="narrowband SNR of the data whistles, in dB")
     s.add_argument("--out", required=True, help="output .wav file")
     s.add_argument("--encounter", type=int, default=None, help="noise recording; default from config.toml (214)")
-    s.add_argument("--seed", type=int, default=0, help="chooses the noise and where the message starts")
+    s.add_argument("--range", dest="range_km", type=float, default=None, help="distance in km; adds echoes and absorption")
+    s.add_argument("--doppler", type=float, default=None, help="closing speed in m/s (negative = moving apart); adds Doppler")
+    s.add_argument("--seed", type=int, default=0, help="chooses the noise, the water depths and where the message starts")
     s.add_argument("--force", action="store_true", help="replace an existing output file")
     s.set_defaults(fn=cmd_channel)
     s = sub.add_parser("receive", help="find and read the message in a recording")

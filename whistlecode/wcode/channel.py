@@ -1,7 +1,7 @@
 """The channel (PLAN.md section 6).
 
-Built so far: real ocean noise from the encounter recordings and narrowband SNR. Multipath, absorption and Doppler come
-later and act on the signal before the noise is added.
+Real ocean noise from the encounter recordings and narrowband SNR. Multipath, absorption and Doppler (sea.py) act on the signal
+before the noise is added, because the noise was recorded at the hydrophone and has already been through the sea.
 
 Noise: channel 0 of a raw 500 kHz file, resampled to the synthesis rate and high-passed at 2 kHz with the
 reproduction's own filter. The result is cached as float32 .npy (gitignored), so each file is decoded once.
@@ -25,6 +25,7 @@ from scipy import signal
 
 from . import repro
 from .config import PROJECT_ROOT, default_config
+from .sea import Sea, propagate, time_scale
 
 
 def noise_files(encounter: int) -> list[Path]:
@@ -99,6 +100,8 @@ class Received:
     offset_s: float             # where the WAV starts in the recording
     encounter: int
     noise_files: list
+    sea: Sea | None = None      # None = the WAV reaches the noise unchanged
+    time_scale: float = 1.0     # Doppler: a moment t of the WAV is heard at t / time_scale
 
 
 def noise_stretch(encounter: int, n: int, rng: np.random.Generator, cfg: dict | None = None, pcfg=None) -> tuple[np.ndarray, list]:
@@ -119,8 +122,9 @@ def noise_stretch(encounter: int, n: int, rng: np.random.Generator, cfg: dict | 
 
 
 def through_channel(audio: np.ndarray, fs: int, snr_db: float, pitches_hz: np.ndarray, encounter: int | None = None, seed: int = 0,
-                    cfg: dict | None = None, pcfg=None) -> Received:
-    """Play a format v2 WAV into real noise. pitches_hz: the pitches the SNR refers to (the sender's pitch pool)."""
+                    cfg: dict | None = None, pcfg=None, sea: Sea | None = None) -> Received:
+    """Play a format v2 WAV through the sea (if given) into real noise. pitches_hz: the pitches the SNR refers to (the sender's
+    pitch pool); with a sea, the SNR is the level of the direct path at their median."""
     cfg = cfg or default_config()
     c = cfg["channel"]
     encounter = int(c["noise_encounter"] if encounter is None else encounter)
@@ -130,11 +134,16 @@ def through_channel(audio: np.ndarray, fs: int, snr_db: float, pitches_hz: np.nd
         raise ValueError(f"the channel works at {cfg['synth']['fs_hz']} Hz, got {fs} Hz")
     rng = np.random.default_rng(int(seed))
     pad = int(round(float(c["pad_s"]) * fs))
-    x, used = noise_stretch(encounter, len(audio) + 2 * pad, rng, cfg, pcfg)
+    played = np.asarray(audio, dtype=np.float64)
+    scale = 1.0
+    if sea is not None:
+        played = propagate(played, int(fs), sea, float(np.median(pitches_hz)), cfg)
+        scale = float(time_scale(sea.speed_mps, cfg))
+    x, used = noise_stretch(encounter, len(played) + 2 * pad, rng, cfg, pcfg)
     levels = bin_levels(x[:int(float(c["level_window_s"]) * fs)], fs, float(c["snr_bin_hz"]))
     want = np.median([amplitude_for_snr(snr_db, float(f), levels, fs, cfg) for f in np.quantile(pitches_hz, np.linspace(0.02, 0.98, 25))])
     reference = float(cfg["realism"]["median_level_db"]) if cfg["realism"]["enabled"] else 0.0   # the quietest data whistle
     gain = float(want) / (float(cfg["sender"]["data_amplitude"]) * 10 ** (reference / 20))
     s0 = int(rng.integers(0, 2 * pad + 1))
-    x[s0:s0 + len(audio)] += gain * np.asarray(audio, dtype=np.float64)
-    return Received(x.astype(np.float32), int(fs), float(snr_db), gain, s0 / fs, encounter, used)
+    x[s0:s0 + len(played)] += gain * played
+    return Received(x.astype(np.float32), int(fs), float(snr_db), gain, s0 / fs, encounter, used, sea, scale)

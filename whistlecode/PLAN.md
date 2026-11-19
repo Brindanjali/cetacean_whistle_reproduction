@@ -85,7 +85,7 @@ Known gaps:
 - **Messages take longer than planned.** The median recording for 12 characters is 66-88 s, against the 41-51 s estimated in section 4.6. Sparse bank stretches and the joins between stretches add the time.
 - **20 dB is not better than 15 dB** for whistle errors. About 4 % of whistles stay wrong even in light noise.
 - **The SNR differs slightly from the gate test.** The channel plays the whole message at one gain, as a real source would, so individual whistles sit above or below the target where the noise spectrum is uneven.
-- **Not tested yet:** multipath, absorption, Doppler, encounter-276 noise and the epoch-150 model.
+- **Not tested yet:** the epoch-150 model. Multipath, absorption, Doppler and encounter-276 noise were tested on 2026-11-19 (see "Sea channel test").
 
 ### Realism upgrade (2026-11-19)
 
@@ -110,6 +110,24 @@ Two tests were run on the same 90 messages. The realism score is how well a trai
 - **Part of the decoding gain is extra loudness.** Data whistles now sit 0-5 dB above the level the SNR refers to, where they used to sit exactly at it.
 - **A trained detector still finds our data whistles easily.** The upgrade removed the harmonic clue, and the main clues left are in the whistle shapes (curve fit, net rise, length, span).
 - **Not scored:** the clicks, the animal group as a whole, and human listening.
+
+### Sea channel test (2026-11-19)
+
+The channel of section 6 is built (`wcode/sea.py`, `channel --range --doppler`): four image-method paths, Thorp absorption over each path, and one Doppler time-scaling per message. `experiments/sea_run.py` sent the same 90 messages under four conditions in encounter-276 noise, which the receiver was never tuned on. Each message kept one random sea (range 0.2-2 km, water 50-1,000 m, closing speed up to 3 m/s) in every condition. The receiver was not changed. The SNR is the level of the direct path at the hydrophone. Results are in `outputs/sea_run/`.
+
+| Condition | Exact at 10 / 15 / 20 dB | Total of 90 | Whistles lost / wrong |
+|---|---|---|---|
+| Ocean noise only | 21 / 23 / 21 | 65 | 13.3 % / 7.3 % |
+| Echoes and absorption | 12 / 20 / 10 | 42 | 17.6 % / 13.5 % |
+| Doppler | 16 / 12 / 11 | 39 | 36.6 % / 9.3 % |
+| **Echoes, absorption and Doppler** | **7 / 10 / 6** | **23** | **38.5 % / 13.7 %** |
+
+- **False messages:** no wrong text was accepted in 360 messages, and none of the 10 recordings without a message reported one.
+- **Unseen noise costs 17 messages on its own.** The same sender and receiver decoded 82 of 90 in encounter-214 noise. On encounter 276 a stronger signal does not help (13 % of whistles lost at every SNR), so the loss is not explained by the noise level. The cause is not yet known.
+- **Doppler fails through timing.** The receiver has no drift correction, so slots slide out of their -60 / +150 ms windows. Messages decoded by total drift: under 30 ms 9/12, 30-60 ms 8/16, 60-150 ms 18/33, over 150 ms 4/29. At 60-150 ms, whistles heard early lost 44.8 % and whistles heard late 13.8 %, as the narrower early window predicts. The pitch shift itself (at most 0.2 %) is small.
+- **Echoes make whistles misread.** Wrong whistles nearly double, and range makes little difference (13/24, 11/24, 8/18 and 10/24 from 0.2 to 2 km).
+- **Limits of the model:** the sea surface is still, all paths share one Doppler, and sound-speed layers are left out. A real sea is likely to be harder.
+- **Encounter 276 has now been seen.** Receiver fixes must be developed on encounter-214 noise, and then checked once on 276.
 
 ## 1. The idea
 

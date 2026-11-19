@@ -38,12 +38,13 @@ def make_text(n: int, rng: np.random.Generator) -> str:
     return out[:n - 1].rstrip().ljust(n - 1, "X") + "."
 
 
-def one_trial(tx: sender.Sender, rx: receiver.Receiver, text: str, key: str, snr: float, seed: int, cfg: dict) -> dict:
+def one_trial(tx: sender.Sender, rx: receiver.Receiver, text: str, key: str, snr: float, seed: int, cfg: dict,
+              encounter: int | None = None, sea=None) -> dict:
     sent = tx.send(text, key, seed % 256)
-    heard = channel.through_channel(sent.audio, sent.fs, snr, tx.pool, seed=seed, cfg=cfg, pcfg=tx.pcfg)
+    heard = channel.through_channel(sent.audio, sent.fs, snr, tx.pool, encounter, seed, cfg, tx.pcfg, sea)
     tracks = rx.detector.tracks(heard.audio, heard.fs)
     got = rx.decode_tracks(tracks, key)
-    true_start = heard.offset_s + sent.lead_in_s
+    true_start = heard.offset_s + sent.lead_in_s / heard.time_scale
     ts = receiver.TrackSet(tracks)
     n_pre = int(cfg["framing"]["n_preamble"])
     slots = [d.slot for d in sent.data[n_pre:]]
@@ -62,9 +63,10 @@ def one_trial(tx: sender.Sender, rx: receiver.Receiver, text: str, key: str, snr
             "n_cover_moved": sent.n_cover_moved, "n_cover_stuck": sent.n_cover_stuck}
 
 
-def no_message_trial(tx: sender.Sender, rx: receiver.Receiver, key: str, seed: int, cfg: dict) -> dict:
+def no_message_trial(tx: sender.Sender, rx: receiver.Receiver, key: str, seed: int, cfg: dict, encounter: int | None = None) -> dict:
     rng = np.random.default_rng(seed)
-    x, _ = channel.noise_stretch(int(cfg["channel"]["noise_encounter"]), int(60 * cfg["synth"]["fs_hz"]), rng, cfg, tx.pcfg)
+    encounter = int(cfg["channel"]["noise_encounter"] if encounter is None else encounter)
+    x, _ = channel.noise_stretch(encounter, int(60 * cfg["synth"]["fs_hz"]), rng, cfg, tx.pcfg)
     got = rx.receive(x.astype(np.float32), cfg["synth"]["fs_hz"], key)
     return {"seed": seed, "false_message": bool(got.ok), "stage": got.stage}
 
