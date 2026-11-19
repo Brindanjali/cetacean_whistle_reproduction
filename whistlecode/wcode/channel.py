@@ -133,7 +133,8 @@ def through_channel(audio: np.ndarray, fs: int, snr_db: float, pitches_hz: np.nd
     x, used = noise_stretch(encounter, len(audio) + 2 * pad, rng, cfg, pcfg)
     levels = bin_levels(x[:int(float(c["level_window_s"]) * fs)], fs, float(c["snr_bin_hz"]))
     want = np.median([amplitude_for_snr(snr_db, float(f), levels, fs, cfg) for f in np.quantile(pitches_hz, np.linspace(0.02, 0.98, 25))])
-    gain = float(want) / float(cfg["sender"]["data_amplitude"])
+    reference = float(cfg["realism"]["median_level_db"]) if cfg["realism"]["enabled"] else 0.0   # the quietest data whistle
+    gain = float(want) / (float(cfg["sender"]["data_amplitude"]) * 10 ** (reference / 20))
     s0 = int(rng.integers(0, 2 * pad + 1))
     x[s0:s0 + len(audio)] += gain * np.asarray(audio, dtype=np.float64)
     return Received(x.astype(np.float32), int(fs), float(snr_db), gain, s0 / fs, encounter, used)

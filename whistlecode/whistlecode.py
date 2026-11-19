@@ -12,6 +12,9 @@ The message pipeline (format v2):
     python whistlecode/whistlecode.py receive heard.wav --key reef42
         find the message in a recording and print it; exit code 1 if no message passes its CRC
 
+    python whistlecode/whistlecode.py build-realism
+        collect the real whistle shapes, voices and clicks the sender plays (a few minutes; needs the raw recordings)
+
 P1 commands (the whistle alphabet):
 
     python whistlecode/whistlecode.py build-codebook [--quick]
@@ -153,6 +156,13 @@ def _check_output(out: Path, force: bool) -> None:
         raise ValueError(f"{out} already exists; use another name or --force")
 
 
+def cmd_build_realism(args) -> int:
+    from wcode import realism
+
+    realism.build(default_config(), log=lambda m: print(m, flush=True))
+    return 0
+
+
 def cmd_send(args) -> int:
     from wcode import format2, sender
 
@@ -165,8 +175,8 @@ def cmd_send(args) -> int:
     print(f"message  : {fr.length} {unit}, nonce {fr.nonce}")
     print(f"whistles : 3 preamble + {len(fr.header_symbols)} header + {len(fr.payload_symbols)} payload = {len(tx.data)} data"
           f", {tx.n_cover} cover ({tx.n_cover_moved} moved to avoid a data whistle)")
-    print(f"shapes   : tau = {tx.tau:g}; {tx.n_redrawn} redrawn by the self-check, {tx.n_fell_back} fell back to the type's mean")
-    print(f"audio    : {tx.duration_s:.1f} s at {tx.fs} Hz")
+    print(f"shapes   : {tx.n_real_shapes} of {len(tx.data)} data whistles use a real whistle's shape; {tx.n_clicks} recorded clicks played")
+    print(f"audio    : {tx.duration_s:.1f} s at {tx.fs} Hz, peak {float(abs(tx.audio).max()):.2f}")
     print(f"written  : {path}" + (f" and {path.with_suffix('.json').name}" if args.manifest else ""))
     return 0
 
@@ -219,6 +229,8 @@ def main(argv=None) -> int:
         s = sub.add_parser(name, help=hlp)
         s.add_argument("--quick", action="store_true", help="the quick check build in outputs/codebook_quick")
         s.set_defaults(fn=fn)
+    s = sub.add_parser("build-realism", help="collect the real shapes, voices and clicks the sender plays")
+    s.set_defaults(fn=cmd_build_realism)
     s = sub.add_parser("send", help="turn a message into a WAV of whistles")
     s.add_argument("message", help="text to send")
     s.add_argument("--key", required=True, help="shared key")

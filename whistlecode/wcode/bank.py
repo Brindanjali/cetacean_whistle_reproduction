@@ -96,7 +96,7 @@ def _one_encounter(encounter: int, c: dict) -> dict:
     run = run_of[w]
     keep = run >= 0
     return {"on": on[keep], "off": off[keep], "contours": [contours[i] for i in np.where(keep)[0]], "run": run[keep],
-            "eligible": eligible[keep], "silence": silence[keep], "start": after_silence[keep], "hop": hop}
+            "eligible": eligible[keep], "silence": silence[keep], "start": after_silence[keep], "hop": hop, "t0": float(t[order[0]])}
 
 
 def build(cfg: dict | None = None) -> Bank:
@@ -124,6 +124,17 @@ def build(cfg: dict | None = None) -> Bank:
               "starts": np.where(np.concatenate([p["start"] for p in parts]))[0].astype(np.int64),
               "hop_s": np.array(hops.pop())}
     return _bank(arrays)
+
+
+def time_base(cfg: dict | None = None) -> dict[int, tuple[float, float]]:
+    """For each encounter: (recording time of its first whistle, where that whistle sits on the bank's time axis)."""
+    cfg = cfg or default_config()
+    out, shift = {}, 0.0
+    for e in cfg["bank"]["encounters"]:
+        p = _one_encounter(int(e), cfg["bank"])
+        out[int(e)] = (float(p["t0"]), shift)
+        shift = float(p["off"].max()) + shift + ENCOUNTER_GAP_S
+    return out
 
 
 def _bank(arrays: dict) -> Bank:

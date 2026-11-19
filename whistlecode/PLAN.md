@@ -87,6 +87,30 @@ Known gaps:
 - **The SNR differs slightly from the gate test.** The channel plays the whole message at one gain, as a real source would, so individual whistles sit above or below the target where the noise spectrum is uneven.
 - **Not tested yet:** multipath, absorption, Doppler, encounter-276 noise and the epoch-150 model.
 
+### Realism upgrade (2026-11-19)
+
+The sender now plays recorded material, and the message format and the receiver are unchanged (`wcode/realism.py`, built once with `build-realism`). No sea background is added: the file is silent between sounds.
+
+- **Real voices:** every whistle takes its loudness pattern and 2nd and 3rd harmonics from one of 3,383 clean recorded whistles.
+- **Virtual animals:** six animals per message, each with its own loudness and tone. Cover whistles span 0-10 dB above the base level, and data whistles 5-10 dB, because quieter data whistles were lost in heavy noise.
+- **Recorded clicks:** 53,729 clean 2 ms clicks in regular trains, played at the times they were recorded during the same bank stretches, and left out within 12 ms of a data whistle.
+- **Real shapes (built, switched off):** `realism.real_shapes = true` gives data whistles the shape of a real whistle of their type. Type 15 has no usable real whistles and would keep its VAE shapes.
+
+Two tests were run on the same 90 messages. The realism score is how well a trained detector separates our data whistles from real encounter-276 whistles (0.50 = it cannot, 1.00 = always). Two real encounters (214 against 276) score 0.751, which is about the lowest to expect.
+
+| Version | Exact messages at 10 / 15 / 20 dB | Total of 90 | Realism score |
+|---|---|---|---|
+| Before the upgrade | 21 / 29 / 27 | 77 | 0.992 |
+| Real shapes, data whistles as quiet as cover whistles | 6 / 23 / 27 | 56 | 0.908 |
+| VAE shapes, data whistles as quiet as cover whistles | 15 / 28 / 28 | 71 | not measured |
+| **VAE shapes, data whistles kept loud (in use)** | **26 / 28 / 28** | **82** | **0.954** |
+| Real shapes, data whistles kept loud | 24 / 25 / 27 | 76 | 0.920 |
+
+- **Choice:** the pass mark, set before the test, was at least 77 of 90. Real shapes missed it by one message, so VAE shapes stay in use. The gap of 6 messages is small at this sample size.
+- **Part of the decoding gain is extra loudness.** Data whistles now sit 0-5 dB above the level the SNR refers to, where they used to sit exactly at it.
+- **A trained detector still finds our data whistles easily.** The upgrade removed the harmonic clue, and the main clues left are in the whistle shapes (curve fit, net rise, length, span).
+- **Not scored:** the clicks, the animal group as a whole, and human listening.
+
 ## 1. The idea
 
 A text message is turned into a sequence of synthetic false killer whale whistles. The sequence is sent through an underwater channel, and a receiver turns the whistles back into the exact text.

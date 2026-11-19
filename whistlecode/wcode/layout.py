@@ -45,6 +45,7 @@ class Layout:
     covers: list
     end_s: float                    # end of the last whistle
     join_gap_s: float               # the real silence left before whatever follows
+    segments: tuple = ()            # (bank start, bank end, shift): add shift to a bank time to get its time in the frame
 
 
 def _segment(b: Bank, i0: int, need: int, cfg: dict) -> tuple[int, list[int]]:
@@ -66,10 +67,11 @@ def _segment(b: Bank, i0: int, need: int, cfg: dict) -> tuple[int, list[int]]:
 
 
 def _walk(b: Bank, rng: np.random.Generator, need: int, t0: float, cfg: dict):
-    """Data slots (bank index, time), cover whistles (bank index, time), end time and the silence after it."""
+    """Data slots (bank index, time), cover whistles (bank index, time), end time, the silence after it, and the bank stretches."""
     c = cfg["bank"]
     data: list[tuple[int, float]] = []
     covers: list[tuple[int, float]] = []
+    segments: list[tuple[float, float, float]] = []
     t, end, gap = float(t0), float(t0), 0.0
     draws = 0
     while len(data) < need:
@@ -85,13 +87,14 @@ def _walk(b: Bank, rng: np.random.Generator, need: int, t0: float, cfg: dict):
         for j in range(i0, last + 1):
             (data if j in chosen else covers).append((j, float(b.on[j]) + shift))
         end = float(b.off[i0:last + 1].max()) + shift
+        segments.append((float(b.on[i0]), end - shift, shift))
         gap = float(np.clip(b.silence_after[last], float(c["min_silence_s"]), float(c["max_join_gap_s"])))
         t = end + gap
-    return data, covers, end, gap
+    return data, covers, end, gap, tuple(segments)
 
 
-def _layout(data, covers, end: float, gap: float, u: np.ndarray, pool: np.ndarray, first_index: int, n_preamble: int,
-            part: str) -> Layout:
+def _layout(data, covers, end: float, gap: float, segments: tuple, u: np.ndarray, pool: np.ndarray, first_index: int,
+            n_preamble: int, part: str) -> Layout:
     slots = []
     for i, ((j, t), ui) in enumerate(zip(data, u)):
         if i < n_preamble:
@@ -99,7 +102,7 @@ def _layout(data, covers, end: float, gap: float, u: np.ndarray, pool: np.ndarra
         else:
             q = (np.arange(4) + ui) / 4
             slots.append(Slot(first_index + i, part, t, tuple(float(f) for f in np.quantile(pool, q)), j))
-    return Layout(slots, [CoverSlot(j, t) for j, t in covers], end, gap)
+    return Layout(slots, [CoverSlot(j, t) for j, t in covers], end, gap, segments)
 
 
 def header_layout(key: str, b: Bank, pool: np.ndarray, cfg: dict | None = None) -> Layout:
@@ -108,18 +111,18 @@ def header_layout(key: str, b: Bank, pool: np.ndarray, cfg: dict | None = None) 
     n_pre = int(cfg["framing"]["n_preamble"])
     f = cfg["format2"]
     need = n_pre + int(f["header_data_symbols"]) + int(f["header_parity"])
-    data, covers, end, gap = _walk(b, keys.stream(keys.HEADER, "position", key, None, cfg), need, 0.0, cfg)
+    data, covers, end, gap, segments = _walk(b, keys.stream(keys.HEADER, "position", key, None, cfg), need, 0.0, cfg)
     u = keys.stream(keys.HEADER, "pitch", key, None, cfg).random(need)
-    return _layout(data, covers, end, gap, u, pool, 0, n_pre, HEADER)
+    return _layout(data, covers, end, gap, segments, u, pool, 0, n_pre, HEADER)
 
 
 def payload_layout(key: str, nonce: int, n_symbols: int, head: Layout, b: Bank, pool: np.ndarray, cfg: dict | None = None) -> Layout:
     """The payload's slots, from the key and nonce, following the header."""
     cfg = cfg or default_config()
     rng = keys.stream(keys.PAYLOAD, "position", key, nonce, cfg)
-    data, covers, end, gap = _walk(b, rng, n_symbols, head.end_s + head.join_gap_s, cfg)
+    data, covers, end, gap, segments = _walk(b, rng, n_symbols, head.end_s + head.join_gap_s, cfg)
     u = keys.stream(keys.PAYLOAD, "pitch", key, nonce, cfg).random(n_symbols)
-    return _layout(data, covers, end, gap, u, pool, len(head.slots), 0, PAYLOAD)
+    return _layout(data, covers, end, gap, segments, u, pool, len(head.slots), 0, PAYLOAD)
 
 
 def frame_layout(frame: format2.Frame, key: str, b: Bank, pool: np.ndarray, cfg: dict | None = None) -> tuple[Layout, Layout]:

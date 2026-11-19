@@ -84,6 +84,39 @@ cover_move_clearance_hz = 1500.0   # [DECISION] a moved cover whistle keeps this
 cover_pitch_range_hz    = [3000.0, 17000.0]   # [DECISION] where moved cover whistles may go
 cover_move_tries        = 30       # [DECISION]
 
+[realism]                    # the sender's realism upgrade; the receiver and the message format do not depend on it
+enabled               = true       # false = the plain sender (VAE shapes, one fixed voice, no clicks)
+out_dir               = "whistlecode/outputs/realism"   # relative to the repository root; built by build-realism
+workers               = 8          # [DECISION] recordings read at once
+# real shapes: real whistles of each codebook type's GMM cluster
+real_shapes           = false      # [DECISION] true = data whistles take the shape of a real whistle of their type. Measured 2026-11-19: real shapes decoded 76 of 90 messages (pass mark 77), realism score 0.920; VAE shapes 82 of 90, score 0.954
+min_observed_fraction = 0.9       # [DECISION] the tracker saw at least this share of the whistle's frames
+shape_margin          = 0.7        # [DECISION] classifier A's closest / second-closest distance must be below this
+min_members           = 8          # [DECISION] with fewer real shapes than this, the type keeps its VAE shapes
+# real voices: loudness patterns and harmonics of clean recorded whistles
+voice_min_snr_db      = 20.0       # [DECISION] median level of the whistle above the noise in its frequency bin
+voice_frame_snr_db    = 10.0       # [DECISION] at least 90 % of its frames reach this level
+voice_max_hz          = 15000.0    # [DECISION] so that the 2nd and 3rd harmonics can be measured below 48 kHz
+max_voices            = 4000       # [DECISION]
+steady_floor_db       = -9.0       # [DECISION] data whistles use voices that stay above this level through their middle 80 %
+max_h2_db             = -3.0       # [DECISION] voices with a stronger 2nd harmonic are skipped: the detector could follow it instead
+edge_fade_ms          = 5.0        # [DECISION] fade at each end of a whistle, so it never starts with a pop
+# virtual animals
+n_animals             = 6          # [DECISION]
+level_range_db        = [0.0, 10.0]   # [DECISION] above data_amplitude, the same range for data and cover whistles
+median_level_db       = 5.0        # [DECISION] the channel's SNR refers to this level, and no data whistle is quieter than it
+level_jitter_db       = 1.5        # [DECISION] whistle-to-whistle change in one animal's level
+animal_stay           = 0.6        # [DECISION] chance that the next whistle comes from the same animal
+tone_range_db         = [0.0, 6.0] # [DECISION] extra loss per harmonic, as for an animal further away
+# recorded clicks
+click_min_snr_db      = 20.0       # [DECISION] peak above the level just before and after the click
+click_min_crest       = 3.0        # [DECISION] peak / RMS of the 2 ms cut: rejects tones and long knocks
+click_train_min       = 5          # [DECISION] clicks in a regular train; isolated sharp sounds are skipped
+click_ici_s           = [0.002, 0.25]  # [DECISION] time between clicks of a train
+click_ici_ratio       = 2.0        # [DECISION] neighbouring intervals of a train differ by less than this factor
+click_guard_ms        = 12.0       # [DECISION] clicks this close to a data whistle are left out
+click_peak_max        = 0.3        # [DECISION] loudest click in the WAV
+
 [receiver]                   # PLAN 7, format v2 receiver
 pitch_window_hz     = 500.0        # [PLAN] a track further than this from every candidate pitch is not a match
 sync_bin_s          = 0.02         # [DECISION] resolution of the search for the frame's start
