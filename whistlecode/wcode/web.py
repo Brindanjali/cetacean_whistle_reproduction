@@ -1,6 +1,11 @@
 """WhistleCode on the project page: 05 · Encode and 06 · Decode (web/message.js).
 
-    python whistlecode/whistlecode.py serve      ->  http://127.0.0.1:8000
+    python whistlecode/whistlecode.py serve          ->  http://127.0.0.1:8000
+    python whistlecode/whistlecode.py serve --lan    ->  https://<this computer's address>:8000, for other computers too
+
+Another computer can record a played message with its microphone (06 · Decode, Record). Browsers allow the microphone only on
+https pages or on localhost, so --lan serves https with a certificate this computer makes for itself (tls_files). The other
+browser warns once that nobody vouches for it; after "Advanced, Proceed" the page works as usual.
 
 The page, Try it and its API come from the reproduction's own app (src/whistlepipe/server.py), mounted unchanged at /. These
 routes sit in front of it:
@@ -25,12 +30,15 @@ Jobs run one at a time on one worker thread and write whistlecode/outputs/web/<i
 """
 from __future__ import annotations
 
+import datetime
 import hashlib
+import ipaddress
 import json
 import queue
 import re
 import secrets
 import shutil
+import socket
 import threading
 import time
 import traceback
@@ -612,17 +620,90 @@ def create_app(engine: Engine | None = None, page=None, warm: bool = True):
     return app
 
 
-def serve(host: str | None = None, port: int | None = None, device: str | None = None) -> None:
-    """The project page with Try it (the reproduction's app, unchanged) and the WhistleCode routes, on one port."""
+# ---------------------------------------------------------------------------------------------- serving to other computers
+def lan_addresses() -> list[str]:
+    """This computer's IPv4 addresses on its networks (no packet is sent)."""
+    found = set()
+    try:
+        found.update(socket.gethostbyname_ex(socket.gethostname())[2])
+    except OSError:
+        pass
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+            s.connect(("10.255.255.255", 1))            # chooses the outgoing interface; a UDP connect sends nothing
+            found.add(s.getsockname()[0])
+    except OSError:
+        pass
+    return sorted(a for a in found if not a.startswith("127."))
+
+
+def tls_files(names: list[str], cfg: dict | None = None) -> tuple[Path, Path]:
+    """(certificate, key) for https on these addresses and names, plus localhost. Made once and kept in web.tls_dir; made
+    again when it no longer covers an address (a new network) or is about to expire. Self-signed, so browsers warn once."""
+    from cryptography import x509
+    from cryptography.hazmat.primitives import hashes, serialization
+    from cryptography.hazmat.primitives.asymmetric import ec
+    from cryptography.x509.oid import ExtendedKeyUsageOID, NameOID
+
+    cfg = cfg or default_config()
+    d = PROJECT_ROOT / cfg["web"]["tls_dir"]
+    cert_p, key_p = d / "cert.pem", d / "key.pem"
+    want = set(names) | {"127.0.0.1", "localhost"}
+    now = datetime.datetime.now(datetime.timezone.utc)
+    if cert_p.exists() and key_p.exists():
+        c = x509.load_pem_x509_certificate(cert_p.read_bytes())
+        san = c.extensions.get_extension_for_class(x509.SubjectAlternativeName).value
+        have = {str(v) for v in san.get_values_for_type(x509.IPAddress)} | set(san.get_values_for_type(x509.DNSName))
+        if want <= have and c.not_valid_after_utc > now + datetime.timedelta(days=7):
+            return cert_p, key_p
+    key = ec.generate_private_key(ec.SECP256R1())
+    alt = []
+    for n in sorted(want):
+        try:
+            alt.append(x509.IPAddress(ipaddress.ip_address(n)))
+        except ValueError:
+            alt.append(x509.DNSName(n))
+    name = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, "WhistleCode on this computer")])
+    cert = (x509.CertificateBuilder().subject_name(name).issuer_name(name).public_key(key.public_key())
+            .serial_number(x509.random_serial_number()).not_valid_before(now - datetime.timedelta(minutes=5))
+            .not_valid_after(now + datetime.timedelta(days=int(cfg["web"]["tls_days"])))
+            .add_extension(x509.SubjectAlternativeName(alt), critical=False)
+            .add_extension(x509.BasicConstraints(ca=False, path_length=None), critical=True)
+            .add_extension(x509.ExtendedKeyUsage([ExtendedKeyUsageOID.SERVER_AUTH]), critical=False)
+            .sign(key, hashes.SHA256()))
+    d.mkdir(parents=True, exist_ok=True)
+    key_p.write_bytes(key.private_bytes(serialization.Encoding.PEM, serialization.PrivateFormat.PKCS8, serialization.NoEncryption()))
+    cert_p.write_bytes(cert.public_bytes(serialization.Encoding.PEM))
+    return cert_p, key_p
+
+
+def serve(host: str | None = None, port: int | None = None, device: str | None = None, lan: bool = False) -> None:
+    """The project page with Try it (the reproduction's app, unchanged) and the WhistleCode routes, on one port.
+    lan=True: on every network of this computer, over https, so another computer can open the page and record with its
+    microphone."""
     import uvicorn
     from whistlepipe.infer import Engine as PageEngine
     from whistlepipe.server import create_app as page_app
 
     page_engine = PageEngine(device=device)
     s = page_engine.icfg["server"]
-    host, port = host or s["host"], int(port or s["port"])
+    host, port = host or ("0.0.0.0" if lan else s["host"]), int(port or s["port"])
     engine = Engine()
+    tls, addresses = {}, []
+    if lan:
+        addresses = lan_addresses()
+        cert, key = tls_files(addresses, engine.cfg)
+        tls = {"ssl_certfile": str(cert), "ssl_keyfile": str(key)}
     print(f"Try it  : {page_engine.model.status['message']}")
     print(f"messages: {'ready' if engine.error is None else engine.error}")
-    print(f"serving web/, Try it and WhistleCode on http://{host}:{port}  (Ctrl+C to stop)")
-    uvicorn.run(create_app(engine, page_app(page_engine)), host=host, port=port, log_level="warning")
+    if lan:
+        print(f"serving web/, Try it and WhistleCode over https on port {port}  (Ctrl+C to stop)")
+        print(f"  this computer   : https://localhost:{port}")
+        for a in addresses:
+            print(f"  other computers : https://{a}:{port}")
+        print("  The browser warns once that the certificate is not trusted: it is this computer's own. Choose Advanced, then")
+        print("  Proceed. If Windows asks whether Python may use the network, allow it for private networks only.")
+        print("  Anyone on this network can open the page while it runs.")
+    else:
+        print(f"serving web/, Try it and WhistleCode on http://{host}:{port}  (Ctrl+C to stop)")
+    uvicorn.run(create_app(engine, page_app(page_engine)), host=host, port=port, log_level="warning", **tls)
