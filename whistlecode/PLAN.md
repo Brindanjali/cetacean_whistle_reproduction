@@ -128,6 +128,27 @@ The channel of section 6 is built (`wcode/sea.py`, `channel --range --doppler`):
 - **Echoes make whistles misread.** Wrong whistles nearly double, and range makes little difference (13/24, 11/24, 8/18 and 10/24 from 0.2 to 2 km).
 - **Limits of the model:** the sea surface is still, all paths share one Doppler, and sound-speed layers are left out. A real sea is likely to be harder.
 - **Encounter 276 has now been seen.** Receiver fixes must be developed on encounter-214 noise, and then checked once on 276.
+- **These results predate the slot-reading fix below,** so the sea test must be run again before it is compared with anything newer.
+
+### Normal conditions proved (2026-11-19)
+
+Normal conditions means the sent file plus real ocean noise, with no echoes or movement. The target is the plan's final mark: at least 95 % of messages exact on encounter 276.
+
+**The cause.** About 8 % of whistles were lost or misread even in almost silent audio, so noise was not the root problem. The detector often joins a little of the sound before or after a whistle onto its track. With those frames removed by hand, correct reads rose from 91.2 % to 99.0 % in clean audio and from 88.8 % to 97.5 % in encounter-214 noise.
+
+**The fix** (`Receiver.read_slots`, the sender is unchanged). The key gives the moment each whistle starts, and each shape has its own length. Each of the 16 shapes is now compared with only the part of the track where that shape would sound, and the pitch is read from that part. A track that starts well before the slot can now be read too. The settings were tuned on the 90 encounter-214 tuning messages only.
+
+| Test | Before the fix | After the fix | Whistles lost / wrong after |
+|---|---|---|---|
+| Almost silent audio, 30 messages | 30 | 30 | 98.0 % read right |
+| Encounter-214 noise, the 90 tuning messages | 82 | 87 | 3.6 % / 2.3 % |
+| **Encounter-214 noise, 90 fresh messages** | not run | **90** | 2.4 % / 1.1 % |
+| **Encounter-276 noise, 90 messages** | 65 | **87** | 5.0 % / 4.0 % |
+
+- **Encounter 276 by noise level:** 29/30 at 10 dB, 28/30 at 15 dB and 30/30 at 20 dB. The mark is met (96.7 %). No message that decoded before now fails.
+- **Sample size:** with 90 messages, the true rate on encounter 276 lies between about 91 % and 99 % (95 % confidence).
+- **False messages:** no wrong text was accepted in those 180 messages. The 20 recordings without a message reported none, and 360 tries with a wrong key reported none.
+- **Not covered:** echoes, absorption and Doppler, and the epoch-150 model. Data whistles still sit 0-5 dB above the level the SNR refers to.
 
 ## 1. The idea
 

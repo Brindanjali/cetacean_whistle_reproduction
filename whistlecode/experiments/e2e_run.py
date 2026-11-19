@@ -89,6 +89,7 @@ def main() -> int:
     ap.add_argument("--quick", action="store_true", help="two trials per setting at 15 dB")
     ap.add_argument("--trials", type=int, default=10, help="messages per SNR and length")
     ap.add_argument("--tag", default="", help="suffix of the output folder")
+    ap.add_argument("--seed", type=int, default=20261118, help="chooses the messages; another value gives messages not used for tuning")
     args = ap.parse_args()
     sys.stdout.reconfigure(errors="replace")
     cfg = default_config()
@@ -104,7 +105,7 @@ def main() -> int:
     snrs, trials = ((15.0,), 2) if args.quick else (SNRS, args.trials)
     tx = sender.Sender(cfg)
     rx = receiver.Receiver(cfg, rhythm_bank=tx.bank, detector=detect.Detector(cfg))
-    rng = np.random.default_rng(20261118)
+    rng = np.random.default_rng(args.seed)
     rows: list[dict] = []
     t0 = time.perf_counter()
     with open(out / "trials.jsonl", "w", encoding="utf-8") as f:

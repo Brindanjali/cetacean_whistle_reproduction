@@ -7,9 +7,11 @@
 3. Read the 7 header slots and repair them, which gives the mode, length and nonce.
 4. Rebuild the payload slots from the key and nonce, read them, repair them, unscramble and check the CRC.
 
-Reading a slot: take the track starting nearest the slot's time within -60/+150 ms and within 500 Hz of a candidate pitch. The
-nearest candidate gives the two pitch bits and classifier A gives the four shape bits. A missing track or an ambiguous shape is
-marked as lost, which costs Reed-Solomon half as much as a wrong symbol.
+Reading a slot: the key gives the moment a whistle starts, and each shape has its own length, so each of the 16 shapes is compared
+with only the part of a track where that shape would sound. The detector often joins a little of the sound before or after a
+whistle onto its track, and those frames are ignored. The nearest candidate pitch to that part gives the two pitch bits, and the
+closest shape gives the four shape bits. A missing track or an ambiguous shape is marked as lost, which costs Reed-Solomon half as
+much as a wrong symbol.
 
 Several frame starts are tried, best first. Only a message that passes its CRC is returned.
 """
@@ -63,6 +65,7 @@ class TrackSet:
         self.t0 = np.array([t.start_s for t in tracks], dtype=np.float64)
         self.fc = np.array([t.centre_hz for t in tracks], dtype=np.float64)
         self.n = np.array([len(t.freq_hz) for t in tracks], dtype=np.int64)
+        self.t1 = np.array([t.start_s + len(t.freq_hz) * t.hop_s for t in tracks], dtype=np.float64)
 
 
 class Receiver:
@@ -135,42 +138,62 @@ class Receiver:
         return (start + float(np.median(residuals)) if residuals else start), votes
 
     # ------------------------------------------------------------------------------------------ reading slots
-    def read_slots(self, tr: TrackSet, slots: list, start_s: float) -> SlotReadout:
-        c = self.cfg["detect"]
-        early, late = float(c["slot_early_ms"]) / 1000, float(c["slot_late_ms"]) / 1000
-        pw = float(self.cfg["receiver"]["pitch_window_hz"])
-        by_shape = self.cfg["receiver"]["track_choice"] == "best_shape"
-        symbols = np.full(len(slots), format2.ERASED, dtype=np.int64)
-        doubt = np.zeros(len(slots))
-        queries, rows = [], []
+    def _shape_fits(self, tr: TrackSet, slots: list, start_s: float) -> dict[tuple[int, int], dict[int, tuple[float, int]]]:
+        """{(slot, track): {shape: (distance, pitch band)}}, each shape compared with the part of the track where it would sound."""
+        r = self.cfg["receiver"]
+        late = float(self.cfg["detect"]["slot_late_ms"]) / 1000
+        pw = float(r["pitch_window_hz"])
+        before, after = float(r["slot_guard_ms"]) / 1000, float(r["slot_tail_ms"]) / 1000
+        overlap = float(r["min_overlap_ms"]) / 1000
+        min_frames = int(r["min_track_frames"])
+        missing_w, extra_w = float(r["missing_weight_hz_per_ms"]), float(r["extra_weight_hz_per_ms"])
+        lengths = np.array([t.duration_ms for t in self.templates]) / 1000.0
+        queries, shapes, costs, rows = [], [], [], []
         for i, s in enumerate(slots):
             t = start_s + s.start_s
             cand = np.asarray(s.candidates_hz)
-            near = np.where((tr.t0 >= t - early) & (tr.t0 <= t + late))[0]
-            if not len(near):
-                continue
-            for k in near[np.abs(tr.fc[near, None] - cand[None, :]).min(axis=1) <= pw]:
-                band = int(np.argmin(np.abs(tr.fc[k] - cand)))
-                queries.append(tr.tracks[int(k)].contour(float(cand[band])))
-                rows.append((i, band, int(k), abs(float(tr.t0[k]) - t)))
-        if not queries:
-            return SlotReadout(symbols, len(slots), 0, doubt)
-        dist = classify.distances(queries, self.templates, self.cfg)
-        best, ambiguous = classify.decide(dist, float(self.cfg["classify"]["ambiguity_ratio"]))
-        closest = np.sort(dist, axis=1)
-        ratio = closest[:, 0] / np.maximum(closest[:, 1], 1e-9)
-        chosen: dict[int, tuple] = {}
-        for r, (i, _, k, dt) in enumerate(rows):
-            rank = (float(closest[r, 0]), dt) if by_shape else (dt, -int(tr.n[k]))
-            if i not in chosen or rank < chosen[i][0]:
-                chosen[i] = (rank, r)
+            for k in np.where((tr.t0 <= t + late) & (tr.t1 >= t + overlap))[0]:
+                track = tr.tracks[int(k)]
+                when = track.start_s + (np.arange(len(track.freq_hz)) + 0.5) * track.hop_s
+                for shape, length in enumerate(lengths):
+                    part = track.freq_hz[(when >= t - before) & (when <= t + length + after)]
+                    if len(part) < min_frames:
+                        continue
+                    middle = 0.5 * (float(part.max()) + float(part.min()))
+                    band = int(np.argmin(np.abs(middle - cand)))
+                    if abs(middle - cand[band]) > pw:
+                        continue
+                    missing_ms = 1000.0 * max(0.0, float(length) - len(part) * track.hop_s)
+                    extra_ms = 1000.0 * max(0.0, float(tr.t1[k]) - (t + float(length) + after))
+                    queries.append(part - cand[band])
+                    shapes.append(shape)
+                    costs.append(missing_w * missing_ms + extra_w * extra_ms)
+                    rows.append((i, int(k), shape, band))
+        fits: dict[tuple[int, int], dict[int, tuple[float, int]]] = {}
+        if queries:
+            dist = classify.pair_distances(queries, np.array(shapes), self.templates, self.cfg) + np.array(costs)
+            for (i, k, shape, band), d in zip(rows, dist):
+                fits.setdefault((i, k), {})[shape] = (float(d), band)
+        return fits
+
+    def read_slots(self, tr: TrackSet, slots: list, start_s: float) -> SlotReadout:
+        symbols = np.full(len(slots), format2.ERASED, dtype=np.int64)
+        doubt = np.zeros(len(slots))
+        limit = float(self.cfg["classify"]["ambiguity_ratio"])
+        chosen: dict[int, list] = {}
+        for (i, _), fit in self._shape_fits(tr, slots, start_s).items():
+            ranked = sorted((d, shape, band) for shape, (d, band) in fit.items())
+            if i not in chosen or ranked[0][0] < chosen[i][0][0]:      # the track that some shape explains best
+                chosen[i] = ranked
         n_doubtful = 0
-        for i, (_, r) in chosen.items():
-            if ambiguous[r]:
+        for i, ranked in chosen.items():
+            d, shape, band = ranked[0]
+            ratio = d / max(ranked[1][0], 1e-9) if len(ranked) > 1 else 0.0
+            if ratio > limit:
                 n_doubtful += 1
             else:
-                symbols[i] = (int(best[r]) << 2) | rows[r][1]
-                doubt[i] = float(ratio[r])
+                symbols[i] = (shape << 2) | band
+                doubt[i] = ratio
         return SlotReadout(symbols, len(slots) - len(chosen), n_doubtful, doubt)
 
     # ------------------------------------------------------------------------------------------ one frame start

@@ -77,6 +77,21 @@ def dtw_matrix(queries, templates, band_frac: float, band_min: int, max_pairs: i
     return out
 
 
+def pair_distances(queries: list, shapes: np.ndarray, templates: list[Contour], cfg: dict | None = None, batch: int = 4000) -> np.ndarray:
+    """Banded DTW of each sequence of Hz offsets queries[i] against templates[shapes[i]]."""
+    c = (cfg or default_config())["classify"]
+    out = np.zeros(len(queries))
+    if not len(queries):
+        return out
+    qa, lq = _pad(queries)
+    tb, lt = _pad([t.offset_hz for t in templates])
+    order = np.argsort(lq, kind="stable")                            # similar lengths together: the loop runs to the longest
+    for g in range(0, len(order), batch):
+        sel = order[g:g + batch]
+        out[sel] = dtw_pairs(qa[sel], lq[sel], tb[shapes[sel]], lt[shapes[sel]], float(c["dtw_band_frac"]), int(c["dtw_band_min"]))
+    return out
+
+
 def distances(queries: list[Contour], templates: list[Contour], cfg: dict | None = None) -> np.ndarray:
     """(Q, T) classifier-A distances."""
     c = (cfg or default_config())["classify"]
