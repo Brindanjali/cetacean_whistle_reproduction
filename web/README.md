@@ -29,7 +29,10 @@ Below "Imagine new voices", two more places hide a text message in whistles and 
   scramble, spare whistles, whistles, real rhythm) and one tile per whistle. "Hide it" makes the sound the sender plays, and
   "Through the sea" mixes it into a real sea recording.
 - **06 · Decode:** drop in a recording (or use one made above) and type the key. The decoder gets only the audio and the key.
-  For a file made above, the page afterwards checks each whistle against the sender's record and says so.
+  For a file made above, the page afterwards checks each whistle against the sender's record and says so. **Record** listens
+  with the microphone instead: press it, play the message near the computer, press Stop, and the recording goes straight to
+  the decoder (with the key already typed, it reads it at once). The microphone's sound is kept as it is: no echo cancelling,
+  noise suppression or automatic gain.
 
 They need the WhistleCode server, which also serves everything else on the page, Try it included:
 
@@ -39,6 +42,23 @@ python whistlecode/whistlecode.py serve
 
 With `python whistle.py serve` or `python web/serve.py` the two places say how to start it and stay still. The routes are in
 `whistlecode/wcode/web.py`; the page code is `message.js`.
+
+### Two computers: play on one, record on the other
+
+Browsers allow the microphone only on https pages or on the computer that runs the server, so serve the network over https:
+
+```
+python whistlecode/whistlecode.py serve --lan
+```
+
+It prints an address such as `https://192.168.18.39:8000` for the other computer. Its browser warns once that the
+certificate is not trusted (this computer made it for itself and keeps it in `whistlecode/outputs/web_tls/`): choose
+Advanced, then Proceed. Windows may ask whether Python may use the network; allow private networks only. While it runs,
+anyone on the network can open the page.
+
+Then: write the message in Encode on one computer, press Hide it and play the sound (or its downloaded WAV) aloud; on the
+other computer type the same key in Decode, press Record, and press Stop when the sound has finished. The air between two
+laptops is a new channel for the decoder (room echoes, speaker and microphone limits) and has not been measured yet.
 
 ## The model files
 
