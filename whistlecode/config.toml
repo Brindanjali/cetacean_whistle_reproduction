@@ -234,3 +234,5 @@ picture_range_db  = 50.0           # [DECISION] darkest = the loudest 0.05 % of 
 picture_floor_db  = 2.0            # [DECISION] ... and at least this far above the median level, so the noise floor of a sea recording is pale
 play_fs_hz        = 48000          # [DECISION] the page plays a 16-bit 48 kHz copy; decoding and downloads use the original
 play_peak         = 0.89           # [DECISION] the copy is scaled to this peak
+tls_dir           = "whistlecode/outputs/web_tls"   # serve --lan: the self-signed certificate and its key (never committed)
+tls_days          = 365            # [DECISION] how long the certificate lasts
