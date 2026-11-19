@@ -229,6 +229,21 @@
           <span class="drop-t" id="dec-drop-t">Drop a recording here, or <u>choose a file</u></span>
           <span class="drop-n" id="dec-drop-n">WAV, FLAC or OGG · 32 kHz or more · up to 300 s</span>
         </label>
+        <!-- or listen: the microphone records the message as another computer plays it, and the recording goes to the decoder -->
+        <div class="wc-rec" id="rec">
+          <p class="ex-h">Or listen with the microphone</p>
+          <div class="wc-rec-row">
+            <button class="play wc-rec-btn" id="rec-run" type="button" aria-pressed="false" disabled><span class="rec-dot" aria-hidden="true"></span><span id="rec-run-t">Record</span></button>
+            <label class="wc-rec-dev" id="rec-dev-l" hidden>Microphone <select id="rec-dev"></select></label>
+            <span class="lab-note wc-rec-time" id="rec-time"></span>
+          </div>
+          <div class="wc-live" id="rec-live" hidden>
+            <canvas id="rec-cv" aria-label="What the microphone hears, newest on the right"></canvas>
+            <span class="wc-live-f" aria-hidden="true"><span style="bottom:21%">5 kHz</span><span style="bottom:47.4%">10 kHz</span><span style="bottom:73.7%">15 kHz</span></span>
+            <span class="wc-meter" aria-hidden="true"><i id="rec-level"></i></span>
+          </div>
+          <p class="lab-note wc-rec-note" id="rec-note">Press Record, then play the message near this computer: from the Download WAV of Encode on another computer, a phone or a speaker. Press Stop when it has finished; the recording goes straight to the decoder.</p>
+        </div>
         <div class="wc-src" id="dec-src" hidden>
           <span class="lab-note">Or use one made above:</span>
           <button class="play" id="dec-use-sent" type="button">The file you just made</button>
