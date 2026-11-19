@@ -23,7 +23,7 @@ from pathlib import Path
 import numpy as np
 import soundfile as sf
 
-from . import bank, classify, codebook, detect, format2, layout, schedule
+from . import bank, channel, classify, codebook, detect, format2, layout, schedule
 from .config import default_config
 from .framing import DecodeError, FramingError
 
@@ -36,6 +36,7 @@ class SlotReadout:
     n_missed: int                   # no track found
     n_doubtful: int                 # track found, shape ambiguous
     doubt: np.ndarray               # closest / second-closest shape distance of each read whistle (higher = less sure)
+    missed: np.ndarray | None = None    # per slot: True = no track found (ERASED and not missed = doubtful)
 
 
 @dataclass(frozen=True)
@@ -55,6 +56,9 @@ class Reception:
     body: SlotReadout | None = None
     n_repaired_wrong: int = 0
     n_repaired_lost: int = 0
+    header_slots: tuple = ()        # the slots the best attempt read (preamble included), from the key alone
+    payload_slots: tuple = ()       # ... and from the key and the nonce it read
+    length: int | None = None       # the message length the header gave (characters or bytes)
 
 
 class TrackSet:
@@ -194,11 +198,13 @@ class Receiver:
             else:
                 symbols[i] = (shape << 2) | band
                 doubt[i] = ratio
-        return SlotReadout(symbols, len(slots) - len(chosen), n_doubtful, doubt)
+        missed = np.ones(len(slots), dtype=bool)
+        missed[list(chosen)] = False
+        return SlotReadout(symbols, len(slots) - len(chosen), n_doubtful, doubt, missed)
 
     # ------------------------------------------------------------------------------------------ one frame start
     def _attempt(self, tr: TrackSet, head: layout.Layout, start_s: float, votes: float, key: str) -> Reception:
-        common = {"offset_s": start_s, "sync_votes": votes, "n_tracks": len(tr.tracks)}
+        common = {"offset_s": start_s, "sync_votes": votes, "n_tracks": len(tr.tracks), "header_slots": tuple(head.slots)}
         r = self.cfg["receiver"]
         soft = bool(r["soft_repair"])
         hdr = self.read_slots(tr, [s for s in head.slots if s.part == layout.HEADER], start_s)
@@ -214,10 +220,12 @@ class Receiver:
             try:
                 m = format2.decode_payload(body.symbols, h, key, self.cfg, body.doubt if soft else None)
             except (DecodeError, FramingError) as e:
-                failed = failed or Reception(False, "payload", str(e), mode=h.mode, nonce=h.nonce, header=hdr, body=body, **common)
+                failed = failed or Reception(False, "payload", str(e), mode=h.mode, nonce=h.nonce, header=hdr, body=body,
+                                             payload_slots=tuple(pay.slots), length=h.length, **common)
                 continue
             return Reception(True, "done", "", m.payload, m.text, m.mode, m.nonce, header=hdr, body=body,
-                             n_repaired_wrong=h.n_errors + m.n_errors, n_repaired_lost=h.n_erasures + m.n_erasures, **common)
+                             n_repaired_wrong=h.n_errors + m.n_errors, n_repaired_lost=h.n_erasures + m.n_erasures,
+                             payload_slots=tuple(pay.slots), length=h.length, **common)
         return failed
 
     def decode_tracks(self, tracks: list, key: str) -> Reception:
@@ -235,8 +243,12 @@ class Receiver:
                 best = got
         return Reception(**{**best.__dict__, "attempts": len(found)})
 
+    def tracks(self, audio: np.ndarray, fs: float) -> list:
+        """Whistle tracks in a recording; digital silence gets a faint noise floor first (channel.quiet_floor)."""
+        return self.detector.tracks(channel.quiet_floor(audio, fs, self.cfg), fs)
+
     def receive(self, audio: np.ndarray, fs: float, key: str) -> Reception:
-        return self.decode_tracks(self.detector.tracks(np.asarray(audio, dtype=np.float32), fs), key)
+        return self.decode_tracks(self.tracks(audio, fs), key)
 
     def receive_file(self, path: str | Path, key: str) -> Reception:
         x, fs = sf.read(str(path), dtype="float32", always_2d=True)

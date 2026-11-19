@@ -16,6 +16,9 @@ The message pipeline (format v2):
     python whistlecode/whistlecode.py build-realism
         collect the real whistle shapes, voices and clicks the sender plays (a few minutes; needs the raw recordings)
 
+    python whistlecode/whistlecode.py serve [--host 127.0.0.1] [--port 8000] [--device cpu]
+        the project page with Try it and its 05 · Encode and 06 · Decode places (wcode/web.py), on one port
+
 P1 commands (the whistle alphabet):
 
     python whistlecode/whistlecode.py build-codebook [--quick]
@@ -231,6 +234,13 @@ def cmd_receive(args) -> int:
     return 0
 
 
+def cmd_serve(args) -> int:
+    from wcode import web
+
+    web.serve(args.host, args.port, args.device)
+    return 0
+
+
 def main(argv=None) -> int:
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(errors="replace")       # Windows consoles cannot print every character
@@ -266,6 +276,11 @@ def main(argv=None) -> int:
     s.add_argument("input", help="the recording (.wav)")
     s.add_argument("--key", required=True, help="shared key")
     s.set_defaults(fn=cmd_receive)
+    s = sub.add_parser("serve", help="the project page with Try it, Encode and Decode")
+    s.add_argument("--host", default=None, help="default from configs/inference.toml (127.0.0.1)")
+    s.add_argument("--port", type=int, default=None, help="default from configs/inference.toml (8000)")
+    s.add_argument("--device", default=None, help="Try it's model device (auto | cuda | cpu)")
+    s.set_defaults(fn=cmd_serve)
     for name, fn, hlp in (("frame", cmd_frame, "show how a message is framed into whistle symbols"),
                           ("roundtrip", cmd_roundtrip, "frame, damage whistles, decode")):
         s = sub.add_parser(name, help=hlp)

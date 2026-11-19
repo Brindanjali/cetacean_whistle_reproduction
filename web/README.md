@@ -21,6 +21,25 @@ Then open http://127.0.0.1:8000 in Chrome or Edge on a desktop. The film alone (
 Both servers answer HTTP Range requests, which the browser needs to seek inside the video files. Python's built-in
 `http.server` does not, so the return shot would start from the wrong frame.
 
+## Encode and Decode (WhistleCode)
+
+Below "Imagine new voices", two more places hide a text message in whistles and read it back:
+
+- **05 · Encode:** type a message and a key. Six stations show each step with the real values (letters to bits, checksum, key
+  scramble, spare whistles, whistles, real rhythm) and one tile per whistle. "Hide it" makes the sound the sender plays, and
+  "Through the sea" mixes it into a real sea recording.
+- **06 · Decode:** drop in a recording (or use one made above) and type the key. The decoder gets only the audio and the key.
+  For a file made above, the page afterwards checks each whistle against the sender's record and says so.
+
+They need the WhistleCode server, which also serves everything else on the page, Try it included:
+
+```
+python whistlecode/whistlecode.py serve
+```
+
+With `python whistle.py serve` or `python web/serve.py` the two places say how to start it and stay still. The routes are in
+`whistlecode/wcode/web.py`; the page code is `message.js`.
+
 ## The model files
 
 Nothing in `web/` changes after training. The server reads the files from where the training commands write them:
@@ -58,6 +77,7 @@ The first plays the 60 fps clip at half speed (every frame real) and appends it 
 - `lab.js`: "Try it": upload, job progress, overview with clickable whistle boxes, per-whistle cards, generation;
   "Slow ×2" and the pitch shift re-synthesise the contour in the browser with sonify.py's rules
 - `audio-engine.js`: the illustrative whistle contours and tone of the film (not the model)
+- `message.js`: 05 · Encode and 06 · Decode (WhistleCode): stations, whistle tiles, close-up spectrograms, playback
 - `media4k/`, `fonts/`: local assets (see `CREDITS.md`); `data/`: exported examples
 
 ## Playback notes

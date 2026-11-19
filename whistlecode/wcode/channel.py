@@ -91,6 +91,31 @@ def amplitude_for_snr(snr_db: float, f_mean_hz: float, levels: np.ndarray, fs: f
     return 10 ** (snr / 20) * float(levels[k]) / (_window(fs, bin_hz).sum() / 2)
 
 
+
+def quiet_floor(x: np.ndarray, fs: float, cfg: dict | None = None) -> np.ndarray:
+    """x as it is, unless it holds digital silence, which no hydrophone records (at least receiver.silence_fraction of the samples
+    are exactly zero, as in a file straight from the sender). Then faint white noise is added, receiver.silence_floor_snr_db below
+    the loud whistles in the narrowband SNR of amplitude_for_snr: the detector learned on sea recordings and misses whistles in
+    pure silence (PLAN.md section 8, E1). The noise has a fixed seed, so one file always gives the same tracks."""
+    cfg = cfg or default_config()
+    r, bin_hz = cfg["receiver"], float(cfg["channel"]["snr_bin_hz"])
+    x = np.asarray(x, dtype=np.float32)
+    if not len(x) or float(np.mean(x == 0)) < float(r["silence_fraction"]):
+        return x
+    w = _window(fs, bin_hz).astype(np.float32)
+    n, hop = len(w), len(w) // 2
+    starts = np.arange(0, max(1, len(x) - n + 1), hop)
+    xp = np.pad(x, (0, max(0, n - len(x))))
+    tone = np.concatenate([np.abs(np.fft.rfft(xp[s[:, None] + np.arange(n)[None, :]] * w, axis=1)).max(axis=1)
+                           for s in np.array_split(starts, max(1, len(starts) // 4096))]) / (w.sum() / 2)   # tone amplitude per frame
+    loud = tone[tone > 0]
+    if not len(loud):
+        return x
+    unit = float(np.median(bin_levels(np.random.default_rng(0).standard_normal(int(fs)), fs, bin_hz)))   # level of unit white noise
+    sigma = float(np.quantile(loud, 0.9)) * (w.sum() / 2) / 10 ** (float(r["silence_floor_snr_db"]) / 20) / unit
+    rng = np.random.default_rng(int(r["silence_floor_seed"]))
+    return (x + sigma * rng.standard_normal(len(x))).astype(np.float32)
+
 @dataclass(frozen=True)
 class Received:
     audio: np.ndarray           # float32, the message inside real noise

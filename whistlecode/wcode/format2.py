@@ -174,6 +174,38 @@ def encode(message: bytes | str, key: str, nonce: int | None = None, cfg: dict |
                  encode_payload(mode, length, bits, key, nonce, cfg))
 
 
+@dataclass(frozen=True)
+class Explained:
+    """Every intermediate step of encode(), for showing how a message becomes whistles (the project page)."""
+    frame: Frame
+    message_bits: np.ndarray        # the text as bits
+    char_bits: int                  # 5 (compact) or 8 (raw)
+    crc: int
+    pad_bits: int                   # zero bits that fill the last symbol
+    plain: np.ndarray               # data symbols before scrambling (message + CRC + padding)
+    scrambled: np.ndarray           # the same after the key-and-nonce scrambler
+    blocks: list                    # (data, parity) of each code block
+    payload_source: list            # per payload whistle in air order: (block, position, data symbol index or None = parity)
+
+
+def explain(message: bytes | str, key: str, nonce: int, cfg: dict | None = None) -> Explained:
+    """encode(), keeping each step. The frame is exactly the one encode() makes for the same message, key and nonce."""
+    cfg = cfg or default_config()
+    check_key(key)
+    nonce = check_nonce(nonce)
+    mode, length, bits = split_message(message, cfg)
+    crc = _crc(mode, length, bits)
+    all_bits = np.concatenate([bits, to_bits([crc], CRC_BITS)])
+    pad = -len(all_bits) % SYMBOL_BITS
+    plain = from_bits(np.concatenate([all_bits, np.zeros(pad, dtype=np.uint8)]), SYMBOL_BITS)
+    scrambled = plain ^ _symbol_mask(PAYLOAD, key, len(plain), nonce, cfg)
+    plan = blocks(len(plain), cfg)
+    first = np.cumsum([0] + [d for d, _ in plan])
+    source = [(b, i, int(first[b] + i) if i < plan[b][0] else None) for b, i in air_order([d + p for d, p in plan])]
+    frame = Frame(mode, length, nonce, encode_header(mode, length, key, nonce, cfg), encode_payload(mode, length, bits, key, nonce, cfg))
+    return Explained(frame, bits, _char_bits(mode), crc, pad, plain, scrambled, plan, source)
+
+
 # ---------------------------------------------------------------------------------------------- decoding
 @dataclass(frozen=True)
 class Header:

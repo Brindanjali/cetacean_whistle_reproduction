@@ -131,6 +131,9 @@ missing_weight_hz_per_ms = 0.5     # [DECISION] cost per ms of the shape that th
 extra_weight_hz_per_ms   = 1.0     # [DECISION] cost per ms the track runs on after the shape should have ended (measured on encounter-214 noise, 2026-11-19)
 soft_repair         = true         # [DECISION] retry failed repairs with the most doubtful whistles marked as lost
 max_header_readings = 3            # [DECISION] valid header readings tried per frame start
+silence_fraction    = 0.01         # [DECISION] a recording with at least this share of exactly-zero samples is digital silence (a file straight from the sender)
+silence_floor_snr_db = 40.0        # [PLAN] E1: such a recording first gets white noise this far under its loud whistles; the detector misses whistles in pure silence
+silence_floor_seed  = 0            # [DECISION] fixed, so one file always gives the same tracks
 
 [model]                      # PLAN 3 (paths relative to the repository root)
 run_dir      = "models/vaegmm/V1_L64_b1e-4_critic_E191"
@@ -212,3 +215,22 @@ verify_rounds       = 5            # [DECISION] replacement rounds before the bu
 out_dir             = "whistlecode/outputs/codebook"   # relative to the repository root
 gallery_fc_hz       = 8000.0       # [DECISION] centre frequency of the gallery WAVs
 seed                = 20261118     # [DECISION]
+
+[web]                        # 05 · Encode and 06 · Decode on the project page (wcode/web.py, web/message.js)
+out_dir           = "whistlecode/outputs/web"   # one folder per job, relative to the repository root
+keep_jobs         = 60             # [DECISION] newest job folders kept
+max_chars         = 60             # [DECISION] about 160 s of sound; longer messages make the visitor wait minutes
+max_key_chars     = 64             # [DECISION]
+max_upload_mb     = 200            # [DECISION] 300 s of 96 kHz float32 audio is 115 MB
+max_seconds       = 300.0          # [DECISION] longest recording the decoder takes
+min_rate_hz       = 32000          # [DECISION] as Try it: the whistles reach 14.5 kHz
+formats           = [".wav", ".flac", ".ogg"]   # [DECISION] read by soundfile; lossy MP3 is left out
+snr_choices_db    = [10.0, 15.0, 20.0]   # [DECISION] the levels the pipeline was tested at
+noise_choices     = [276, 214]     # [DECISION] 276 first: the receiver was never tuned on it
+picture_hz        = [1000.0, 20000.0]    # [DECISION] frequency range of the page's spectrograms
+picture_rows      = 200            # [DECISION]
+picture_cols_per_s = 100           # [DECISION] at most; fewer for long recordings, so a picture stays under 30,000 columns
+picture_range_db  = 50.0           # [DECISION] darkest = the loudest 0.05 % of the picture, palest = at most 50 dB below it
+picture_floor_db  = 2.0            # [DECISION] ... and at least this far above the median level, so the noise floor of a sea recording is pale
+play_fs_hz        = 48000          # [DECISION] the page plays a 16-bit 48 kHz copy; decoding and downloads use the original
+play_peak         = 0.89           # [DECISION] the copy is scaled to this peak
