@@ -16,8 +16,9 @@ The message pipeline (format v2):
     python whistlecode/whistlecode.py build-realism
         collect the real whistle shapes, voices and clicks the sender plays (a few minutes; needs the raw recordings)
 
-    python whistlecode/whistlecode.py serve [--host 127.0.0.1] [--port 8000] [--device cpu]
-        the project page with Try it and its 05 · Encode and 06 · Decode places (wcode/web.py), on one port
+    python whistlecode/whistlecode.py serve [--lan] [--host 127.0.0.1] [--port 8000] [--device cpu]
+        the project page with Try it and its 05 · Encode and 06 · Decode places (wcode/web.py), on one port.
+        --lan: also for other computers on this network, over https (a self-signed certificate), so they can record
 
 P1 commands (the whistle alphabet):
 
@@ -237,7 +238,7 @@ def cmd_receive(args) -> int:
 def cmd_serve(args) -> int:
     from wcode import web
 
-    web.serve(args.host, args.port, args.device)
+    web.serve(args.host, args.port, args.device, args.lan)
     return 0
 
 
@@ -280,6 +281,7 @@ def main(argv=None) -> int:
     s.add_argument("--host", default=None, help="default from configs/inference.toml (127.0.0.1)")
     s.add_argument("--port", type=int, default=None, help="default from configs/inference.toml (8000)")
     s.add_argument("--device", default=None, help="Try it's model device (auto | cuda | cpu)")
+    s.add_argument("--lan", action="store_true", help="serve other computers on this network too, over https, so they can record")
     s.set_defaults(fn=cmd_serve)
     for name, fn, hlp in (("frame", cmd_frame, "show how a message is framed into whistle symbols"),
                           ("roundtrip", cmd_roundtrip, "frame, damage whistles, decode")):
