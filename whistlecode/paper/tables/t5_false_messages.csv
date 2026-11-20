@@ -1,0 +1,4 @@
+Check,Tries,False messages,95 % upper bound on the rate
+"Recording with a message, receiver holds the right key: wrong text accepted",3700,0,0.08 %
+"Recording with a message, wrong key",3700,0,0.08 %
+"No message: 50 min of encounter-276 noise, random keys",500,0,0.60 %

@@ -1,0 +1,15 @@
+Receiver,Noise,5 dB,7.5 dB,10 dB,15 dB,20 dB,All 13 SNRs,Wrong text
+"Receiver as deployed (ratio 0.85, soft repair)",214,8/50,47/50,50/50,49/50,50/50,404/650,0
+"Receiver as deployed (ratio 0.85, soft repair)",276,7/50,33/50,38/50,50/50,50/50,375/650,0
+No soft repair (no retries that mark the most doubtful whistles as lost),214,6/50,43/50,50/50,49/50,49/50,397/650,0
+No soft repair (no retries that mark the most doubtful whistles as lost),276,4/50,30/50,37/50,47/50,49/50,361/650,0
+Stricter doubt rule (ratio 0.75),214,7/50,44/50,49/50,49/50,50/50,399/650,0
+Stricter doubt rule (ratio 0.75),276,3/50,26/50,37/50,50/50,50/50,363/650,0
+Looser doubt rule (ratio 0.95),214,15/50,47/50,49/50,49/50,50/50,410/650,0
+Looser doubt rule (ratio 0.95),276,11/50,33/50,39/50,50/50,50/50,380/650,0
+No up-front doubt rule (ratio 1.0; soft repair still erases the most doubtful in turn),214,15/50,47/50,49/50,49/50,50/50,410/650,0
+No up-front doubt rule (ratio 1.0; soft repair still erases the most doubtful in turn),276,11/50,33/50,39/50,50/50,50/50,380/650,0
+"Errors only: every whistle given a symbol, no erasures, no soft repair",214,4/50,40/50,48/50,48/50,49/50,387/650,0
+"Errors only: every whistle given a symbol, no erasures, no soft repair",276,2/50,23/50,33/50,46/50,48/50,342/650,0
+Frame start given (oracle sync),214,12/50,48/50,50/50,49/50,50/50,409/650,0
+Frame start given (oracle sync),276,8/50,34/50,38/50,50/50,50/50,377/650,0

@@ -1,0 +1,7 @@
+Test,Pass mark,Measured,Verdict
+E1 clean channel,100 % exact,100.0 % (98.1-100.0),PASS
+"Final run, encounter 276, 10 dB",>= 95 % exact,84.5 % (78.8-88.9),FAIL
+"False messages (wrong text, wrong key, no message)",0,0 in 7900 tries,PASS
+"E7 whistle-shape discriminator, deployed sender",AUC <= 0.75,0.944 (two real encounters: 0.696),FAIL
+E9 rhythm: WhistleCode stream on its own,AUC <= 0.60,0.440,PASS
+"E9 rhythm: WhistleCode inside encounter-276 noise, 10 dB",AUC <= 0.60,0.684,FAIL

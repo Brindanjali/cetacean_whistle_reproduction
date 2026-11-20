@@ -1,0 +1,4 @@
+Payload,Messages,Median length,Median data whistles,Median whistles played,Median airtime (s),Median information rate (bit/s)
+Compact text,50,41 characters,66,198,142,1.22
+Binary,150,34 bytes,82,236,193,1.38
+"Sweep set (text, 8-32 characters)",50,19.5 characters,39.5,109.5,84,1.08

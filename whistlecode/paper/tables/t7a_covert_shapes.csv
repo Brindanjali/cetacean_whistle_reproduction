@@ -1,0 +1,8 @@
+Whistles compared with real encounter-276 whistles,Whistles,Discriminator AUC,Main clues,W1 L (ms),W1 df (Hz),W1 f_start (Hz),W1 f_end (Hz),W1 f_c (Hz)
+"Real whistles, encounter 214 (reference)",686,0.696 +/- 0.037,"loudness depth, centre, loudness roughness",3,167,232,252,147
+WhistleCode as deployed (tau 0.5),1861,0.944 +/- 0.013,"curve fit error, net rise, span",41,457,1141,370,714
+"WhistleCode, tau 0.25",1826,0.943 +/- 0.007,"curve fit error, duration, net rise",41,454,1128,366,700
+"WhistleCode, tau 0.75",1888,0.938 +/- 0.009,"curve fit error, net rise, duration",41,454,1138,382,719
+"WhistleCode, tau 1.0",1900,0.932 +/- 0.013,"curve fit error, net rise, duration",42,446,1131,376,711
+Without the realism library,1698,0.988 +/- 0.002,"2nd harmonic, 3rd harmonic, 2nd harmonic change",50,490,1139,375,722
+Chirp baseline,1648,0.992 +/- 0.003,"2nd harmonic, 3rd harmonic, slope changes",80,310,981,418,683

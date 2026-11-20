@@ -1,0 +1,3 @@
+Test,Messages,Exact,Binary payloads,Text payloads,Whistles lost / wrong,Failed at (frame / header / payload),Wrong text accepted,Wrong-key accepts,Pass mark,Verdict
+"E1 clean, no channel",200,100.0 % (98.1-100.0),150/150,50/50,0.7 % / 0.2 %,0 / 0 / 0,0,0,100 % exact,PASS
+"Final: encounter 276, 10 dB",200,84.5 % (78.8-88.9),125/150,44/50,8.1 % / 5.1 %,4 / 3 / 24,0,0,>= 95 % exact,FAIL

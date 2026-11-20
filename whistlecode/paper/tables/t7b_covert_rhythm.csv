@@ -1,0 +1,4 @@
+44 s windows,Coded windows (test),Real windows (train 214 / test 276),Rhythm AUC,Pass mark (E9)
+WhistleCode stream on its own,760,126 / 158,0.440,PASS (<= 0.60)
+"WhistleCode inside encounter-276 noise, 10 dB",769,126 / 158,0.684,FAIL (<= 0.60)
+Control: format v1's steady 0.55-0.95 s gaps,200,126 / 158,1.000,-
