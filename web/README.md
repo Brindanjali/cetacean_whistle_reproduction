@@ -79,6 +79,28 @@ says so while it is a mid-training checkpoint) and
 picks them up on restart or `POST /api/reload-model`. Re-run `python whistle.py export-web` afterwards so the
 pre-rendered examples include the model's output too.
 
+### Choosing the model
+
+Try it can offer several trained models side by side. They are listed in `configs/inference.toml` under `[[models]]`
+(the first is the default); each entry is `[model]` with its own keys replaced. Today:
+
+| id | shown as | checkpoint | can do |
+|---|---|---|---|
+| `model1` | Model 1 | epoch 101 of 150, `V1_L64_b1e-4_critic_E191/checkpoints/last.pt` (= `[model]`) | recreate, families, imagine, kinds |
+| `model2` | Model 2 | epoch 150 of 150, `V1_L64_b1e-4_critic_E191_epoch150/checkpoints/final.pt` | recreate (its GMM is not fitted yet) |
+
+To rename one, change its `name` (keep the `id`) and restart the server. Model 2 gains whistle families and "Imagine" once
+its own mixture exists: `python whistle.py fit-gmm --experiment V1_L64_b1e-4_critic_E191_epoch150`, then
+`python whistle.py vae-eval components --experiment V1_L64_b1e-4_critic_E191_epoch150`, then a restart.
+`python whistle.py model-status --all` checks every model.
+
+On the page, "The listener" under the heading chooses the model (click, or the arrow keys); a small twin sits in the
+Imagine panel. Each option draws the training run its checkpoint came from (reconstruction loss per epoch, one epoch axis
+for all), so a model stopped early ends part-way along. Every request carries the chosen model (`model` in
+`/api/analyze`, `/api/analyze-example` and `/api/generate`; an unknown one is refused with 400), each result names the model
+that made it, and a recording on screen can be heard again by the other model with one click. The choice is remembered
+in the visitor's browser. With one model, or without the server, the selector does not appear.
+
 ## Video and example files
 
 The two 4K clips (`media4k/whale.mp4`, `media4k/dolphins.mp4`, about 100 MB) are not in git. Download the 4K
@@ -115,7 +137,7 @@ Without them, an internet visitor's page falls back to the 4K files. Without the
 - `scene.js`: the research section's 3D scene on the `#sig` canvas (Listen → Learn → Imagine, one continuous camera;
   hand-made, not model output)
 - `styles.css`: all styling; `serve.py`: the film-only server with HTTP Range support
-- `lab.js`: "Try it": upload, job progress, overview with clickable whistle boxes, per-whistle cards, generation;
+- `lab.js`: "Try it": model selector, upload, job progress, overview with clickable whistle boxes, per-whistle cards, generation;
   "Slow ×2" and the pitch shift re-synthesise the contour in the browser with sonify.py's rules
 - `audio-engine.js`: the illustrative whistle contours and tone of the film (not the model)
 - `message.js`: 05 · Encode and 06 · Decode (WhistleCode): stations, whistle tiles, close-up spectrograms, playback

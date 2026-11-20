@@ -13,6 +13,10 @@ The trained files are read from where the training commands write them (configs/
     models/vaegmm/<run_id>/gmm_K<K>/component_features.npy      python whistle.py vae-eval components --experiment V1
 Missing files are reported (``python whistle.py model-status``); everything on the input side still runs.
 
+Several models can be offered side by side ([[models]] in configs/inference.toml, the page's model selector): each entry
+is [model] with its own keys replaced, every one is loaded at start, and each request names the one it wants (default:
+the first). A model whose files are missing is reported, never fatal, exactly as a single model is.
+
 [DECISION] when the VAE is present but the GMM is not, "new whistles" fall back to samples of the encoder's own
 posterior z = mu + sigma * eps (a standard VAE operation, not the paper's generation method; labelled as such).
 """
@@ -21,6 +25,7 @@ from __future__ import annotations
 import csv
 import json
 import math
+import re
 import threading
 import time
 import uuid
@@ -68,9 +73,29 @@ def new_job_id() -> str:
 
 
 # ----------------------------------------------------------------------------- the trained files
-def model_paths(icfg: Cfg, vcfg: Cfg) -> dict[str, Path]:
-    """Same layout as vaegmm/train.py (checkpoints/) and vaegmm/evaluate.gmm_dir (gmm_K<K>[_tag]/); tested."""
-    m = icfg["model"]
+MODEL_ID = re.compile(r"^[A-Za-z0-9_-]{1,40}$")
+
+
+def model_specs(icfg: Cfg) -> list[dict]:
+    """The models offered to visitors, default first: each [[models]] entry is [model] with the entry's own keys replaced
+    (an entry with only id and name is [model] itself). Without [[models]], [model] alone, with id "model"."""
+    base = dict(icfg["model"])
+    out, seen = [], set()
+    for e in icfg.get("models") or [{"id": "model", "name": "Model"}]:
+        s = {**base, **e}
+        mid = str(s.get("id", ""))
+        if not MODEL_ID.match(mid) or mid in seen:
+            raise ValueError(f"[[models]] id {mid!r}: needs a unique id of letters, digits, _ or - (configs/inference.toml)")
+        seen.add(mid)
+        s["name"] = str(s.get("name") or mid)
+        out.append(s)
+    return out
+
+
+def model_paths(icfg: Cfg, vcfg: Cfg, spec: dict | None = None) -> dict[str, Path]:
+    """Same layout as vaegmm/train.py (checkpoints/) and vaegmm/evaluate.gmm_dir (gmm_K<K>[_tag]/); tested.
+    ``spec``: one entry of model_specs (default: [model])."""
+    m = spec or icfg["model"]
     run = resolve(vcfg["paths"]["runs_dir"]) / m["run_id"]
     gd = run / f"gmm_K{int(m['n_components'])}{('_' + m['gmm_tag']) if m['gmm_tag'] else ''}"
     return {"run_dir": run, "vae": run / "checkpoints" / m["checkpoint"], "gmm": gd / "gmm.npz",
@@ -83,28 +108,60 @@ class Model:
     vae: object | None = None
     gmm: object | None = None
     comp_feats: np.ndarray | None = None
+    curve: list | None = None          # [[epoch, rec], ...] of the training run up to this checkpoint (the page draws it)
 
     @property
     def latent_dim(self) -> int | None:
         return self.vae.latent_dim if self.vae is not None else None
 
+    def card(self) -> dict:
+        """What the page's model selector shows: who it is, how far it trained, what it can do."""
+        st, v = self.status, self.status["vae"]
+        return {"id": st.get("id"), "name": st.get("name"), "run_id": st["run_id"], "ready": st["ready"], "message": st["message"],
+                "epoch": v.get("epoch"), "epochs": v.get("spec", {}).get("epochs"), "final": v.get("final", False),
+                "in_training": v.get("in_training", False), "stopped_early": v.get("stopped_early", False),
+                "rec": self.curve[-1][1] if self.curve else None, "curve": self.curve}
 
-def load_model(icfg: Cfg, vcfg: Cfg, device: torch.device) -> Model:
+
+def training_curve(run_dir: Path, epoch: int | None) -> list | None:
+    """Mean reconstruction term (rec) of every epoch up to ``epoch``, from the run's train_log.jsonl (the last summary of an
+    epoch wins, as after a resume). None when there is no log or it does not reach the checkpoint."""
+    f = Path(run_dir) / "train_log.jsonl"
+    if epoch is None or not f.exists():
+        return None
+    ep = {}
+    try:
+        for line in f.read_text(encoding="utf-8").splitlines():
+            r = json.loads(line) if line.strip() else {}
+            if r.get("epoch_summary") and isinstance(r.get("epoch"), int) and r["epoch"] <= epoch and math.isfinite(r.get("rec", math.nan)):
+                ep[r["epoch"]] = round(float(r["rec"]), 2)
+    except (ValueError, OSError):
+        return None
+    return [[e, ep[e]] for e in sorted(ep)] if epoch in ep else None
+
+
+def load_model(icfg: Cfg, vcfg: Cfg, device: torch.device, spec: dict | None = None) -> Model:
+    """Load one model (``spec``: an entry of model_specs; default [model]). Missing or broken files are reported in
+    the status, never raised."""
     from .vaegmm.gmm import GaussianMixtureEM
     from .vaegmm.train import load_trained_vae
 
-    p = model_paths(icfg, vcfg)
+    ms = spec or icfg["model"]
+    p = model_paths(icfg, vcfg, ms)
     st = {k: {"path": rel(p[k]), "present": p[k].exists(), "loaded": False, "error": None}
           for k in ("vae", "gmm", "component_features")}
-    st["run_id"] = icfg["model"]["run_id"]
-    st["n_components"] = int(icfg["model"]["n_components"])
+    if spec is not None:
+        st["id"], st["name"] = spec["id"], spec["name"]
+    st["run_id"] = ms["run_id"]
+    st["n_components"] = int(ms["n_components"])
     m = Model(status=st)
     if st["vae"]["present"]:
         try:
-            m.vae, spec = load_trained_vae(p["run_dir"], device, icfg["model"]["checkpoint"])
+            m.vae, vspec = load_trained_vae(p["run_dir"], device, ms["checkpoint"])
             epoch = torch.load(p["vae"], map_location="cpu", weights_only=False).get("epoch")   # completed epochs
             st["vae"].update(loaded=True, latent_dim=m.vae.latent_dim, sha256=sha256_file(p["vae"]), epoch=epoch,
-                             spec={k: spec[k] for k in ("latent_dim", "beta", "use_critic", "epochs") if k in spec})
+                             spec={k: vspec[k] for k in ("latent_dim", "beta", "use_critic", "epochs") if k in vspec})
+            m.curve = training_curve(p["run_dir"], epoch)
         except Exception as e:  # noqa: BLE001  (reported to the page, never fatal)
             st["vae"]["error"] = repr(e)
     if st["gmm"]["present"]:
@@ -133,7 +190,7 @@ def load_model(icfg: Cfg, vcfg: Cfg, device: torch.device) -> Model:
                          f"(python whistle.py train-vae --experiment V1).")
     elif not ok_g:
         st["message"] = (f"VAE loaded; whistle types and generation appear once {st['gmm']['path']} exists "
-                         f"(python whistle.py fit-gmm --experiment V1). New whistles meanwhile come from the encoder's own spread.")
+                         f"(python whistle.py fit-gmm --experiment {st['run_id']}). New whistles meanwhile come from the encoder's own spread.")
     else:
         st["message"] = f"Model {st['run_id']} loaded (K = {m.gmm.K})."
     epoch, epochs = st["vae"].get("epoch"), st["vae"].get("spec", {}).get("epochs")
@@ -339,21 +396,44 @@ class Engine:
         self.vcfg = vcfg or load_vaegmm_config()
         self.device = resolve_device(device or self.icfg["model"]["device"])
         self.detector = RidgeDetector.from_checkpoint(resolve(self.pcfg["decisions"]["s5"]["checkpoint"]), self.pcfg, str(self.device))
-        self.model = load_model(self.icfg, self.vcfg, self.device)
+        self.specs = model_specs(self.icfg)
+        self.models = self._load_models()
         self.fc_pool = training_centre_frequencies(self.pcfg, self.vcfg["deviations"].get("encounters"))
         self.processing_hash = processing_hash(self.pcfg)
         info = resolve(self.pcfg["paths"]["dataset_dir"]) / "dataset_info.json"
         self.training_hash = json.loads(info.read_text(encoding="utf-8")).get("processing_config_hash") if info.exists() else None
         self.lock = threading.Lock()
 
+    def _load_models(self) -> dict[str, Model]:
+        return {s["id"]: load_model(self.icfg, self.vcfg, self.device, s) for s in self.specs}
+
+    @property
+    def default_model(self) -> str:
+        return self.specs[0]["id"]
+
+    @property
+    def model(self) -> Model:
+        """The default model (the first of [[models]], or [model])."""
+        return self.models[self.default_model]
+
+    def get_model(self, model_id: str | None = None) -> Model:
+        """A model by its id (None or "": the default). An unknown id is the visitor's mistake, shown to them as it is."""
+        if not model_id:
+            return self.model
+        m = self.models.get(model_id)
+        if m is None:
+            raise audio.InputError(f"no model {model_id!r} (choose from {', '.join(self.models)})")
+        return m
+
     def reload_model(self) -> dict:
         with self.lock:
-            self.model = load_model(self.icfg, self.vcfg, self.device)
+            self.models = self._load_models()
         return self.model.status
 
     def status(self) -> dict:
         c = self.icfg["input"]
-        return {"model": self.model.status, "device": str(self.device),
+        return {"model": self.model.status, "default_model": self.default_model,
+                "models": [m.card() for m in self.models.values()], "device": str(self.device),
                 "detector": f"{self.detector.name} {self.detector.version}",
                 "processing_hash": self.processing_hash, "matches_training_data": (self.processing_hash == self.training_hash)
                 if self.training_hash else None,
@@ -386,9 +466,10 @@ class Engine:
 
     # ------------------------------------------------------------------ analysis of a recording
     def analyze(self, path: str | Path, out_dir: str | Path, channel: int | None = None, n_samples: int | None = None,
-                seed: int = 0, name: str | None = None, progress=None) -> dict:
+                seed: int = 0, name: str | None = None, progress=None, model: str | None = None) -> dict:
         say = progress or (lambda stage, frac=None: None)
         o, thr = self.icfg["output"], float(self.icfg["output"]["contour_threshold"])
+        mdl = self.get_model(model)
         out = Path(out_dir)
         out.mkdir(parents=True, exist_ok=True)
         t0 = time.perf_counter()
@@ -403,7 +484,7 @@ class Engine:
         hop_s, win_s = pre["s4"].hop_s, pre["s4"].win_len / pre["s4"].fs
         say("model")
         n_s = int(o["n_samples"] if n_samples is None else n_samples)
-        mo = run_model(self.model, images, n_s, seed, self.device)
+        mo = run_model(mdl, images, n_s, seed, self.device)
         say("sound")
         whistles = []
         for i, r in enumerate(rows):
@@ -461,7 +542,7 @@ class Engine:
             "pipeline": {"processing_hash": self.processing_hash, "matches_training_data":
                          (self.processing_hash == self.training_hash) if self.training_hash else None,
                          "detector": f"{self.detector.name} {self.detector.version}", "n_tracks": pre["n_tracks"]},
-            "model": self.model.status, "n_samples": n_s, "seed": seed, "samples_method": mo.get("method") if mo else None,
+            "model": mdl.status, "n_samples": n_s, "seed": seed, "samples_method": mo.get("method") if mo else None,
             "overview": ov, "whistles": whistles, "rejected": rejected,
             "timings_s": {**pre["timings_s"], "total": round(time.perf_counter() - t0, 2)},
         }
@@ -472,13 +553,13 @@ class Engine:
     # ------------------------------------------------------------------ generation without a recording
     @torch.no_grad()
     def generate(self, out_dir: str | Path, n: int = 8, seed: int = 0, condition: int | None = None,
-                 fc_hz: float | None = None, progress=None) -> dict:
+                 fc_hz: float | None = None, progress=None, model: str | None = None) -> dict:
         from .vaegmm.conditional import acceptance_ratios, conditional_sample, weights_eq8, weights_eq10
         from .vaegmm.features import FEATURES, contour_features
 
         say = progress or (lambda stage, frac=None: None)
         g, thr = self.icfg["generate"], float(self.icfg["output"]["contour_threshold"])
-        m = self.model
+        m = self.get_model(model)
         if not m.status["ready"]["generate"]:
             raise audio.InputError(m.status["message"])
         n = int(max(1, min(int(g["max_n"]), n)))

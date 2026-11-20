@@ -108,3 +108,29 @@ def test_old_job_folders_are_pruned(tmp_path, web):
         wait(c, ids[-1])
     left = sorted(d.name for d in (tmp_path / "jobs").iterdir())
     assert len(left) <= 4 and ids[-1] in left and ids[0] not in left
+
+
+def test_requests_choose_the_model(tmp_path, web):
+    from test_infer import make_two_model_engine
+
+    eng = make_two_model_engine(tmp_path)
+    eng.icfg["output"]["out_dir"] = str(tmp_path / "jobs")
+    c = TestClient(create_app(eng, web_dir=web, keep_jobs=5))
+    s = c.get("/api/status").json()
+    assert s["default_model"] == "first" and [m["id"] for m in s["models"]] == ["first", "second"]
+    j = wait(c, c.post("/api/analyze-example", json={"example": "one", "n_samples": 1, "model": "second"}).json()["job"])
+    res = c.get(j["result"]).json()
+    assert res["model"]["id"] == "second" and res["samples_method"] == "encoder_posterior"
+    p = synthetic_recording(tmp_path / "up.wav", fs=48000, dur=1.0)
+    with open(p, "rb") as f:
+        up = wait(c, c.post("/api/analyze", files={"file": ("up.wav", f)}, data={"model": "second"}).json()["job"])
+    assert c.get(up["result"]).json()["model"]["id"] == "second"
+    assert c.post("/api/generate", json={"n": 2, "model": "second"}).status_code == 409    # no GMM: refused up front
+    g = wait(c, c.post("/api/generate", json={"n": 2, "model": "first"}).json()["job"])
+    assert c.get(g["result"]).json()["model"]["id"] == "first"
+    n_jobs = len(list((tmp_path / "jobs").iterdir()))
+    for r in (c.post("/api/generate", json={"n": 2, "model": "third"}),
+              c.post("/api/analyze-example", json={"example": "one", "model": "third"}),
+              c.post("/api/analyze", files={"file": ("up.wav", b"x")}, data={"model": "third"})):
+        assert r.status_code == 400 and "no model 'third'" in r.json()["detail"]
+    assert len(list((tmp_path / "jobs").iterdir())) == n_jobs                # nothing stored for a refused request

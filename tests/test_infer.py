@@ -258,3 +258,68 @@ def test_recording_clip_from_a_500k_file_is_playable(tmp_path):
     assert out_fs == 48000 and band == [7500.0, 10500.0]
     assert len(x) == pytest.approx((0.3 + 2 * 0.05) * 48000, abs=50)
     assert abs(20 * np.log10(np.abs(x).max()) + 3) < 0.01
+
+
+# ----------------------------------------------------------------------------- several models (the page's model selector)
+RUN2 = "TEST_L64_second"
+
+
+def make_two_model_engine(tmp_path):
+    """"first": the random model with its GMM; "second": the same VAE in its own run folder, no GMM, with a training log."""
+    runs = tmp_path / "runs"
+    runs.mkdir()
+    write_random_model(runs, gmm=True, comp_feats=True)
+    shutil.copytree(runs / RUN / "checkpoints", runs / RUN2 / "checkpoints")
+    log = [{"epoch_summary": True, "epoch": e, "rec": 400.0 - e} for e in range(1, 301)]
+    log.insert(0, {"epoch_summary": True, "epoch": 5, "rec": 999.0})            # an epoch logged twice: the later summary wins
+    log.insert(1, {"step": 7, "rec": 1.0})                                       # step lines are not epochs
+    (runs / RUN2 / "train_log.jsonl").write_text("\n".join(json.dumps(r) for r in log), encoding="utf-8")
+    icfg = load_inference_config(overrides=[f'model.run_id="{RUN}"', f"model.n_components={K}"])
+    icfg["models"] = [{"id": "first", "name": "First"}, {"id": "second", "name": "Second", "run_id": RUN2}]
+    vcfg = load_vaegmm_config(overrides=[f"paths.runs_dir='{runs.as_posix()}'"])
+    return Engine(icfg=icfg, vcfg=vcfg, device="cpu")
+
+
+def test_model_specs_inherit_model_and_need_unique_ids():
+    icfg = load_inference_config()
+    specs = infer.model_specs(icfg)
+    assert [s["id"] for s in specs] == ["model1", "model2"]                      # configs/inference.toml [[models]]
+    assert model_paths(icfg, load_vaegmm_config(), specs[0]) == model_paths(icfg, load_vaegmm_config())   # model1 = [model]
+    assert specs[1]["run_id"] != icfg["model"]["run_id"] and specs[1]["n_components"] == icfg["model"]["n_components"]
+    icfg["models"] = []
+    assert [(s["id"], s["run_id"]) for s in infer.model_specs(icfg)] == [("model", icfg["model"]["run_id"])]
+    for bad in ([{"id": "a"}, {"id": "a"}], [{"id": "no spaces"}], [{"name": "no id"}]):
+        icfg["models"] = bad
+        with pytest.raises(ValueError, match="id"):
+            infer.model_specs(icfg)
+
+
+def test_each_request_uses_the_model_it_names(tmp_path, rec):
+    eng = make_two_model_engine(tmp_path)
+    st = eng.status()
+    assert st["default_model"] == "first" and st["model"]["id"] == "first"
+    cards = {m["id"]: m for m in st["models"]}
+    assert cards["first"]["ready"]["generate"] and cards["first"]["curve"] is None          # no train_log.jsonl
+    assert cards["second"]["ready"] == {"recreate": True, "same_type": False, "generate": False, "conditional": False}
+    assert cards["second"]["name"] == "Second" and cards["second"]["epoch"] == 300 and cards["second"]["epochs"] == 300
+    curve = cards["second"]["curve"]
+    assert [e for e, _ in curve] == list(range(1, 301)) and dict(curve)[5] == 395.0 and cards["second"]["rec"] == 100.0
+    assert f"fit-gmm --experiment {RUN2}" in cards["second"]["message"]
+    a = eng.analyze(rec, tmp_path / "a", n_samples=2)                             # no model named: the default
+    b = eng.analyze(rec, tmp_path / "b", n_samples=2, model="second")
+    assert a["model"]["id"] == "first" and a["samples_method"] == "gmm"
+    assert b["model"]["id"] == "second" and b["samples_method"] == "encoder_posterior" and "type" not in b["whistles"][0]
+    assert eng.generate(tmp_path / "g", n=2, model="first")["model"]["id"] == "first"
+    with pytest.raises(audio.InputError, match="map of|fit-gmm"):
+        eng.generate(tmp_path / "g2", n=2, model="second")
+    with pytest.raises(audio.InputError, match="no model 'third'"):
+        eng.analyze(rec, tmp_path / "c", model="third")
+    assert eng.reload_model()["id"] == "first" and set(eng.models) == {"first", "second"}
+
+
+def test_training_curve_stops_at_the_checkpoint(tmp_path):
+    (tmp_path / "train_log.jsonl").write_text("\n".join(json.dumps({"epoch_summary": True, "epoch": e, "rec": 10.0 * e})
+                                                        for e in range(1, 11)), encoding="utf-8")
+    assert infer.training_curve(tmp_path, 4) == [[1, 10.0], [2, 20.0], [3, 30.0], [4, 40.0]]
+    assert infer.training_curve(tmp_path, 12) is None              # the log does not reach the checkpoint: no curve
+    assert infer.training_curve(tmp_path / "none", 4) is None

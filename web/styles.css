@@ -144,6 +144,80 @@ body.lab-on .bar{background:rgba(6,30,52,.94);padding-bottom:22px;box-shadow:0 1
 .lab-status .dot{flex:none;width:9px;height:9px;border-radius:50%;background:#e8c38a;box-shadow:0 0 0 4px rgba(232,195,138,.16)}
 .lab-status.ok .dot{background:#7fd1a8;box-shadow:0 0 0 4px rgba(127,209,168,.16)}
 .lab-status code{font:400 12px var(--mono);color:var(--pale)}
+.lab-status .txt{transition:opacity .22s ease}
+.lab-status.swap .txt{opacity:0}
+
+/* the model selector (lab.js setupModels): a glass lens glides to the chosen model. Each option draws the training run it
+   came from (mean reconstruction loss per epoch, on one epoch axis shared by every option) up to its checkpoint, where a
+   sonar ping marks it; the line draws itself whenever its model is chosen. The Imagine panel carries a small twin. */
+.lab.anim.in .lab-head>:nth-child(5){transition-delay:1s}
+#mdl.enter{opacity:0;transform:translateY(16px)}
+.mdl{margin-top:36px;max-width:940px}
+.mdl-h{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 16px;margin:0 0 14px;font:500 12px var(--mono);letter-spacing:.18em;
+  text-transform:uppercase;color:var(--pale)}
+.mdl-h span{font-weight:400;letter-spacing:.03em;text-transform:none;color:var(--mist);opacity:.85}
+.mdl-track{position:relative;display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:6px;padding:6px;border-radius:22px;
+  border:1px solid rgba(169,207,224,.16);background:linear-gradient(160deg,rgba(4,22,40,.6),rgba(4,22,40,.32));
+  box-shadow:inset 0 1px 0 rgba(169,207,224,.06),0 24px 60px rgba(0,8,20,.28)}
+.mdl-lens{position:absolute;left:0;top:6px;bottom:6px;width:0;border-radius:16px;pointer-events:none;border:1px solid rgba(169,207,224,.5);
+  background:linear-gradient(165deg,rgba(169,207,224,.2),rgba(169,207,224,.05) 58%,rgba(169,207,224,.1));
+  box-shadow:inset 0 1px 0 rgba(234,246,251,.24),0 12px 32px rgba(0,8,20,.38),0 0 0 4px rgba(169,207,224,.045);
+  transition:transform .62s cubic-bezier(.2,.85,.2,1),width .62s cubic-bezier(.2,.85,.2,1)}
+.mdl-opt{position:relative;z-index:1;display:grid;gap:10px;padding:17px 20px 15px;border:0;border-radius:16px;background:none;
+  color:var(--mist);font:inherit;text-align:left;cursor:pointer;transition:color .35s ease,background-color .35s ease}
+.mdl-opt:hover{color:var(--ink);background-color:rgba(169,207,224,.035)}
+.mdl-opt[aria-checked=true]{color:var(--ink);background-color:transparent;cursor:default}
+.lab .mdl-opt:focus-visible{outline:1px solid var(--pale);outline-offset:-4px}
+.mdl-top{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+.mdl-name{font:400 1.8rem/1 var(--serif);letter-spacing:.005em}
+.mdl-ep{font:400 11.5px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--pale);opacity:.7;white-space:nowrap;transition:opacity .35s}
+.mdl-ep b{font-weight:500;color:var(--ink)}
+.mdl-opt[aria-checked=true] .mdl-ep{opacity:1}
+.mdl-curve{position:relative;display:block;height:52px}
+.mdl-curve svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.mdl-curve path{fill:none;stroke-linecap:round;stroke-linejoin:round}
+.mdl-curve .axis{stroke:rgba(169,207,224,.16);stroke-width:1px;stroke-dasharray:2 5}
+.mdl-curve .glow{stroke:rgba(169,207,224,0);stroke-width:8px;stroke-dasharray:1;transition:stroke .5s}
+.mdl-curve .line{stroke:rgba(169,207,224,.38);stroke-width:1.5px;stroke-dasharray:1;transition:stroke .5s}
+.mdl-curve .pt{fill:rgba(169,207,224,.55);transition:fill .5s}
+.mdl-curve .ping{fill:none;stroke:rgba(234,246,251,.8);stroke-width:1.2px;opacity:0}
+.mdl-opt[aria-checked=true] .glow{stroke:rgba(169,207,224,.15)}
+.mdl-opt[aria-checked=true] .line{stroke:rgba(238,246,250,.96)}
+.mdl-opt[aria-checked=true] .pt{fill:#f2fafc}
+.mdl-opt[aria-checked=true] :is(.line,.glow){animation:mdl-draw 1.3s cubic-bezier(.45,0,.2,1) both}
+.mdl-opt[aria-checked=true] .pt{animation:mdl-pop .5s 1.05s cubic-bezier(.3,1.6,.5,1) both}
+.mdl-opt[aria-checked=true] .ping{animation:mdl-ping 2.8s 1.35s cubic-bezier(.15,.6,.3,1) infinite}
+/* the first drawing waits for the page to arrive (lab.js adds .in), so it plays where it can be seen */
+.lab.anim:not(.in) .mdl-opt :is(.line,.glow,.pt,.ping){animation:none}
+.lab.anim:not(.in) .mdl-opt[aria-checked=true] :is(.line,.glow){stroke-dashoffset:1}
+@keyframes mdl-draw{from{stroke-dashoffset:1}to{stroke-dashoffset:0}}
+@keyframes mdl-pop{from{r:0}to{r:3.2px}}
+@keyframes mdl-ping{0%{r:3px;opacity:.9}75%,100%{r:15px;opacity:0}}
+.mdl-foot{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 16px}
+.mdl-caps{display:flex;flex-wrap:wrap;gap:6px 15px;font:400 11.5px var(--mono);letter-spacing:.03em;transition:opacity .35s}
+.mdl-caps i{display:inline-flex;align-items:center;gap:7px;font-style:normal}
+.mdl-caps i::before{content:"";flex:none;width:6px;height:6px;border-radius:50%;background:#7fd1a8;box-shadow:0 0 0 3px rgba(127,209,168,.14)}
+.mdl-caps i.off{opacity:.55}
+.mdl-caps i.off::before{width:4px;height:4px;background:none;border:1px solid rgba(169,207,224,.7);box-shadow:none}
+.mdl-opt:not([aria-checked=true]) .mdl-caps{opacity:.7}
+.mdl-loss{font:400 11.5px var(--mono);color:var(--mist);white-space:nowrap}
+.mdl-loss b{font-weight:500;color:var(--ink)}
+.mdl-opt.na .mdl-name{opacity:.6}
+/* its twin in the Imagine panel: the same choice, as a sliding pill */
+.lab-opts .lbl{display:flex;align-items:center;gap:10px;font:400 12.5px var(--mono);color:var(--mist)}
+.mdl-mini{position:relative;display:inline-grid;grid-auto-flow:column;grid-auto-columns:max-content;padding:3px;border-radius:999px;
+  border:1px solid rgba(169,207,224,.28);background:rgba(4,22,40,.45)}
+.mdl-mini button{position:relative;z-index:1;padding:6px 15px;border:0;border-radius:999px;background:none;color:var(--mist);
+  font:400 12.5px var(--mono);cursor:pointer;transition:color .3s ease}
+.mdl-mini button:hover{color:var(--ink)}
+.mdl-mini button[aria-checked=true]{color:var(--navy);cursor:default}
+.mdl-thumb{position:absolute;left:0;top:3px;bottom:3px;width:0;border-radius:999px;background:var(--pale);box-shadow:0 2px 12px rgba(0,8,20,.35);
+  transition:transform .5s cubic-bezier(.2,.85,.2,1),width .5s cubic-bezier(.2,.85,.2,1)}
+.mdl-lens.still,.mdl-thumb.still{transition:none}
+@media(prefers-reduced-motion:reduce){
+  .mdl-lens,.mdl-thumb,.lab-status .txt{transition:none}
+  .mdl-opt[aria-checked=true] :is(.line,.glow,.pt,.ping){animation:none}
+}
 .lab-note{font:400 12.5px/1.6 var(--mono);color:var(--mist);opacity:.9}
 .ex-h{margin:0 0 14px;font:500 12px var(--mono);letter-spacing:.18em;text-transform:uppercase;color:var(--pale)}
 
@@ -190,6 +264,9 @@ body.lab-on .bar{background:rgba(6,30,52,.94);padding-bottom:22px;box-shadow:0 1
 .sum b{color:var(--ink);font-weight:500}
 .sum .warn{color:#e8c38a}
 .sum .dl{margin-left:12px;color:var(--pale)}
+.sum .redo{margin-left:12px;padding:3px 13px 4px;border:1px solid rgba(169,207,224,.42);border-radius:999px;background:rgba(169,207,224,.08);
+  color:var(--ink);font:400 12.5px var(--sans);cursor:pointer;transition:border-color .2s,background-color .2s}
+.sum .redo:hover{border-color:var(--pale);background-color:rgba(169,207,224,.16)}
 .ov-card{position:relative;margin-top:18px;padding:22px 26px 6px 80px;border-radius:16px;background:linear-gradient(180deg,#f3fafb,#e2f0f3);
   box-shadow:0 30px 80px rgba(0,8,20,.45),inset 0 0 0 1px rgba(255,255,255,.7)}
 .ov{position:relative;height:clamp(220px,27vh,330px);border-radius:8px;overflow:hidden;background:#eef7f8}

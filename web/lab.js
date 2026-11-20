@@ -8,6 +8,10 @@
  * Sound: the server renders each image to a WAV at the whistle's own centre pitch (sonify.py). "Slow ×2" and the
  * pitch shift re-synthesise the same contour here, with the same rules (phase-continuous tone, 2.67 ms ramps,
  * 20 ms of silence either side, peak −3 dBFS), so they need no round trip.
+ *
+ * Models: when the server offers more than one (configs/inference.toml [[models]]), the visitor chooses which one hears
+ * and imagines (setupModels). Every request names the chosen model; each result says which model made it, and offers
+ * the same recording to the other model. The choice is remembered in this browser only.
  */
 (() => {
   const $ = s => document.querySelector(s);
@@ -54,7 +58,8 @@
   const STAGES = { queued: 'Waiting for the previous job', reading: 'Reading the file', detecting: 'Finding whistles',
                    model: 'Running the model', sound: 'Turning images into sound', overview: 'Drawing the overview',
                    done: 'Done' };
-  const S = { api: false, status: null, file: null, result: null, base: null, sel: 0, slow: false, shift: 0, examples: [] };
+  const S = { api: false, status: null, file: null, result: null, base: null, sel: 0, slow: false, shift: 0, examples: [],
+              model: null, redo: null, genNote: '' };
 
   /* ------------------------------------------------------------------ sound */
   const player = new Audio();
@@ -119,15 +124,12 @@
       txt.textContent = 'This copy of the page runs without its analysis server, so here are recordings we analysed earlier.';
       st.title = 'Live analysis: python whistle.py serve';
       $('#drop').classList.add('off'); $('#file').disabled = true;
+      // say why the drop zone does nothing, rather than leave it looking live
+      $('#drop-t').textContent = 'Uploading your own recording needs the analysis server';
+      $('#drop-n').textContent = 'Start it with: python whistle.py serve, then open http://127.0.0.1:8000';
     } else {
-      const m = S.status.model;
-      txt.textContent = (m.ready.same_type ? 'The model is ready. Every whistle you bring gets a recreation and new whistles of its family.'
-        : m.ready.recreate ? 'The model is ready to recreate whistles; its map of whistle families is still being drawn.'
-        : 'The model is still in training. Finding whistles and hearing them works now; the recreations and new whistles appear here once it is done.')
-        + (m.vae.in_training ? ` For now it is a snapshot taken part-way through training (epoch ${m.vae.epoch} of ${m.vae.spec.epochs}), so its recreations are still rough.` : '')
-        + (S.status.matches_training_data === false ? ' (Note: the preprocessing settings differ from the training data.)' : '');
-      st.title = m.message;
-      st.classList.toggle('ok', m.ready.recreate);
+      try { setupModels(); } catch (e) { console.warn('setupModels:', e); }   // a broken selector must not stop Try it
+      showStatus();
       $('#nsamples').value = S.status.limits.n_samples;
       $('#drop-n').textContent = `${S.status.limits.formats.map(f => f.slice(1).toUpperCase()).join(', ')} · ${S.status.limits.min_sample_rate_hz / 1000} kHz or more · up to ${S.status.limits.max_duration_s} s · ${S.status.limits.max_upload_mb} MB`;
     }
@@ -138,6 +140,141 @@
       $('#ex-row').replaceChildren(...S.examples.map((e, i) => exampleCard(e, i)));
       $('#examples').hidden = !S.examples.length;
     } catch (_) { /* no examples exported */ }
+  }
+
+  /* ------------------------------------------------------------------ the model selector */
+  const MODEL_KEY = 'whistle-lab-model';
+  const models = () => (S.api && Array.isArray(S.status.models) ? S.status.models : []);
+  const many = () => models().length > 1;
+  /* the chosen model's card (infer.Model.card); a server without a model list has only its one model */
+  function cur() {
+    const ms = models();
+    const m = ms.find(q => q.id === S.model) || ms.find(q => q.id === S.status.default_model) || ms[0];
+    if (m) return m;
+    const s = S.status.model;
+    return { id: null, name: 'The model', ready: s.ready, message: s.message, epoch: s.vae.epoch,
+             epochs: s.vae.spec && s.vae.spec.epochs, in_training: s.vae.in_training };
+  }
+  const nameOf = id => (models().find(m => m.id === id) || {}).name;
+
+  /* the status line under the selector speaks for the chosen model */
+  function showStatus(animate) {
+    const st = $('#lab-status'), txt = st.querySelector('.txt'), m = cur(), who = many() ? m.name : 'The model';
+    const text = (m.ready.same_type ? `${who} is ready. Every whistle you bring gets a recreation and new whistles of its family.`
+      : m.ready.recreate ? `${who} is ready to recreate whistles; its map of whistle families is still being drawn.`
+      : `${who} is still in training. Finding whistles and hearing them works now; the recreations and new whistles appear here once it is done.`)
+      + (m.in_training ? ` For now it is a snapshot taken part-way through training (epoch ${m.epoch} of ${m.epochs}), so its recreations are still rough.` : '')
+      + (S.status.matches_training_data === false ? ' (Note: the preprocessing settings differ from the training data.)' : '');
+    const apply = () => { txt.textContent = text; st.title = m.message; st.classList.toggle('ok', m.ready.recreate); };
+    clearTimeout(showStatus.t);
+    if (!animate || matchMedia('(prefers-reduced-motion: reduce)').matches) { st.classList.remove('swap'); apply(); return; }
+    st.classList.add('swap');                       // fade the words out, change them, fade back in
+    showStatus.t = setTimeout(() => { apply(); st.classList.remove('swap'); }, 220);
+  }
+
+  /* One option per model, each showing the training run it came from: mean reconstruction loss per epoch (lower = closer
+     to the input), on one epoch axis shared by every option, so a model stopped early ends part-way along. The loss
+     axis is logarithmic above the lowest value shown, which spreads out the slow last epochs where the models differ. */
+  const SVG_NS = 'http://www.w3.org/2000/svg';
+  const sv = (tag, attrs) => { const e = document.createElementNS(SVG_NS, tag); for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v); return e; };
+  const CAPS = [['recreate', 'Recreates', 'Redraws every whistle it hears'],
+                ['same_type', 'Families', 'Knows which family a whistle belongs to, and makes new whistles of that family'],
+                ['generate', 'Imagines', 'Dreams up brand-new whistles without a recording']];
+  function modelOption(m) {
+    const svg = sv('svg', { 'aria-hidden': 'true', focusable: 'false' });
+    svg.append(sv('path', { class: 'axis' }), sv('path', { class: 'glow', pathLength: 1 }), sv('path', { class: 'line', pathLength: 1 }),
+               sv('circle', { class: 'ping', r: 3 }), sv('circle', { class: 'pt', r: 3.2 }));
+    const can = CAPS.filter(([k]) => m.ready[k]).map(c => c[1].toLowerCase());
+    const label = `${m.name}${m.epoch != null ? `, epoch ${m.epoch} of ${m.epochs}` : ', not trained yet'}${can.length ? `: ${can.join(', ')}` : ''}`;
+    return h('button', { class: 'mdl-opt' + (m.ready.recreate ? '' : ' na'), type: 'button', role: 'radio', 'aria-checked': 'false',
+                         tabindex: -1, 'aria-label': label, 'data-id': m.id, onclick: () => choose(m.id) },
+      h('span', { class: 'mdl-top' }, h('span', { class: 'mdl-name' }, m.name),
+        h('span', { class: 'mdl-ep' }, m.epoch != null ? ['Epoch ', h('b', {}, m.epoch), m.epochs ? ` / ${m.epochs}` : ''] : 'Not trained yet')),
+      h('span', { class: 'mdl-curve' }, svg),
+      h('span', { class: 'mdl-foot' },
+        h('span', { class: 'mdl-caps' }, CAPS.map(([k, t, tip]) => h('i', { class: m.ready[k] ? null : 'off',
+          title: m.ready[k] ? tip : `${tip}: not yet, its map of whistle families has not been drawn` }, t))),
+        m.rec != null ? h('span', { class: 'mdl-loss', title: 'Reconstruction loss of its last training epoch: lower means closer copies' },
+                          'loss ', h('b', {}, m.rec.toFixed(1))) : null));
+  }
+  function drawCurves() {
+    const ms = models(), vals = ms.flatMap(m => (m.curve || []).map(p => p[1]));
+    if (!vals.length) return;
+    const E = Math.max(2, ...ms.map(m => m.epochs || m.epoch || 0)), lo = Math.min(...vals);
+    const longest = ms.reduce((a, m) => ((m.curve || []).length > (a || []).length ? m.curve : a), null);
+    const top = Math.max(lo + 1, longest[Math.min(4, longest.length - 1)][1]);       // from epoch 5: the first plunge runs off the top
+    const d = 0.03 * (top - lo), Y = r => Math.log(Math.min(top, Math.max(lo, r)) - lo + d), y0 = Y(top), y1 = Y(lo);
+    for (const b of document.querySelectorAll('#mdl-track .mdl-opt')) {
+      const m = ms.find(q => q.id === b.dataset.id), box = b.querySelector('.mdl-curve'), svg = box.querySelector('svg');
+      const W = box.clientWidth, H = box.clientHeight;
+      if (!m || !W || !H) continue;
+      svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+      const px = e => 4 + (e - 1) / (E - 1) * (W - 14), py = r => 5 + (y0 - Y(r)) / (y0 - y1) * (H - 12);
+      svg.querySelector('.axis').setAttribute('d', `M4 ${H - 1.5}H${W - 10}`);
+      const c = m.curve || [];
+      const path = c.map(([e, r], i) => `${i ? 'L' : 'M'}${px(e).toFixed(1)} ${py(r).toFixed(1)}`).join('');
+      for (const p of svg.querySelectorAll('.line,.glow')) p.setAttribute('d', path || 'M0 0');
+      for (const p of svg.querySelectorAll('.pt,.ping')) {
+        p.style.display = c.length ? '' : 'none';
+        if (c.length) { p.setAttribute('cx', px(c[c.length - 1][0]).toFixed(1)); p.setAttribute('cy', py(c[c.length - 1][1]).toFixed(1)); }
+      }
+    }
+  }
+  /* the lens (and the small twin's thumb) sit under the chosen option; `still` moves them without the glide */
+  function placeGlass(still) {
+    for (const [group, glass] of [['#mdl-track', '.mdl-lens'], ['#gen-mdl', '.mdl-thumb']]) {
+      const g = $(group), el = g && g.querySelector(glass), b = g && g.querySelector('[aria-checked="true"]');
+      if (!el || !b || !b.offsetWidth) continue;
+      el.classList.toggle('still', !!still);
+      el.style.width = `${b.offsetWidth}px`; el.style.transform = `translateX(${b.offsetLeft}px)`;
+      if (still) { void el.offsetWidth; el.classList.remove('still'); }
+    }
+  }
+  function choose(id, focusIn) {
+    if (!models().some(m => m.id === id)) return;
+    const changed = S.model !== id;
+    S.model = id;
+    try { localStorage.setItem(MODEL_KEY, id); } catch (_) { /* private window: not remembered */ }
+    for (const g of [$('#mdl-track'), $('#gen-mdl')]) for (const b of g.querySelectorAll('[role=radio]')) {
+      const on = b.dataset.id === id;
+      b.setAttribute('aria-checked', String(on)); b.tabIndex = on ? 0 : -1;
+      if (on && focusIn === g) b.focus();
+    }
+    placeGlass(false);
+    if (!changed) return;
+    showStatus(true); refreshGenerate(); sumModel();
+  }
+  /* arrow keys move the choice within a group, as in any radio group */
+  function radioKeys(g) {
+    g.addEventListener('keydown', e => {
+      const ids = models().map(m => m.id), i = Math.max(0, ids.indexOf(S.model)), n = ids.length;
+      const step = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[e.key];
+      const j = step ? (i + step + n) % n : e.key === 'Home' ? 0 : e.key === 'End' ? n - 1 : -1;
+      if (j < 0) return;
+      e.preventDefault(); choose(ids[j], g);
+    });
+  }
+  function setupModels() {
+    const ms = models();
+    let saved = null;
+    try { saved = localStorage.getItem(MODEL_KEY); } catch (_) { /* storage blocked */ }
+    S.model = ms.some(m => m.id === saved) ? saved : (S.status.default_model || (ms[0] && ms[0].id) || null);
+    if (!many()) return;                          // one model: nothing to choose, the page looks as it always did
+    const track = $('#mdl-track'), mini = $('#gen-mdl');
+    track.append(...ms.map(modelOption));
+    mini.append(...ms.map(m => h('button', { type: 'button', role: 'radio', 'aria-checked': 'false', tabindex: -1, 'data-id': m.id,
+                                             onclick: () => choose(m.id) }, m.name)));
+    radioKeys(track); radioKeys(mini);
+    const box = $('#mdl');
+    box.classList.add('enter'); box.hidden = false; $('#gen-mdl-w').hidden = false;
+    S.model = null; choose(ms.some(m => m.id === saved) ? saved : (S.status.default_model || ms[0].id));
+    requestAnimationFrame(() => { drawCurves(); placeGlass(true); requestAnimationFrame(() => box.classList.remove('enter')); });
+    // fonts arriving, the window resizing: the curves are drawn in pixels and the glass follows its option
+    if (window.ResizeObserver) {
+      let raf = 0;
+      const ro = new ResizeObserver(() => { cancelAnimationFrame(raf); raf = requestAnimationFrame(() => { drawCurves(); placeGlass(true); }); });
+      ro.observe(track); ro.observe(mini);
+    } else addEventListener('resize', () => { drawCurves(); placeGlass(true); });
   }
 
   /* an example as a card: a small whistle drawn in its own style, the encounter, when, how many whistles */
@@ -173,15 +310,20 @@
     // the swells are soft-edged colour: one canvas pixel per CSS pixel is plenty, and it keeps the fill cost low on an
     // integrated GPU; only the whistle crest (svg) stays sharp
     const measure = () => {
-      W = svg.clientWidth; H = svg.clientHeight; E = H * 70 / 98;     // E: the page's top edge inside the box
+      // a box with no size yet (hidden or minimised window, a background tab): keep the old gradients, wait for a resize
+      const r = svg.getBoundingClientRect();
+      if (!(r.width > 0 && r.height > 0)) return false;
+      W = Math.round(r.width); H = Math.round(r.height); E = H * 70 / 98;     // E: the page's top edge inside the box
       svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
       cv.width = W; cv.height = H;
       // each swell fades out below the page's edge, into the page's own water
       const fade = (rgb, a) => { const g = cx.createLinearGradient(0, 0, 0, H); g.addColorStop(0, `rgba(${rgb},${a})`);
                                  g.addColorStop(E / H, `rgba(${rgb},${a})`); g.addColorStop(1, `rgba(${rgb},0)`); return g; };
       paint = SWELLS.map(w => ({ fill: fade(w.c.slice(0, 3).join(), w.c[3]), line: w.hl && fade('196,230,244', w.hl) }));
+      return true;
     };
     const draw = now => {
+      if (!paint.length && !measure()) return;
       const t = reduced ? 0 : now / 1000, r = lab.getBoundingClientRect(), vh = innerHeight;
       const s = Math.min(1.2, Math.max(0, (vh - r.top) / vh));        // 0: the page edge at the bottom of the screen, 1: at the top
       cx.clearRect(0, 0, W, H); cx.lineWidth = 1.2;
@@ -292,10 +434,16 @@ void main() {
     new IntersectionObserver(es => { on = es[es.length - 1].isIntersecting; if (on && !raf) raf = requestAnimationFrame(loop); }).observe(lab);
   }
 
+  /* an analysis job with the chosen model; its result can be heard again by another model with the same settings */
+  function analyse(send) {
+    const run = model => submit(send(model), url => showResult(url, other => run(other)));
+    return run(S.model);
+  }
   async function openExample(e) {
-    if (S.api) return submit(fetch('api/analyze-example', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-                                                         body: JSON.stringify({ example: e.id, n_samples: +$('#nsamples').value }) }));
-    showResult(e.result);
+    if (!S.api) return showResult(e.result);
+    const n = +$('#nsamples').value;
+    return analyse(model => fetch('api/analyze-example', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+                                                          body: JSON.stringify({ example: e.id, n_samples: n, model }) }));
   }
 
   /* ------------------------------------------------------------------ upload and jobs */
@@ -313,9 +461,13 @@ void main() {
     d.addEventListener('drop', e => { if (S.api && e.dataTransfer.files.length) pick(e.dataTransfer.files[0]); });
     $('#run').addEventListener('click', () => {
       if (!S.file) return;
-      const fd = new FormData();
-      fd.append('file', S.file); fd.append('channel', $('#channel').value || '0'); fd.append('n_samples', $('#nsamples').value || '0');
-      submit(fetch('api/analyze', { method: 'POST', body: fd }));
+      const file = S.file, channel = $('#channel').value || '0', n = $('#nsamples').value || '0';
+      analyse(model => {
+        const fd = new FormData();
+        fd.append('file', file); fd.append('channel', channel); fd.append('n_samples', n);
+        if (model) fd.append('model', model);
+        return fetch('api/analyze', { method: 'POST', body: fd });
+      });
     });
   }
   /* a job's progress line sits next to the control that started it (#job for analyses, #gen-job for generation) */
@@ -327,6 +479,7 @@ void main() {
   }
   async function submit(req, onDone = showResult, el = $('#job'), btn = $('#run')) {
     btn.disabled = true; jobLine(el, el.id === 'job' ? 'Uploading…' : 'Starting…', null);
+    if (btn.id === 'run') sumModel();
     try {
       const r = await req, body = await r.json();
       if (!r.ok) throw new Error(body.detail || r.statusText);
@@ -340,25 +493,40 @@ void main() {
         jobLine(el, stage + (j.frac != null && j.stage === 'sound' ? ` · ${Math.round(j.frac * 100)}%` : '') + '…', j.frac);
       }
     } catch (e) { jobLine(el, String(e.message || e), null, true); }
-    btn.disabled = btn.id === 'run' ? !S.file || !S.api : !(S.api && S.status.model.ready.generate);
+    btn.disabled = btn.id === 'run' ? !S.file || !S.api : !(S.api && cur().ready.generate);
+    if (btn.id === 'run') sumModel();
   }
 
   /* ------------------------------------------------------------------ one analysis */
-  async function showResult(url) {
+  async function showResult(url, redo = null) {
     const r = await (await fetch(url)).json();
-    S.result = r; S.base = new URL(url, location.href).href; S.sel = 0;
+    S.result = r; S.base = new URL(url, location.href).href; S.sel = 0; S.redo = redo;
     const inp = r.input, ws = r.whistles;
     const rej = r.rejected.length ? ` · ${r.rejected.length} not usable (too long or too wide for the model's images)` : '';
     $('#sum').replaceChildren(
       h('b', {}, inp.name), ` · ${inp.duration_s.toFixed(1)} s · ${inp.fs_in_hz / 1000} kHz · channel ${inp.channel_index} of ${inp.n_channels} · `,
       h('b', {}, `${ws.length} whistle${ws.length === 1 ? '' : 's'}`), rej,
       ...inp.warnings.map(w => h('span', { class: 'warn' }, ' · ' + w)),
-      S.api ? h('a', { class: 'dl', href: S.base.replace(/\/result\.json$/, '.zip') }, 'download all') : null);
+      h('span', { id: 'sum-m' }),
+      ...(S.api ? [h('a', { class: 'dl', href: S.base.replace(/\/result\.json$/, '.zip') }, 'download all')] : []));
+    sumModel();
     drawOverview(r);
     drawList(r);
     select(ws.length ? 0 : -1);
     const res = $('#results'); res.hidden = false;
     res.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  /* which model heard the recording on screen; when another one is chosen now, offer it the same recording */
+  const resultModel = r => (r && r.model && r.model.id ? { id: r.model.id, name: nameOf(r.model.id) || r.model.name || r.model.id } : null);
+  function sumModel() {
+    const el = $('#sum-m'), rm = resultModel(S.result);
+    if (!el) return;
+    if (!rm || !many()) { el.replaceChildren(); return; }
+    const m = cur(), busy = !$('#job').hidden && !$('#job').classList.contains('err');
+    el.replaceChildren(' · heard by ', h('b', {}, rm.name));
+    if (S.redo && m.id !== rm.id && m.ready.recreate)
+      el.append(h('button', { class: 'redo', type: 'button', disabled: busy, onclick: () => S.redo(m.id) }, `Hear it with ${m.name}`));
   }
 
   function drawOverview(r) {
@@ -424,9 +592,10 @@ void main() {
                     `centre ${kHz(w.fc_hz)} kHz · ${kHz(w.f_min_hz)}–${kHz(w.f_max_hz)} kHz`));
     const pending = (title, text) => h('div', { class: 'card pending' }, h('h4', {}, title), h('p', {}, text));
     let recon;
+    const by = (many() && resultModel(r)) ? resultModel(r).name : 'the model';
     if (w.recreation) {
       const rc = w.recreation;
-      recon = h('div', { class: 'card' }, h('h4', {}, 'Recreated by the model'), img(rc.png, 'model recreation'),
+      recon = h('div', { class: 'card' }, h('h4', {}, `Recreated by ${by}`), img(rc.png, `recreation by ${by}`),
                 h('div', { class: 'plays' }, playBtn('Recreation', rc.sound && fileUrl(rc.sound.wav), rc.sound)),
                 h('p', { class: 'meta' }, rc.contour_error_hz != null ? `Its shape stays within ${Math.round(rc.contour_error_hz)} Hz of the original on average` : 'No clear shape in the recreation',
                   h('br'), `PSNR ${rc.psnr_db} dB`));
@@ -452,20 +621,34 @@ void main() {
 
   /* ------------------------------------------------------------------ generation */
   function setupGenerate() {
-    const ready = S.api && S.status.model.ready.generate, note = $('#gen-note'), sel = $('#gen-cond');
-    if (S.api) for (const c of S.status.conditions) sel.append(h('option', { value: c.no, disabled: !S.status.model.ready.conditional }, `${c.no}. ${c.label}`));
-    $('#gen-run').disabled = !ready;
-    note.textContent = !S.api ? 'Imagining new whistles needs the analysis server (python whistle.py serve).'
-      : !ready ? 'Available once the model has finished training.'
-      : !S.status.model.ready.conditional ? 'Asking for a certain kind becomes available once the model has sampled every family.' : '';
-    note.title = S.api ? S.status.model.message : '';
+    const sel = $('#gen-cond');
+    if (S.api) for (const c of S.status.conditions) sel.append(h('option', { value: c.no }, `${c.no}. ${c.label}`));
+    refreshGenerate();
     $('#gen-run').addEventListener('click', () => {
       const fc = $('#gen-fc').value;
       submit(fetch('api/generate', { method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ n: +$('#gen-n').value || 8, seed: +$('#gen-seed').value || 0,
-                               condition: sel.value ? +sel.value : null, fc_hz: fc ? +fc : null }) }),
+                               condition: sel.value ? +sel.value : null, fc_hz: fc ? +fc : null, model: S.model }) }),
              showGenerated, $('#gen-job'), $('#gen-run'));
     });
+  }
+  /* what the chosen model can imagine: the button, the kinds it can be asked for, and the note under them */
+  function refreshGenerate() {
+    const note = $('#gen-note'), sel = $('#gen-cond'), run = $('#gen-run');
+    if (!S.api) {
+      run.disabled = true;
+      note.textContent = 'Imagining new whistles needs the analysis server (python whistle.py serve).';
+      return;
+    }
+    const m = cur(), ready = m.ready.generate, who = many() ? m.name : 'the model';
+    for (const o of sel.options) if (o.value) o.disabled = !m.ready.conditional;
+    if (sel.selectedOptions[0] && sel.selectedOptions[0].disabled) sel.value = '';
+    const busy = !$('#gen-job').hidden && !$('#gen-job').classList.contains('err');
+    run.disabled = !ready || busy;
+    note.textContent = !ready ? (m.ready.recreate ? `${many() ? m.name : 'The model'} cannot imagine new whistles yet: its map of whistle families has not been drawn.`
+                                                  : `Available once ${who} has finished training.`)
+      : S.genNote || (!m.ready.conditional ? `Asking for a certain kind becomes available once ${who} has sampled every family.` : '');
+    note.title = m.message;
   }
   async function showGenerated(url) {
     const r = await (await fetch(url)).json();
@@ -478,9 +661,16 @@ void main() {
                playBtn(`Whistle ${it.i + 1}`, it.sound && fileUrl(it.sound.wav, base), it.sound),
                h('figcaption', {}, f.L != null ? `${Math.round(f.L * ms)} ms · ${fr}` : 'empty image', it.component != null ? ` · k ${it.component}` : ''));
     }));
-    $('#gen-note').textContent = r.condition ? `${r.condition.label}: ${r.n} accepted (acceptance ${(r.acceptance_rate * 100).toPrecision(2)}%). Centre pitch ${r.fc}.`
-      : `${r.n} whistles from the mixture. Centre pitch ${r.fc}.`;
+    const rm = many() ? resultModel(r) : null;
+    S.genNote = (rm ? `Imagined by ${rm.name}. ` : '')
+      + (r.condition ? `${r.condition.label}: ${r.n} accepted (acceptance ${(r.acceptance_rate * 100).toPrecision(2)}%). Centre pitch ${r.fc}.`
+                     : `${r.n} whistles from the mixture. Centre pitch ${r.fc}.`);
+    $('#gen-note').textContent = S.genNote;
   }
 
-  addEventListener('DOMContentLoaded', () => { bindUpload(); setupSea(); setupTide(); init(); });
+  // the upload and the status come first; the water is decoration, and a failure there must never stop the page working
+  addEventListener('DOMContentLoaded', () => {
+    bindUpload(); init();
+    for (const f of [setupSea, setupTide]) try { f(); } catch (e) { console.warn(`${f.name}:`, e); }
+  });
 })();

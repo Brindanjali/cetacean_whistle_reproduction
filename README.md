@@ -325,7 +325,7 @@ the paper's own Fig. 2 chain (threshold 0.05 -> contour -> constant-amplitude to
 the 2-24 kHz detector band is missing and the result says so), any number of channels (one is analysed: `--channel` or
 the page's Channel box, default 0), up to 120 s.
 ```bash
-python whistle.py model-status              # are the trained files where inference looks for them?
+python whistle.py model-status              # are the trained files where inference looks for them? (--all: every model on offer)
 python whistle.py infer recording.wav       # -> runs/infer/<id>/: result.json, overview.png, per-whistle PNG + WAV
 python whistle.py generate --n 8            # new whistles from the GMM; --condition 1..13 = Table 3, --fc 9000 fixes the pitch
 python whistle.py serve                     # the page + API on http://127.0.0.1:8000 ("Try it" section)

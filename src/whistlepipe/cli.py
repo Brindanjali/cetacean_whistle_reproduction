@@ -210,12 +210,18 @@ def cmd_generate(args) -> int:
 
 def cmd_model_status(args) -> int:
     from .detector.ridgenet import resolve_device
-    from .infer import load_inference_config, load_model
+    from .infer import load_inference_config, load_model, model_specs
     from .vaegmm.config import load_vaegmm_config
 
     icfg = load_inference_config()
-    st = load_model(icfg, load_vaegmm_config(), resolve_device(args.device or icfg["model"]["device"])).status
-    print(json.dumps(st, indent=1))
+    vcfg, dev = load_vaegmm_config(), resolve_device(args.device or icfg["model"]["device"])
+    if args.all:      # every model the page offers ([[models]]), by id; the exit code still follows the default one
+        sts = {s["id"]: load_model(icfg, vcfg, dev, s).status for s in model_specs(icfg)}
+        print(json.dumps(sts, indent=1))
+        st = next(iter(sts.values()))
+    else:
+        st = load_model(icfg, vcfg, dev).status
+        print(json.dumps(st, indent=1))
     return 0 if st["ready"]["recreate"] else 1
 
 
@@ -344,6 +350,7 @@ def main(argv=None) -> int:
 
     ms = sub.add_parser("model-status", help="are the trained files where inference looks for them?")
     ms.add_argument("--device", default=None)
+    ms.add_argument("--all", action="store_true", help="every model on offer in Try it (configs/inference.toml [[models]])")
     ms.set_defaults(fn=cmd_model_status)
 
     sv = sub.add_parser("serve", help="the web page plus the inference API (http://127.0.0.1:8000)")

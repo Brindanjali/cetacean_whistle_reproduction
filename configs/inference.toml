@@ -20,6 +20,25 @@ n_components = 3000                    # [DEVIATION] main K for encounter 191 (c
 gmm_tag      = ""
 device       = "auto"                  # auto | cpu | cuda (detector and model)
 
+# The models a visitor can choose between in Try it (the page's model selector); the first is the default, and every one
+# is loaded when the server starts. Each entry is [model] above with the entry's own keys replaced, so an entry with only
+# id and name is exactly [model].
+#   id    the stable name the page and the API use (letters, digits, _ or -); keep it when renaming
+#   name  what the page shows; rename freely, then restart the server
+[[models]]
+id   = "model1"
+name = "Model 1"                       # epoch 101 of 150: [model] as it is (the paper results and WhistleCode use this one)
+
+[[models]]
+id         = "model2"
+name       = "Model 2"                 # epoch 150 of 150: the run resumed on a Colab A100 on 2026-11-20 (Drive final.pt,
+run_id     = "V1_L64_b1e-4_critic_E191_epoch150"   # SHA-256 1db44d81...), in its own folder so model1 stays as it is
+checkpoint = "final.pt"
+# Its own Gaussian mixture is not fitted yet: it recreates whistles, but has no whistle families or generation. To add them,
+#   python whistle.py fit-gmm --experiment V1_L64_b1e-4_critic_E191_epoch150
+#   python whistle.py vae-eval components --experiment V1_L64_b1e-4_critic_E191_epoch150
+# then restart the server (or POST /api/reload-model).
+
 [input]
 formats            = [".wav", ".flac", ".ogg", ".mp3"]   # whatever libsndfile reads
 min_sample_rate_hz = 32000      # [DECISION] below this the detector band (2-24 kHz) is mostly empty

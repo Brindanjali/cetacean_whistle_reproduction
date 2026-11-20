@@ -111,6 +111,12 @@
       <p class="step">04 · Try it</p>
       <h2 id="try-title">Bring a voice from the deep.<br /><i>Hear what the machine makes of it.</i></h2>
       <p class="body lab-lede">Start with a recording made off Hawai‘i, or drop in your own. The machine finds every whistle in it, redraws it, and plays it back to you.</p>
+      <!-- the model selector (lab.js setupModels): one option per trained model the server offers, each on the training
+           curve it came from; shown only when the server offers more than one -->
+      <div class="mdl" id="mdl" hidden>
+        <p class="mdl-h" id="mdl-h">The listener <span>Choose the trained model that hears your whistles</span></p>
+        <div class="mdl-track" id="mdl-track" role="radiogroup" aria-labelledby="mdl-h"><span class="mdl-lens" aria-hidden="true"></span></div>
+      </div>
       <div class="lab-status" id="lab-status" role="status"><span class="dot"></span><span class="txt">Checking the model…</span></div>
     </div>
 
@@ -152,6 +158,7 @@
       <h3>Imagine new voices</h3>
       <p class="body">No recording needed: the machine dreams up brand-new whistles from everything it has heard. Choose how many, and if you like, ask for a certain kind.</p>
       <div class="lab-opts">
+        <div class="lbl" id="gen-mdl-w" hidden><span id="gen-mdl-l">Model</span><span class="mdl-mini" id="gen-mdl" role="radiogroup" aria-labelledby="gen-mdl-l"><i class="mdl-thumb" aria-hidden="true"></i></span></div>
         <label>How many <input type="number" id="gen-n" min="1" max="16" value="8" /></label>
         <label>Kind <select id="gen-cond"><option value="">any</option></select></label>
         <label>Centre pitch (Hz) <input type="number" id="gen-fc" min="2000" max="24000" step="100" placeholder="auto" title="Empty: each whistle gets a centre pitch drawn from the training whistles" /></label>

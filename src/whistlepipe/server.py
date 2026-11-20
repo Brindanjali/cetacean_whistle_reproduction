@@ -1,16 +1,17 @@
 """Web demo server: the page (web/) plus the inference API.     python whistle.py serve  ->  http://127.0.0.1:8000
 
-    GET  /api/status                    model files present/loaded, limits, Table 3 conditions
+    GET  /api/status                    model files present/loaded (models: every model on offer), limits, Table 3 conditions
     POST /api/reload-model              re-read the trained files (after dropping them into place)
-    POST /api/analyze                   multipart upload (file, channel, n_samples, seed)        -> {"job": id}
-    POST /api/analyze-example           {"example": id, "seed": 0}   (web/data/examples.json)    -> {"job": id}
-    POST /api/generate                  {"n": 8, "seed": 0, "condition": null, "fc_hz": null}  -> {"job": id}
+    POST /api/analyze                   multipart upload (file, channel, n_samples, seed, model) -> {"job": id}
+    POST /api/analyze-example           {"example": id, "seed": 0, "model": null}  (web/data/examples.json) -> {"job": id}
+    POST /api/generate                  {"n": 8, "seed": 0, "condition": null, "fc_hz": null, "model": null} -> {"job": id}
     GET  /api/jobs/{id}                 state, stage, progress, error, result URL
     GET  /api/results/{id}/{file}       result.json, PNG, WAV of a finished job
     GET  /api/results/{id}.zip          everything of a job in one file
     GET  /                              the page itself (web/, with HTTP Range for the videos)
 
-Jobs run one at a time on a single worker thread (the GPU holds one model). Each job writes runs/infer/<id>/;
+``model`` is an id from configs/inference.toml [[models]] (null or absent: the first, the default); an unknown id is a 400.
+Jobs run one at a time on a single worker thread (the GPU holds the models). Each job writes runs/infer/<id>/;
 the newest ``keep_jobs`` job folders are kept. Binds to 127.0.0.1 by default (configs/inference.toml [server]).
 """
 from __future__ import annotations
@@ -44,12 +45,14 @@ class GenerateRequest(BaseModel):
     seed: int = 0
     condition: int | None = None
     fc_hz: float | None = None
+    model: str | None = None
 
 
 class ExampleRequest(BaseModel):
     example: str
     seed: int = 0
     n_samples: int | None = None
+    model: str | None = None
 
 
 class Jobs:
@@ -125,7 +128,8 @@ def create_app(engine: Engine | None = None, web_dir: Path = WEB_DIR, keep_jobs:
 
     @app.post("/api/analyze")
     async def analyze(file: UploadFile = File(...), channel: int | None = Form(None), n_samples: int | None = Form(None),
-                      seed: int = Form(0)):
+                      seed: int = Form(0), model: str | None = Form(None)):
+        engine.get_model(model)                     # an unknown model is refused before the upload is stored
         name = Path(file.filename or "upload").name[:120]
         ext = Path(name).suffix.lower()
         if ext not in icfg["input"]["formats"]:
@@ -142,24 +146,27 @@ def create_app(engine: Engine | None = None, web_dir: Path = WEB_DIR, keep_jobs:
                     raise HTTPException(413, f"{name}: larger than {icfg['input']['max_upload_mb']} MB")
                 f.write(chunk)
         ns = None if n_samples is None else max(0, min(int(icfg["output"]["n_samples"]) * 2, n_samples))
-        return jobs.submit(jid, "analyze", lambda progress: engine.analyze(dst, d, channel, ns, seed, name, progress))
+        return jobs.submit(jid, "analyze", lambda progress: engine.analyze(dst, d, channel, ns, seed, name, progress, model))
 
     @app.post("/api/analyze-example")
     def analyze_example(req: ExampleRequest):
         ex = examples().get(req.example)
         if ex is None:
             raise HTTPException(404, f"no example {req.example!r}")
+        engine.get_model(req.model)
         src = web_dir / ex["audio"]
         jid, d = jobs.folder("analyze")
         return jobs.submit(jid, "analyze", lambda progress: engine.analyze(src, d, None, req.n_samples, req.seed,
-                                                                           Path(ex["audio"]).name, progress))
+                                                                           Path(ex["audio"]).name, progress, req.model))
 
     @app.post("/api/generate")
     def generate(req: GenerateRequest):
-        if not engine.model.status["ready"]["generate"]:
-            raise HTTPException(409, engine.model.status["message"])
+        st = engine.get_model(req.model).status
+        if not st["ready"]["generate"]:
+            raise HTTPException(409, st["message"])
         jid, d = jobs.folder("generate")
-        return jobs.submit(jid, "generate", lambda progress: engine.generate(d, req.n, req.seed, req.condition, req.fc_hz, progress))
+        return jobs.submit(jid, "generate", lambda progress: engine.generate(d, req.n, req.seed, req.condition, req.fc_hz, progress,
+                                                                             req.model))
 
     @app.get("/api/jobs/{jid}")
     def job(jid: str):
@@ -206,6 +213,7 @@ def serve(host: str | None = None, port: int | None = None, device: str | None =
     engine = Engine(device=device)
     s = engine.icfg["server"]
     host, port = host or s["host"], int(port or s["port"])
-    print(f"model: {engine.model.status['message']}")
+    for m in engine.models.values():
+        print(f"model {m.status['id']} ({m.status['name']}): {m.status['message']}")
     print(f"serving web/ and the API on http://{host}:{port}  (Ctrl+C to stop)")
     uvicorn.run(create_app(engine), host=host, port=port, log_level="warning")
