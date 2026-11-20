@@ -303,7 +303,6 @@ python whistlecode/whistlecode.py receive --help                       # recordi
 ├── whistlecode/            WhistleCode: code, tests, plan, paper results
 ├── deploy/                 Docker + Tailscale Funnel deployment
 ├── mod_detector_5_24/      5–24 kHz detector variant for the DCLDE 2011 benchmark
-├── whistleflow/            archived proposal (not implemented)
 ├── tests/                  reproduction tests (small synthetic fixtures; no dataset needed)
 └── docs/                   technical reference, figures, review notes
 ```

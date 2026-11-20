@@ -2,7 +2,7 @@
 
 Status: plan written 2026-11-17 and revised twice the same day (section 14). P0 (keys, framing, Reed-Solomon, tests, the `frame` and `roundtrip` commands) and P1 (the codebook, with the pieces of P2-P4 it needs: whistle synthesis, noise and SNR, the detector wrapper and classifier A) were built on 2026-11-18, followed by P2 (the transmitter and the `send` command). P1 changed some plan values after measuring them; section 14 lists the changes. The idea was finalised on 2026-11-18 (next section), and the complete format v2 pipeline was built the same day: `send`, `channel` and `receive` now use format v2. The `frame` and `roundtrip` commands still show format v1.
 
-This enhancement replaces WhistleFlow. The `whistleflow/` folder stays as it is but will not be implemented. WhistleFlow's no-images rule does not apply here, because this enhancement reuses the reproduction's spectrogram detector and VAE.
+This enhancement replaces WhistleFlow. WhistleFlow was dropped and its folder removed. WhistleFlow's no-images rule does not apply here, because this enhancement reuses the reproduction's spectrogram detector and VAE.
 
 How to read this document:
 
@@ -685,7 +685,7 @@ whistlecode/
 
 **Ported (copied, with an equivalence test against the original):** the envelope part of `src/whistlepipe/synth/whistles.py`. The only intended difference is the narrower taper range (section 4.4).
 
-**Never edited by WhistleCode:** `src/`, `configs/`, `models/`, `preprocessed/`, the encounter audio folders, `web/` (until the optional P7 panel, and only with your go-ahead), `whistleflow/`. Phase M changes `models/` through the reproduction's own commands, not through WhistleCode.
+**Never edited by WhistleCode:** `src/`, `configs/`, `models/`, `preprocessed/`, the encounter audio folders, `web/` (until the optional P7 panel, and only with your go-ahead). Phase M changes `models/` through the reproduction's own commands, not through WhistleCode.
 
 **Model files needed:** the V1 `final.pt` and `gmm_K3000/gmm.npz`, matching the hashes in `codebook.json`. `gmm.npz` is about 100 MB and is not in git, so any other machine needs it copied over.
 

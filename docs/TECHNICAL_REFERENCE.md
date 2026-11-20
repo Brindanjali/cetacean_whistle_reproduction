@@ -50,7 +50,6 @@ colab/                 Colab notebook for the main VAE training + make_colab_bun
 post_training/         laptop versions of notebook cells 10-11, finalize_run.py, gmm_check.py, table6_warm.py,
                        compare_paper.py; out/ = their records
 mod_detector_5_24/     5-24 kHz detector variant for the DCLDE 2011 benchmark (own configs and outputs)
-whistleflow/           archived proposal for an audio-native model (not implemented)
 tests/                 pytest, small synthetic fixtures; none needs the full dataset
 models/detector/<ver>/ checkpoint.pt, train_info.json, calibration.json, eval_*.json
 models/vaegmm/<run_id>/  VAE runs: train_info.json, train_log.jsonl, sample grids, checkpoints/final.pt (+ last.pt),
