@@ -15,7 +15,10 @@ components are the MAP component of at least one training whistle, and a memoris
 from each GMM sample to its nearest training latent, against the leave-one-out nearest-neighbour distance among the
 training latents themselves.
 
-    python post_training/gmm_check.py [--K 3000] [--tag ""]
+    python post_training/gmm_check.py [--K 3000] [--tag ""] [--run-id V1_L64_b1e-4_critic_E191_epoch150]
+
+--run-id checks another run's fit (default: V1's). Its outputs are named gmm_check_<run_id>_K<K>..., so V1's stay as they
+are; its latents are matched against its own latents_mu.json (encoded from its final.pt) instead of V1's cell11 report.
 """
 from __future__ import annotations
 
@@ -81,17 +84,19 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--K", type=int, default=None)
     ap.add_argument("--tag", default="")
+    ap.add_argument("--run-id", default=RUN_ID, help="another run's GMM (default: V1's main run)")
     args = ap.parse_args()
+    run_id = args.run_id
     set_deterministic()
     cfg = load_vaegmm_config()
     K = args.K or main_k(cfg)
-    name = f"K{K}{('_' + args.tag) if args.tag else ''}"
-    run = resolve(cfg["paths"]["runs_dir"]) / RUN_ID
-    gd = gmm_dir(cfg, RUN_ID, K, args.tag)
+    name = ("" if run_id == RUN_ID else f"{run_id}_") + f"K{K}{('_' + args.tag) if args.tag else ''}"
+    run = resolve(cfg["paths"]["runs_dir"]) / run_id
+    gd = gmm_dir(cfg, run_id, K, args.tag)
     dev = resolve_device(cfg["train"]["device"])
     seed = int(cfg["decisions"]["train"]["seed"]) + SEED_OFFSET
     thr = float(cfg["paper"]["contour_threshold"])
-    checks, rep = {}, {"run_id": RUN_ID, "gmm_dir": str(gd.relative_to(ROOT)).replace("\\", "/"), "K": K, "tag": args.tag}
+    checks, rep = {}, {"run_id": run_id, "gmm_dir": str(gd.relative_to(ROOT)).replace("\\", "/"), "K": K, "tag": args.tag}
 
     # ---- fit record and lineage
     checks["files_present"] = all((gd / f).exists() for f in ("gmm.npz", "gmm.json", "fit_log.jsonl"))
@@ -100,8 +105,13 @@ def main() -> int:
     meta = json.loads((gd / "gmm.json").read_text(encoding="utf-8"))
     lat = run / "latents_mu.npy"
     sha_lat = sha256_file(lat)
-    cell11 = json.loads((OUT / "cell11_report.json").read_text(encoding="utf-8"))
-    checks["latents_match"] = meta["latents_sha256"] == sha_lat == cell11["latents"]["sha256"]
+    if run_id == RUN_ID:
+        cell11 = json.loads((OUT / "cell11_report.json").read_text(encoding="utf-8"))
+        checks["latents_match"] = meta["latents_sha256"] == sha_lat == cell11["latents"]["sha256"]
+    else:      # another run: the latents must be the ones encode() wrote from this run's own final.pt
+        lj = json.loads((run / "latents_mu.json").read_text(encoding="utf-8"))
+        checks["latents_match"] = (meta["latents_sha256"] == sha_lat
+                                   and lj["checkpoint_sha256"] == sha256_file(run / "checkpoints" / "final.pt"))
     rep["fit"] = {k: meta.get(k) for k in ("n_components", "reg_rel", "reg_abs", "max_iter", "tol", "tol_mode", "empty_nk", "seed",
                                            "converged", "n_iter", "final_mean_loglik", "fit_wall_s")}
     rep["fit"]["gmm_npz_sha256"] = sha256_file(gd / "gmm.npz")
@@ -124,7 +134,7 @@ def main() -> int:
                      "max_n_frozen": int(frozen.max()), "n_frozen_last": int(frozen[-1])}
 
     # ---- the GMM itself
-    g = load_gmm(cfg, RUN_ID, K, args.tag)      # load() runs the Cholesky factorisation of every covariance
+    g = load_gmm(cfg, run_id, K, args.tag)      # load() runs the Cholesky factorisation of every covariance
     mu = np.load(lat)
     diag = g.diagnostics(len(mu))
     checks["covariances_positive_definite"] = diag["eig_min"] > 0
@@ -189,7 +199,7 @@ def main() -> int:
     axs[1, 1].set(title=f"N_k = pi_k N over the {K} components", xlabel="N_k")
     for a in axs.flat:
         a.grid(alpha=0.3)
-    fig.suptitle(f"{RUN_ID} GMM {name}", fontsize=10)
+    fig.suptitle(f"{run_id} GMM {name}", fontsize=10)
     fig.tight_layout()
     fig.savefig(OUT / f"gmm_check_{name}_fit.png", dpi=100)
     plt.close(fig)

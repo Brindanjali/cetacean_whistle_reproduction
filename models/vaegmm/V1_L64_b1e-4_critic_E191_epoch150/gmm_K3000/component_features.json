@@ -1,0 +1,41 @@
+{
+  "shape": [
+    3000,
+    500,
+    7
+  ],
+  "features": [
+    "L",
+    "f_min",
+    "f_max",
+    "df",
+    "f_start",
+    "f_end",
+    "f_c"
+  ],
+  "n_per_component": 500,
+  "seed": 20261024,
+  "batch": 500,
+  "threshold": 0.05,
+  "frac_samples_with_contour": 1.0,
+  "gmm_npz_sha256": "4354547ecc641fe2d8d41dedf2a774fd2f69049c8e2b863fb455f255c34ca054",
+  "checkpoint_sha256": "1db44d81e03ce7156c83c880b6db5f01810853efbfa8f345225e5119b8c0145f",
+  "device": "cuda",
+  "wall_s": 264.6,
+  "software": {
+    "python": "3.11.0",
+    "platform": "Windows-10-10.0.26300-SP0",
+    "numpy": "2.4.4",
+    "scipy": "1.17.1",
+    "soundfile": "0.13.1",
+    "libsndfile": "1.2.2",
+    "git_commit": "7297e32f616a6d2afaf4eb7eb03705323493cdaf",
+    "git_uncommitted_code_changes": true,
+    "torch": "2.14.0+cu130",
+    "cuda_available": true,
+    "tf32_conv_allowed": false,
+    "tf32_matmul_allowed": false,
+    "deterministic_algorithms": true,
+    "cuda_device": "NVIDIA GeForce RTX 5060 Laptop GPU"
+  }
+}
