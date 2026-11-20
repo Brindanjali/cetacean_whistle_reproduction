@@ -86,11 +86,11 @@ Try it can offer several trained models side by side. They are listed in `config
 
 | id | shown as | checkpoint | can do |
 |---|---|---|---|
-| `model1` | Model 1 | epoch 101 of 150, `V1_L64_b1e-4_critic_E191/checkpoints/last.pt` (= `[model]`) | recreate, families, imagine, kinds |
-| `model2` | Model 2 | epoch 150 of 150, `V1_L64_b1e-4_critic_E191_epoch150/checkpoints/final.pt` | recreate, families, imagine, kinds |
+| `model1` | Nyx | epoch 101 of 150, `V1_L64_b1e-4_critic_E191/checkpoints/last.pt` (= `[model]`) | recreate, families, imagine, kinds |
+| `model2` | Delphi | epoch 150 of 150, `V1_L64_b1e-4_critic_E191_epoch150/checkpoints/final.pt` | recreate, families, imagine, kinds |
 
 To rename one, change its `name` (keep the `id`) and restart the server. Each model has its own mixture, fitted on its own
-latents: Model 2's was made with `python whistle.py fit-gmm --experiment V1_L64_b1e-4_critic_E191_epoch150` and
+latents: Delphi's was made with `python whistle.py fit-gmm --experiment V1_L64_b1e-4_critic_E191_epoch150` and
 `python whistle.py vae-eval components --experiment V1_L64_b1e-4_critic_E191_epoch150` (checked with
 `python post_training/gmm_check.py --run-id V1_L64_b1e-4_critic_E191_epoch150`). A model without its mixture still
 recreates; the page then shows families and Imagine as off. `python whistle.py model-status --all` checks every model.
