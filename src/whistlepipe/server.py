@@ -114,6 +114,17 @@ def create_app(engine: Engine | None = None, web_dir: Path = WEB_DIR, keep_jobs:
     app = FastAPI(title="Whistle VAE-GMM", docs_url="/api/docs", openapi_url="/api/openapi.json")
     app.state.engine, app.state.jobs = engine, jobs
 
+    @app.middleware("http")
+    async def revalidate_page_code(request, call_next):
+        """The page's own code (HTML, JS, CSS) is checked with the server on every load (a 304 when unchanged). Without a
+        Cache-Control header the browser may reuse an old copy for hours, and Chrome's ordinary reload re-checks only the
+        page itself, so an updated lab.js or styles.css would not show. Media and results keep the default caching."""
+        response = await call_next(request)
+        p = request.url.path
+        if (p.endswith((".html", ".js", ".css")) or p.endswith("/")) and not p.startswith("/api/"):
+            response.headers.setdefault("Cache-Control", "no-cache")
+        return response
+
     def examples() -> dict:
         p = web_dir / "data" / "examples.json"
         return {e["id"]: e for e in json.loads(p.read_text(encoding="utf-8"))["examples"]} if p.exists() else {}

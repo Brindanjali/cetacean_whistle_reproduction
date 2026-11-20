@@ -43,6 +43,9 @@ def test_status_and_page(tmp_path, web):
     assert c.get("/").status_code == 200 and "<title>t</title>" in c.get("/").text
     r = c.get("/clip.bin", headers={"Range": "bytes=10-19"})          # videos need byte ranges to seek
     assert r.status_code == 206 and r.content == bytes(range(10, 20))
+    # the page's code is re-checked on every load (an edited lab.js shows after a plain reload); media keeps default caching
+    assert c.get("/").headers.get("cache-control") == "no-cache" and c.get("/index.html").headers.get("cache-control") == "no-cache"
+    assert "cache-control" not in c.get("/clip.bin").headers
 
 
 def test_upload_to_results_without_model(tmp_path, web):

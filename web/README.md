@@ -95,13 +95,9 @@ latents: Model 2's was made with `python whistle.py fit-gmm --experiment V1_L64_
 `python post_training/gmm_check.py --run-id V1_L64_b1e-4_critic_E191_epoch150`). A model without its mixture still
 recreates; the page then shows families and Imagine as off. `python whistle.py model-status --all` checks every model.
 
-On the page, "The listener" under the heading is a small instrument. On the left are the models, numbered (click, or the
-arrow keys), and the chosen one's readings: loss with its difference from the other model, families, latent size. On the
-right is the training run they came from: reconstruction loss per epoch, the raw run as a faint trace under a 5-epoch
-smoothing whose end values are the real ones, the loss axis stretched toward its low end and labelled with real values.
-Each model is a station at its checkpoint, so a model stopped early sits part-way along. Choosing a model, in the list or
-by clicking its station, sends the light along the run to its checkpoint; the cursor reads any epoch's loss. A small twin
-sits beside the Imagine panel's heading. Every request carries the chosen model (`model` in
+On the page, a single segmented control under the heading ("Model") chooses the model (click, or the arrow keys). Each option
+shows the model's name, its epoch, and a hairline for how far through its planned training it got; a glass thumb glides to
+the chosen one. A small twin sits beside the Imagine panel's heading. Every request carries the chosen model (`model` in
 `/api/analyze`, `/api/analyze-example` and `/api/generate`; an unknown one is refused with 400), each result names the model
 that made it, and a recording on screen can be heard again by the other model with one click. The choice is remembered
 in the visitor's browser. With one model, or without the server, the selector does not appear.
