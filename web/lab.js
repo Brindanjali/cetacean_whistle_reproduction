@@ -172,67 +172,266 @@
     showStatus.t = setTimeout(() => { apply(); st.classList.remove('swap'); }, 220);
   }
 
-  /* One option per model, each showing the training run it came from: mean reconstruction loss per epoch (lower = closer
-     to the input), on one epoch axis shared by every option, so a model stopped early ends part-way along. The loss
-     axis is logarithmic above the lowest value shown, which spreads out the slow last epochs where the models differ. */
+  /* The listening instrument. Left: the models (a radio group, numbered) and the chosen one's readings, which count to
+     their new values. Right: the training run they came from, drawn in pixels: reconstruction loss per epoch (lower =
+     closer copies), one epoch axis for all, each model a station at its checkpoint. The loss axis is stretched toward its
+     low end, where the models differ, and labelled with real values; the first plunge runs in from above the frame.
+     Choosing a model sends the light along the run from the old checkpoint to the new one (one short redraw per frame,
+     only while it travels); the cursor reads any epoch. Curves that coincide (one run, two checkpoints) are drawn once. */
   const SVG_NS = 'http://www.w3.org/2000/svg';
-  const sv = (tag, attrs) => { const e = document.createElementNS(SVG_NS, tag); for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v); return e; };
+  const sv = (tag, attrs = {}, ...kids) => {
+    const e = document.createElementNS(SVG_NS, tag);
+    for (const [k, v] of Object.entries(attrs)) if (v != null) e.setAttribute(k, v);
+    e.append(...kids.filter(k => k != null)); return e;
+  };
   const CAPS = [['recreate', 'Recreates', 'Redraws every whistle it hears'],
                 ['same_type', 'Families', 'Knows which family a whistle belongs to, and makes new whistles of that family'],
                 ['generate', 'Imagines', 'Dreams up brand-new whistles without a recording']];
-  function modelOption(m) {
-    const svg = sv('svg', { 'aria-hidden': 'true', focusable: 'false' });
-    svg.append(sv('path', { class: 'axis' }), sv('path', { class: 'glow', pathLength: 1 }), sv('path', { class: 'line', pathLength: 1 }),
-               sv('circle', { class: 'ping', r: 3 }), sv('circle', { class: 'pt', r: 3.2 }));
+  const still = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const ease = t => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+  const G = { e: null, raf: 0, geo: null, from: null, shown: false, pending: null, el: {} };   // the light's epoch and run, the chart's geometry
+  const lastEpoch = c => c[c.length - 1][0];
+  /* The bright line is the run smoothed over 5 epochs, centred; the window narrows at the ends, so the first and last
+     values are the real ones. The raw run stays beneath it as a faint trace, and the cursor reads raw values. */
+  const SMOOTH = new WeakMap();
+  function smooth(c) {
+    if (!c) return c;
+    let out = SMOOTH.get(c);
+    if (!out) {
+      out = c.map(([e], i) => {
+        const k = Math.min(2, i, c.length - 1 - i);
+        let t = 0;
+        for (let j = i - k; j <= i + k; j++) t += c[j][1];
+        return [e, t / (2 * k + 1)];
+      });
+      SMOOTH.set(c, out);
+    }
+    return out;
+  }
+
+  function modelRow(m, i) {
     const can = CAPS.filter(([k]) => m.ready[k]).map(c => c[1].toLowerCase());
     const label = `${m.name}${m.epoch != null ? `, epoch ${m.epoch} of ${m.epochs}` : ', not trained yet'}${can.length ? `: ${can.join(', ')}` : ''}`;
     return h('button', { class: 'mdl-opt' + (m.ready.recreate ? '' : ' na'), type: 'button', role: 'radio', 'aria-checked': 'false',
-                         tabindex: -1, 'aria-label': label, 'data-id': m.id, onclick: () => choose(m.id) },
-      h('span', { class: 'mdl-top' }, h('span', { class: 'mdl-name' }, m.name),
-        h('span', { class: 'mdl-ep' }, m.epoch != null ? ['Epoch ', h('b', {}, m.epoch), m.epochs ? ` / ${m.epochs}` : ''] : 'Not trained yet')),
-      h('span', { class: 'mdl-curve' }, svg),
-      h('span', { class: 'mdl-foot' },
-        h('span', { class: 'mdl-caps' }, CAPS.map(([k, t, tip]) => h('i', { class: m.ready[k] ? null : 'off',
-          title: m.ready[k] ? tip : `${tip}: not yet, its map of whistle families has not been drawn` }, t))),
-        m.rec != null ? h('span', { class: 'mdl-loss', title: 'Reconstruction loss of its last training epoch: lower means closer copies' },
-                          'loss ', h('b', {}, m.rec.toFixed(1))) : null));
+                         tabindex: -1, 'aria-label': label, 'data-id': m.id, onclick: () => choose(m.id),
+                         onmouseenter: () => peek(m.id, true), onmouseleave: () => peek(m.id, false) },
+      h('span', { class: 'mdl-idx' }, String(i + 1).padStart(2, '0')),
+      h('span', { class: 'mdl-name' }, h('span', {}, m.name),
+        h('span', { class: 'mdl-eq', 'aria-hidden': 'true' }, h('i'), h('i'), h('i'), h('i'))),
+      h('span', { class: 'mdl-ep' }, m.epoch != null ? ['Epoch', h('b', {}, String(m.epoch))] : 'not trained'));
   }
-  function drawCurves() {
-    const ms = models(), vals = ms.flatMap(m => (m.curve || []).map(p => p[1]));
-    if (!vals.length) return;
-    const E = Math.max(2, ...ms.map(m => m.epochs || m.epoch || 0)), lo = Math.min(...vals);
-    const longest = ms.reduce((a, m) => ((m.curve || []).length > (a || []).length ? m.curve : a), null);
-    const top = Math.max(lo + 1, longest[Math.min(4, longest.length - 1)][1]);       // from epoch 5: the first plunge runs off the top
-    const d = 0.03 * (top - lo), Y = r => Math.log(Math.min(top, Math.max(lo, r)) - lo + d), y0 = Y(top), y1 = Y(lo);
-    for (const b of document.querySelectorAll('#mdl-track .mdl-opt')) {
-      const m = ms.find(q => q.id === b.dataset.id), box = b.querySelector('.mdl-curve'), svg = box.querySelector('svg');
-      const W = box.clientWidth, H = box.clientHeight;
-      if (!m || !W || !H) continue;
-      svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
-      const px = e => 4 + (e - 1) / (E - 1) * (W - 14), py = r => 5 + (y0 - Y(r)) / (y0 - y1) * (H - 12);
-      svg.querySelector('.axis').setAttribute('d', `M4 ${H - 1.5}H${W - 10}`);
-      const c = m.curve || [];
-      const path = c.map(([e, r], i) => `${i ? 'L' : 'M'}${px(e).toFixed(1)} ${py(r).toFixed(1)}`).join('');
-      for (const p of svg.querySelectorAll('.line,.glow')) p.setAttribute('d', path || 'M0 0');
-      for (const p of svg.querySelectorAll('.pt,.ping')) {
-        p.style.display = c.length ? '' : 'none';
-        if (c.length) { p.setAttribute('cx', px(c[c.length - 1][0]).toFixed(1)); p.setAttribute('cy', py(c[c.length - 1][1]).toFixed(1)); }
-      }
-    }
+  /* a model under the pointer, in the list or on the chart, lights up in both */
+  function peek(id, on) {
+    for (const el of document.querySelectorAll(`#mdl [data-id="${CSS.escape(id)}"]`)) el.classList.toggle('peek', on);
   }
-  /* the lens (and the small twin's thumb) sit under the chosen option; `still` moves them without the glide */
-  function placeGlass(still) {
-    for (const [group, glass] of [['#mdl-track', '.mdl-lens'], ['#gen-mdl', '.mdl-thumb']]) {
-      const g = $(group), el = g && g.querySelector(glass), b = g && g.querySelector('[aria-checked="true"]');
-      if (!el || !b || !b.offsetWidth) continue;
-      el.classList.toggle('still', !!still);
-      el.style.width = `${b.offsetWidth}px`; el.style.transform = `translateX(${b.offsetLeft}px)`;
-      if (still) { void el.offsetWidth; el.classList.remove('still'); }
+
+  /* the chosen model's readings; numbers count from the old model's values to the new one's */
+  function readouts(m, animate) {
+    const show = (sel, v, fmt) => {
+      const el = $(sel), from = el._x;
+      el._to = v;
+      if (v == null) { el._x = null; el.textContent = '–'; return; }
+      if (!animate || from == null || from === v || still()) { el._x = v; el.textContent = fmt(v); return; }
+      const t0 = performance.now(), dur = 850;
+      const step = now => {
+        if (el._to !== v) return;                                    // a newer choice took over
+        const t = Math.min(1, (now - t0) / dur);
+        el._x = from + (v - from) * ease(t); el.textContent = fmt(t < 1 ? el._x : v);
+        if (t < 1) requestAnimationFrame(step); else el._x = v;
+      };
+      requestAnimationFrame(step);
+    };
+    show('#mdl-r-loss', m.rec, v => v.toFixed(1));
+    show('#mdl-r-k', m.k, v => Math.round(v).toLocaleString('en-US'));
+    show('#mdl-r-z', m.latent_dim, v => String(Math.round(v)));
+    // the loss against the other model (two models) or the default one (more)
+    const ms = models(), ref = ms.length === 2 ? ms.find(q => q.id !== m.id) : ms.find(q => q.id === S.status.default_model);
+    const d = $('#mdl-r-delta');
+    if (ref && ref.id !== m.id && ref.rec && m.rec) {
+      const p = (m.rec / ref.rec - 1) * 100;
+      d.textContent = `${p < 0 ? '−' : '+'}${Math.abs(p).toFixed(1)}% vs ${ref.name}`;
+      d.classList.toggle('up', p > 0);
+      d.title = p < 0 ? `Its copies were ${Math.abs(p).toFixed(1)}% closer than ${ref.name}'s` : `Its copies were ${p.toFixed(1)}% further off than ${ref.name}'s`;
+    } else d.textContent = '';
+    $('#mdl-caps').replaceChildren(...CAPS.map(([k, t, tip]) => h('i', { class: m.ready[k] ? null : 'off',
+      title: m.ready[k] ? tip : `${tip}: not yet, its map of whistle families has not been drawn` }, t)));
+  }
+  /* the line above the chart: the chosen checkpoint at rest, the epoch under the cursor while it reads */
+  function live(e, r) {
+    const m = cur(), el = $('#mdl-live');
+    if (e == null) {
+      el.replaceChildren(...(m.epoch != null ? [h('b', {}, m.name), ` · epoch ${m.epoch}`, ...(m.rec != null ? [' · loss ', h('b', {}, m.rec.toFixed(1))] : [])] : [m.name]));
+    } else el.replaceChildren('Epoch ', h('b', {}, String(e).padStart(3, '0')), ' · loss ', h('b', {}, r.toFixed(1)));
+  }
+
+  /* ---- the chart */
+  function geometry() {
+    const ms = models(), plot = $('#mdl-plot'), W = plot.clientWidth, H = plot.clientHeight;
+    const curves = ms.filter(m => m.curve && m.curve.length > 1).map(m => m.curve);
+    if (!W || !H || !curves.length) return null;
+    const vals = curves.flat().map(p => p[1]), lo = Math.min(...vals);
+    const E = Math.max(2, ...ms.map(m => m.epochs || m.epoch || 0), ...curves.map(lastEpoch));
+    const longest = curves.reduce((a, c) => (c.length > a.length ? c : a));
+    const top = Math.max(lo + 1, longest[Math.min(4, longest.length - 1)][1]);        // from epoch 5 down; earlier epochs run in from above
+    const d = 0.12 * (top - lo), T = r => Math.log(Math.max(lo, r) - lo + d), t0 = T(top), t1 = T(lo);
+    const L = 50, R = W - 16, Tp = 22, B = H - 30;
+    return { W, H, E, lo, top, L, R, T: Tp, B, x: e => L + (e - 1) / (E - 1) * (R - L), y: r => Tp + (t0 - T(r)) / (t0 - t1) * (B - Tp), curves };
+  }
+  /* the loss and epoch ticks: real values, at least `gap` pixels apart */
+  function ticks(g) {
+    const out = [], ys = [], steps = [1, 2, 5, 10, 20, 25, 50, 100, 200, 250, 500, 1000];
+    const nice = [];
+    for (let m = 1; m <= 1e6; m *= 10) for (const k of [1, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.65, 1.7, 1.8, 1.9, 2, 2.5, 3, 4, 5, 6, 7, 8, 9]) nice.push(Math.round(k * m * 100) / 100);
+    for (const v of nice.filter(v => v >= g.lo && v <= g.top)) {
+      const Y = g.y(v);
+      if (Y > g.B - 4 || ys.some(q => Math.abs(q - Y) < 22)) continue;
+      ys.push(Y);
+      out.push(sv('line', { class: 'grid', x1: g.L, x2: g.R, y1: Y.toFixed(1), y2: Y.toFixed(1) }),
+               sv('text', { class: 'tick', x: g.L - 12, y: Y.toFixed(1), 'text-anchor': 'end', 'dominant-baseline': 'middle' }, String(v)));
     }
+    const step = steps.find(s => (g.E - 1) / s <= 7) || 1000;
+    out.push(sv('line', { class: 'axis', x1: g.L, x2: g.R, y1: g.B + 6, y2: g.B + 6 }));
+    for (const e of [1, ...Array.from({ length: Math.floor(g.E / step) }, (_, i) => (i + 1) * step)]) {
+      const X = g.x(e).toFixed(1);
+      out.push(sv('line', { class: 'axis', x1: X, x2: X, y1: g.B + 6, y2: g.B + 10 }),
+               sv('text', { class: 'tick', x: X, y: g.B + 23, 'text-anchor': 'middle' }, String(e)));
+    }
+    return out;
+  }
+  const pathOf = (g, pts) => pts.map(([e, r], i) => `${i ? 'L' : 'M'}${g.x(e).toFixed(1)} ${g.y(r).toFixed(1)}`).join('');
+  /* a curve that is the start of another (the same run, an earlier checkpoint) is not drawn twice */
+  const within = (a, b) => a !== b && a.length <= b.length && a.every(([e, r], i) => b[i] && b[i][0] === e && Math.abs(b[i][1] - r) < 1e-6);
+
+  function buildChart() {
+    const svg = $('#mdl-svg'), g = G.geo = geometry();
+    // no training log for any model: no chart. (No size yet, as while hidden, is not that: the next resize draws it.)
+    $('#mdl').classList.toggle('nochart', !models().some(m => m.curve && m.curve.length > 1));
+    if (!g) { svg.replaceChildren(); return; }
+    svg.setAttribute('viewBox', `0 0 ${g.W} ${g.H}`);
+    const stop = (o, c, a = 1) => sv('stop', { offset: o, 'stop-color': c, 'stop-opacity': a });
+    const grad = sv('linearGradient', { id: 'mdl-grad', gradientUnits: 'userSpaceOnUse', x1: g.L, x2: g.R, y1: 0, y2: 0 },
+                    stop(0, '#a9cfe0', 0.18), stop(0.6, '#d6ecf5', 0.75), stop(1, '#f4fbfd'));
+    const defs = sv('defs', {}, grad,
+      sv('linearGradient', { id: 'mdl-fill', x1: 0, x2: 0, y1: 0, y2: 1 }, stop(0, '#a9cfe0', 0.15), stop(1, '#a9cfe0', 0)),
+      sv('radialGradient', { id: 'mdl-halo' }, stop(0, '#eaf6fb', 0.55), stop(1, '#eaf6fb', 0)),
+      sv('clipPath', { id: 'mdl-clip' }, sv('rect', { x: 0, y: 0, width: g.W, height: g.B + 2 })));
+    const bases = g.curves.filter(c => !g.curves.some(o => within(c, o)))
+      .map(c => sv('path', { class: 'base', d: pathOf(g, c) }));
+    const el = G.el = {
+      grad, area: sv('path', { class: 'area' }), glow: sv('path', { class: 'lit-glow' }), lit: sv('path', { class: 'lit' }),
+      plumb: sv('line', { class: 'plumb' }), foot: sv('circle', { class: 'foot', r: 2 }),
+      cross: sv('line', { class: 'cross', y1: g.T - 8, y2: g.B + 6 }), dot: sv('circle', { class: 'cross-dot', r: 4 }),
+      head: sv('g', { class: 'light' }, sv('circle', { class: 'ping', r: 4 }), sv('circle', { class: 'ping', r: 4 }),
+               sv('circle', { class: 'halo', r: 14 }), sv('circle', { class: 'head', r: 3.6 }))
+    };
+    // the stations: one per model, a ring on the run at its checkpoint and its name as a callout along the top, joined by
+    // a leader; callouts too close take two rows, and a checkpoint too near the top has its name beneath it instead
+    const stations = [];
+    let lastX = -1e9, row = 0;
+    for (const m of models().filter(m => m.epoch != null && m.curve && m.curve.length).sort((a, b) => a.epoch - b.epoch)) {
+      const X = g.x(m.epoch), Y = g.y(m.rec != null ? m.rec : m.curve[m.curve.length - 1][1]);
+      row = X - lastX < 120 ? 1 - row : 0; lastX = X;
+      const anchor = X > g.R - 80 ? 'end' : X < g.L + 80 ? 'start' : 'middle', dx = anchor === 'end' ? 4 : anchor === 'start' ? -4 : 0;
+      let ty = g.T + 6 + row * 20;
+      const below = Y - 10 < ty + 16;
+      if (below) ty = Y + 30;
+      const st = sv('g', { class: 'mstn' + (m.id === S.model ? ' sel' : ''), 'data-id': m.id },
+        below ? null : sv('line', { class: 'leader', x1: X.toFixed(1), x2: X.toFixed(1), y1: (ty + 8).toFixed(1), y2: (Y - 9).toFixed(1) }),
+        sv('circle', { class: 'hit', cx: X, cy: Y, r: 18 }), sv('circle', { class: 'ring', cx: X, cy: Y, r: 4 }),
+        sv('text', { x: X + dx, y: ty, 'text-anchor': anchor }, m.name, sv('tspan', { class: 'sub', dx: 7 }, String(m.epoch))));
+      st.addEventListener('click', () => choose(m.id));
+      st.addEventListener('mouseenter', () => peek(m.id, true));
+      st.addEventListener('mouseleave', () => peek(m.id, false));
+      stations.push(st);
+    }
+    svg.replaceChildren(defs, ...ticks(g), sv('g', { 'clip-path': 'url(#mdl-clip)' }, ...bases, el.area, el.glow, el.lit),
+                        el.plumb, el.foot, el.cross, ...stations, el.head, el.dot);
+    light(G.e != null ? G.e : G.shown ? cur().epoch : 1);
+    if (G.pending != null) { const to = G.pending; G.pending = null; travel(to); }      // asked to travel before it had a size
+    else if (!G.raf && G.shown && G.e === cur().epoch) svg.classList.add('rest');
+  }
+  /* the run the light follows at epoch e: the chosen model's, or, while it runs back from a later checkpoint, the one it
+     came from */
+  function runAt(e) {
+    const c = smooth(cur().curve), p = smooth(G.from && G.from.curve);
+    return c && c.length && (e <= lastEpoch(c) + 1e-6 || !p) ? c : p;
+  }
+  function light(e) {
+    const g = G.geo, el = G.el, c = g && runAt(e);
+    if (!c || !c.length) return;
+    e = Math.max(c[0][0], Math.min(e, lastEpoch(c)));
+    G.e = e;
+    const pts = [];
+    for (let i = 0; i < c.length; i++) {
+      if (c[i][0] <= e) { pts.push(c[i]); continue; }
+      if (i) { const [e0, r0] = c[i - 1], [e1, r1] = c[i]; pts.push([e, r0 + (r1 - r0) * (e - e0) / (e1 - e0)]); }
+      break;
+    }
+    const d = pathOf(g, pts), [he, hr] = pts[pts.length - 1], X = g.x(he), Y = g.y(hr), X0 = g.x(pts[0][0]);
+    el.lit.setAttribute('d', d); el.glow.setAttribute('d', d);
+    el.area.setAttribute('d', pts.length > 1 ? `${d}L${X.toFixed(1)} ${g.B}L${X0.toFixed(1)} ${g.B}Z` : '');
+    el.grad.setAttribute('x2', Math.max(g.L + 1, X).toFixed(1));
+    el.head.setAttribute('transform', `translate(${X.toFixed(1)} ${Y.toFixed(1)})`);
+    el.head.style.opacity = Y < 0 ? 0 : 1;                           // still above the frame, in the first plunge
+    for (const [k, v] of Object.entries({ x1: X, x2: X, y1: Math.max(Y + 8, 0), y2: g.B + 6 })) el.plumb.setAttribute(k, v.toFixed(1));
+    el.plumb.style.opacity = el.foot.style.opacity = Y < g.B - 10 ? 1 : 0;
+    el.foot.setAttribute('cx', X.toFixed(1)); el.foot.setAttribute('cy', g.B + 6);
+  }
+  /* send the light along the run to epoch `to` (from where it is); the ping starts once it arrives */
+  function travel(to, from = null) {
+    cancelAnimationFrame(G.raf);
+    const svg = $('#mdl-svg'), a = G.e;
+    G.from = from;
+    if (to == null) return;
+    if (!G.geo) { G.pending = to; return; }                          // buildChart sends it on once the chart has a size
+    if (still() || a == null || Math.abs(to - a) < 1e-6) { light(to); G.from = null; svg.classList.add('rest'); return; }
+    svg.classList.remove('rest');
+    const dur = Math.min(1500, Math.max(650, 420 + 9 * Math.abs(to - a))), t0 = performance.now();
+    const step = now => {
+      const t = Math.min(1, (now - t0) / dur);
+      light(a + (to - a) * ease(t));
+      if (t < 1) G.raf = requestAnimationFrame(step);
+      else { G.raf = 0; G.from = null; svg.classList.add('rest'); }
+    };
+    G.raf = requestAnimationFrame(step);
+  }
+  /* the cursor reads the run: the epoch under it and its loss (the chosen model's run where it reaches) */
+  function bindReading() {
+    const plot = $('#mdl-plot'), svg = $('#mdl-svg');
+    const off = () => { svg.classList.remove('hover'); live(); };
+    plot.addEventListener('pointermove', ev => {
+      const g = G.geo;
+      if (!g) return;
+      const X = ev.clientX - plot.getBoundingClientRect().left;
+      if (X < g.L - 8 || X > g.R + 8) return off();
+      const e = Math.round(Math.max(1, Math.min(g.E, 1 + (X - g.L) / (g.R - g.L) * (g.E - 1))));
+      const c = [cur(), ...models()].map(m => m.curve).find(q => q && q.length && q[0][0] <= e && lastEpoch(q) >= e);
+      const p = c && c.find(q => q[0] === e);
+      if (!p) return off();
+      const x = g.x(e), y = g.y(p[1]);
+      G.el.cross.setAttribute('x1', x.toFixed(1)); G.el.cross.setAttribute('x2', x.toFixed(1));
+      G.el.dot.setAttribute('cx', x.toFixed(1)); G.el.dot.setAttribute('cy', Math.max(0, y).toFixed(1));
+      svg.classList.add('hover'); live(e, p[1]);
+    });
+    plot.addEventListener('pointerleave', off);
+  }
+
+  /* the lens (and the small twin's thumb) sit under the chosen option; `instant` moves them without the glide */
+  function placeGlass(instant) {
+    const put = (g, glass, vertical) => {
+      const el = g && g.querySelector(glass), b = g && g.querySelector('[aria-checked="true"]');
+      if (!el || !b || !b.offsetWidth) return;
+      el.classList.toggle('still', !!instant);
+      if (vertical) { el.style.height = `${b.offsetHeight}px`; el.style.transform = `translateY(${b.offsetTop}px)`; }
+      else { el.style.width = `${b.offsetWidth}px`; el.style.transform = `translateX(${b.offsetLeft}px)`; }
+      if (instant) { void el.offsetWidth; el.classList.remove('still'); }
+    };
+    put($('#mdl-track'), '.mdl-lens', true);
+    put($('#gen-mdl'), '.mdl-thumb', false);
   }
   function choose(id, focusIn) {
     if (!models().some(m => m.id === id)) return;
-    const changed = S.model !== id;
+    const prev = models().find(m => m.id === S.model) || null, changed = S.model !== id;
     S.model = id;
     try { localStorage.setItem(MODEL_KEY, id); } catch (_) { /* private window: not remembered */ }
     for (const g of [$('#mdl-track'), $('#gen-mdl')]) for (const b of g.querySelectorAll('[role=radio]')) {
@@ -240,9 +439,13 @@
       b.setAttribute('aria-checked', String(on)); b.tabIndex = on ? 0 : -1;
       if (on && focusIn === g) b.focus();
     }
+    for (const st of document.querySelectorAll('#mdl-svg .mstn')) st.classList.toggle('sel', st.dataset.id === id);
     placeGlass(false);
     if (!changed) return;
-    showStatus(true); refreshGenerate(); sumModel();
+    const m = cur();
+    readouts(m, !!prev); live();
+    if (G.shown) travel(m.epoch, prev);
+    showStatus(!!prev); refreshGenerate(); sumModel();
   }
   /* arrow keys move the choice within a group, as in any radio group */
   function radioKeys(g) {
@@ -258,23 +461,32 @@
     const ms = models();
     let saved = null;
     try { saved = localStorage.getItem(MODEL_KEY); } catch (_) { /* storage blocked */ }
-    S.model = ms.some(m => m.id === saved) ? saved : (S.status.default_model || (ms[0] && ms[0].id) || null);
+    const first = ms.some(m => m.id === saved) ? saved : (S.status.default_model || (ms[0] && ms[0].id) || null);
+    S.model = first;
     if (!many()) return;                          // one model: nothing to choose, the page looks as it always did
-    const track = $('#mdl-track'), mini = $('#gen-mdl');
-    track.append(...ms.map(modelOption));
+    const track = $('#mdl-track'), mini = $('#gen-mdl'), box = $('#mdl');
+    track.append(...ms.map(modelRow));
     mini.append(...ms.map(m => h('button', { type: 'button', role: 'radio', 'aria-checked': 'false', tabindex: -1, 'data-id': m.id,
-                                             onclick: () => choose(m.id) }, m.name)));
-    radioKeys(track); radioKeys(mini);
-    const box = $('#mdl');
+                                             onclick: () => choose(m.id) }, m.name, m.epoch != null ? h('small', {}, String(m.epoch)) : null)));
+    $('#mdl-count').textContent = `${ms.length} trained models`;
+    radioKeys(track); radioKeys(mini); bindReading();
     box.classList.add('enter'); box.hidden = false; $('#gen-mdl-w').hidden = false;
-    S.model = null; choose(ms.some(m => m.id === saved) ? saved : (S.status.default_model || ms[0].id));
-    requestAnimationFrame(() => { drawCurves(); placeGlass(true); requestAnimationFrame(() => box.classList.remove('enter')); });
-    // fonts arriving, the window resizing: the curves are drawn in pixels and the glass follows its option
+    S.model = null; choose(first);
+    // after layout: next frame, or a timer where frames are paused (a tab opened in the background)
+    const soon = f => { let done = false; const run = () => { if (!done) { done = true; f(); } }; requestAnimationFrame(run); setTimeout(run, 100); };
+    soon(() => { buildChart(); placeGlass(true); soon(() => box.classList.remove('enter')); });
+    // the first time the instrument comes into view, the light runs the whole training run to the chosen checkpoint
+    const arrive = () => { if (G.shown) return; G.shown = true; G.e = 1; light(1); setTimeout(() => travel(cur().epoch), still() ? 0 : 700); };
+    if (window.IntersectionObserver && !still()) {
+      const io = new IntersectionObserver(es => { if (es.some(e => e.isIntersecting)) { io.disconnect(); arrive(); } }, { threshold: 0.45 });
+      io.observe(box);
+    } else { G.shown = true; G.e = null; }
+    // fonts arriving, the window resizing: the chart is drawn in pixels and the glass follows its option
     if (window.ResizeObserver) {
       let raf = 0;
-      const ro = new ResizeObserver(() => { cancelAnimationFrame(raf); raf = requestAnimationFrame(() => { drawCurves(); placeGlass(true); }); });
-      ro.observe(track); ro.observe(mini);
-    } else addEventListener('resize', () => { drawCurves(); placeGlass(true); });
+      const ro = new ResizeObserver(() => { cancelAnimationFrame(raf); raf = requestAnimationFrame(() => { buildChart(); placeGlass(true); }); });
+      ro.observe($('#mdl-plot')); ro.observe(track); ro.observe(mini);
+    } else addEventListener('resize', () => { buildChart(); placeGlass(true); });
   }
 
   /* an example as a card: a small whistle drawn in its own style, the encounter, when, how many whistles */

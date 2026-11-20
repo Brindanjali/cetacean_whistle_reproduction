@@ -302,6 +302,7 @@ def test_each_request_uses_the_model_it_names(tmp_path, rec):
     assert cards["first"]["ready"]["generate"] and cards["first"]["curve"] is None          # no train_log.jsonl
     assert cards["second"]["ready"] == {"recreate": True, "same_type": False, "generate": False, "conditional": False}
     assert cards["second"]["name"] == "Second" and cards["second"]["epoch"] == 300 and cards["second"]["epochs"] == 300
+    assert cards["first"]["k"] == K and cards["second"]["k"] is None and cards["second"]["latent_dim"] == 64
     curve = cards["second"]["curve"]
     assert [e for e, _ in curve] == list(range(1, 301)) and dict(curve)[5] == 395.0 and cards["second"]["rec"] == 100.0
     assert f"fit-gmm --experiment {RUN2}" in cards["second"]["message"]

@@ -120,7 +120,8 @@ class Model:
         return {"id": st.get("id"), "name": st.get("name"), "run_id": st["run_id"], "ready": st["ready"], "message": st["message"],
                 "epoch": v.get("epoch"), "epochs": v.get("spec", {}).get("epochs"), "final": v.get("final", False),
                 "in_training": v.get("in_training", False), "stopped_early": v.get("stopped_early", False),
-                "rec": self.curve[-1][1] if self.curve else None, "curve": self.curve}
+                "rec": self.curve[-1][1] if self.curve else None, "curve": self.curve,
+                "k": self.gmm.K if self.gmm is not None else None, "latent_dim": self.latent_dim}
 
 
 def training_curve(run_dir: Path, epoch: int | None) -> list | None:
