@@ -1,192 +1,184 @@
-# whistlepipe — a reproduction of VAE-GMM for cetacean whistles
+<div align="center">
 
-Reproduces Park et al., "A Generative Model for Cetacean Whistles Using Variational Autoencoder and Mixture of
-Gaussians", *IEEE Access* 14 (2026), pp. 27877–27894 (DOI 10.1109/ACCESS.2026.3664765), on false killer whale whistles
-from NOAA's DCLDE 2022 data: raw recordings -> whistle images -> VAE-GMM training and evaluation -> inference and a
-web demo.
+# whistlepipe
 
-Preprocessing implements S1–S9 of `resources/PREPROCESSING_SPECIFICATION.md` (the paper evidence for every stage; nothing
-from it is repeated here beyond what is needed to run and extend the code). The VAE-GMM training, GMM fitting and
-evaluation (`src/whistlepipe/vaegmm/`) follow `resources/TRAINING_SPECIFICATION.md` (see "VAE-GMM" below).
+**An end-to-end, auditable reproduction of VAE-GMM for cetacean whistles**
 
-**Status (2026-11-08):** the dataset is built (180,154 images from 8 encounters, see "Dataset record"). The main model
-V1 is trained on encounter 191 only (363 files, 63,490 images) with K = 3,000; the other encounters stay on disk, unused
-(`resources/TRAINING_SPECIFICATION.md` §2.1). It was planned for 150 epochs; the owner stopped it after epoch 101 (rec 171.2)
-and did not resume, so the final model is epoch 101 (`checkpoints/final.pt` = `last.pt`, `train_info.json` status
-`stopped_early`; a reported deviation). Its latents are encoded (`latents_mu.npy`, 63,490 x 64, `post_training/`) and the GMM
-is fitted at K = 3,000 (`gmm_K3000/`: converged in 111 iterations, post-fit check passed; `gmm.npz` is not in git, it is backed
-up in the Drive run folder). Ridge sensitivity: x10 fitted, x0.1 not feasible (spec §3.5). The component features are computed,
-so all four web-demo functions work. Table 1 (L = 64): MSE 8.52, PSNR 32.84 dB, SSIM 0.9898, KL 860.6, against the paper's 0.5778,
-44.53 dB, 0.9861, 43.19; only SSIM is reproduced (likely causes in spec §3.10). Table 3 / Fig. 12: the Fig. 12 structure is
-reproduced (every diagonal entry is its row's minimum), but recall, precision and F1 are lower than the paper's (F1 75-83 % vs
-90-94 %). Figs. 7-10 are made (`figures/`). Table 6: decoder size matches the paper (368,097 parameters, 557.3 MFLOPs);
-with the paper's 0.5 s pause the laptop GPU wakes from idle on every trial, so a warm supplement is reported too (B = 16:
-0.120 ms per image warm vs the paper's 0.11 ms). Side by side with the paper: `post_training/out/paper_comparison.csv`
-(`python post_training/compare_paper.py`). Not computed, by the owner's decision (2026-11-09): Fig. 11 (no GMM fits at other K)
-and Tables 2, 4 and 5 (FID and precision/recall need the Inception-V3 / VGG-16 weights, which are not downloaded).
+From raw hydrophone recordings to a generative model of false killer whale whistles, an interactive web instrument and a covert acoustic message channel.
 
-> **Research-integrity statement.** The paper's S5 detector (its reference [31]) and S6 tracker (refs [32], [33]) are
-> unavailable. This project does **not** reproduce them. S5 and S6 here are **newly designed replacements** that satisfy the
-> functional requirements in spec §11. They are not claimed to be equivalent to the originals. Li et al. 2020 ("[L30]") is
-> **not** reference [31]; it was used only as methodological inspiration (injecting known shapes into whistle-free
-> backgrounds; per-node confidence maps) and none of its numbers were adopted.
+[![Python](https://img.shields.io/badge/python-3.11%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
+[![PyTorch](https://img.shields.io/badge/PyTorch-2.11%2B-EE4C2C?logo=pytorch&logoColor=white)](https://pytorch.org/)
+[![Tests](https://img.shields.io/badge/tests-454%20passing-2E7D32)](#getting-started)
+[![Paper](https://img.shields.io/badge/IEEE%20Access-10.1109%2FACCESS.2026.3664765-00629B)](https://doi.org/10.1109/ACCESS.2026.3664765)
+[![Data](https://img.shields.io/badge/data-NOAA%20DCLDE%202022-1F4E79)](#dataset-record)
 
-## Evidence tags (used in `configs/*.toml`, code docstrings and this file)
-`[EXPLICIT]` / `[IMPLIED]` / `[UNSPECIFIED]` come from the specification. **`[DECISION]`** = implementation decision made
-here because the paper leaves it open (never paper evidence). **`[REPLACEMENT]`** = part of the new S5/S6 design.
-The `[paper]` section of `configs/pipeline.toml` is locked: `config.py` refuses to run if any value differs from the spec.
+<img src="models/vaegmm/V1_L64_b1e-4_critic_E191/figures/fig7_unconditional.png" width="540" alt="A 5 × 5 grid of synthetic whistle contours, each sampled from a different mixture component and decoded by the VAE">
 
-## Layout
+<sub>Whistles sampled from 25 components of the fitted Gaussian mixture and decoded by the trained VAE (the paper's Fig. 7 protocol).</sub>
+
+</div>
+
+---
+
+This repository reimplements, stage by stage, the method of Park *et al.*, *"A Generative Model for Cetacean Whistles Using Variational Autoencoder and Mixture of Gaussians"*, *IEEE Access* 14 (2026), 27877–27894. Whistle contours are extracted from spectrograms and rendered as 128 × 128 images. A variational autoencoder (latent dimension L = 64, with an adversarial critic) learns a latent space, and a full-covariance Gaussian mixture models that space as an explicit prior that can be sampled.
+
+The reproduction draws on the paper's own source collection: false killer whale (*Pseudorca crassidens*) recordings from the 2017 HICEAS survey, released by NOAA as part of DCLDE 2022. It uses a different selection of files, though. All eight encounters of ship 1705 are processed (1,415 files), and the model is trained on one of them. Every result can be traced from the SHA-256 of a raw file to the checkpoint that produced it.
+
+### Highlights
+
+- **Complete pipeline.** 1,415 raw recordings are turned into 180,154 whistle images with no failed files. Training, mixture fitting, evaluation, inference and sonification all run from one CLI.
+- **Faithful where it can be measured.** SSIM is 0.990 against the paper's 0.986. The Fig. 12 diagonal structure appears for all 13 generation conditions. The decoder's size and cost are identical to the paper's: 368,097 parameters and 557.3 MFLOPs.
+- **Clear about evidence.** Each parameter is tagged as paper evidence or an implementation decision. The paper-defined configuration is locked, and every deviation is recorded.
+- **Beyond the paper.** The trained model drives a web instrument, and it is the alphabet of **WhistleCode**, which hides text messages in synthetic whistles. That is the biomimetic underwater-communication setting that motivates the paper.
+
+## Contents
+
+[Project status](#project-status) · [Method](#method) · [Results](#results) · [Dataset record](#dataset-record) · [WhistleCode](#whistlecode-messages-hidden-in-whistles) · [Getting started](#getting-started) · [Command reference](#command-reference) · [Repository layout](#repository-layout) · [Research integrity](#research-integrity) · [Limitations](#known-limitations) · [Documentation](#documentation) · [Citation](#citation)
+
+## Project status
+
+*As of 20 November 2026.*
+
+| Component | State | Notes |
+|---|---|---|
+| Preprocessing (S1–S9) | **Complete** | 1,415 / 1,415 files processed, 0 failed; 180,154 images from 8 encounters |
+| Replacement detector (S5/S6) | **Adopted** | `ridgenet-v2c`: 14,209 weights, trained only on synthetic whistles |
+| VAE training (run V1) | **Complete** | 150 / 150 epochs on encounter 191 (Colab A100 80 GB); epochs 102–150 resumed on 2026-11-20 |
+| Gaussian mixture, K = 3,000 | **Fitted for both checkpoints** | Post-fit checks passed |
+| Paper evaluation | **Complete for epoch 101** | Tables 1, 3 and 6; Figs. 7–10 and 12. Epoch 150 has not yet been evaluated against the paper |
+| Fig. 11; Tables 2, 4, 5 | **Not computed (owner's decision)** | They need extra GMM fits and the Inception-V3 / VGG-16 weights |
+| Web instrument | **Deployed** | Served locally, or self-hosted with Docker and a Tailscale Funnel https address |
+| WhistleCode | **Test campaign complete** | 4,200 trials and 500 empty-recording tries; [results](whistlecode/paper/RESULTS.md) |
+| Real acoustic test | **Open** | No message has been played through a speaker and recorded yet |
+
+## Method
+
+```mermaid
+flowchart LR
+    subgraph PRE["Preprocessing · S1–S9"]
+        direction TB
+        A["Raw hydrophone audio<br/>500 kHz · 6 channels"] --> B["Spectrogram<br/>192 kHz · 93.75 Hz × 5.33 ms"]
+        B --> C["RidgeNet detector + tracker<br/>replacement S5 / S6"]
+        C --> D["Whistle images<br/>128 × 128"]
+    end
+    subgraph MOD["Generative model"]
+        direction TB
+        E["VAE encoder"] --> F["Latent space<br/>L = 64"]
+        F --> G["Gaussian mixture prior<br/>K = 3,000 · full covariance"]
+        G --> H["VAE decoder"]
+    end
+    subgraph APP["Applications"]
+        direction TB
+        I["Try it<br/>recreate · classify · imagine"]
+        J["WhistleCode<br/>text ⇄ whistles"]
+    end
+    PRE --> MOD --> APP
 ```
-encounter_<id>_audio/  RAW, immutable, one folder per encounter (8 folders, 1,415 files). Opened read-only; storage.py
-                       refuses any write inside them. Encounter 191 also feeds the synthetic backgrounds (synth_raw_dir).
-metadata/  resources/  provided inputs and the specification; manifest_all.csv = SHA-256 of every raw file (build-manifest)
-configs/pipeline.toml  paper-defined [paper] + implementation decisions [decisions.*] + storage + validation sets
-configs/detector.toml  S5 architecture, synthetic-data generator, training  (all [REPLACEMENT])
-configs/vaegmm.toml    VAE-GMM training, GMM fitting and evaluation ([paper] section locked by vaegmm/config.py)
-src/whistlepipe/       audio.py(S1) dsp.py(S2-S4) detector/(S5) tracking.py(S6) representation.py(S7-S9)
-                       pipeline.py(orchestrator) storage.py(lineage/policy) dataset.py(final layout) manifest.py
-                       checks.py plotting.py cli.py
-                       synth/(synthetic training data)  train.py  evaluate.py  vaegmm/(VAE-GMM)
-                       infer.py(inference engine) sonify.py(image -> sound) server.py(web API) webexport.py ratecheck.py
-configs/inference.toml inference / web demo settings (not part of any training or processing hash)
-web/                   the project webpage (scroll film + "Try it"); web/media4k/*.mp4 and web/data/ are not in git
-colab/                 Colab notebook for the main VAE training + make_colab_bundle.py (its output colab/dist/ is not in git)
-post_training/         laptop versions of notebook cells 10-11 + finalize_run.py (closes a run stopped early); out/ = their records
-tests/                 pytest, small synthetic fixtures; none needs the full dataset
-models/detector/<ver>/ checkpoint.pt, train_info.json, calibration.json, eval_*.json
-models/vaegmm/<run_id>/  VAE runs: train_info.json, train_log.jsonl, sample grids (checkpoints/ not in git); _gates/ = gate records
-data/synthetic/        background banks (real S3 audio windows) and cached synthetic val/test sets
-preprocessed/          FINAL dataset, one folder per encounter: see "Dataset layout"
-preprocessing_checks/<run_id>/   small check runs with full debug detail (never overwritten): see "Storage and lineage"
-```
 
-## Setup
-* **Python 3.11 or newer** (`tomllib`), then `pip install -r requirements.txt`. For a CUDA GPU, install `torch` and
-  `torchvision` from the PyTorch index for your CUDA version first. Versions in use: Python 3.11.0, numpy 2.4.4,
-  scipy 1.17.1, soundfile 0.13.1 (libsndfile 1.2.2), torch 2.14.0+cu130 (dataset build, `preprocessed/dataset_info.json`);
-  Python 3.13, torch 2.11 on Colab (V1 `train_info.json`).
-* **Raw audio** (not in git, about 190 MB per file): NOAA DCLDE 2022, ship 1705 (R/V Lasker),
-  `gs://noaa-passive-bioacoustic/dclde/2022/dclde_2022_1705/audio/`. `metadata/whale_encounters_1705.csv` gives each
-  encounter's first and last file prefix; the false killer whale encounters used here are the eight in
-  `configs/pipeline.toml` `[paths].raw_dirs`. Put each encounter's files in `encounter_<id>_audio/` in the project root, then
-  run `build-manifest` once.
-* **Licence:** none has been chosen yet. The paper PDF in `resources/` is CC BY-NC-ND 4.0 (its first page).
+| Stage | Operation | Basis |
+|---|---|---|
+| S1 | Read channel 0 of the 6-channel, 500 kHz FLAC | Decision (the paper is silent) |
+| S2 | Polyphase resampling to 192 kHz (Kaiser FIR, 48/125) | Paper; filter is a decision |
+| S3 | High-pass above 2 kHz (4th-order Butterworth, zero-phase) | Paper; filter is a decision |
+| S4 | STFT: Hamming, 2,048 points, 50 % overlap, giving 93.75 Hz × 5.333 ms | Paper |
+| S5 | RidgeNet: per-node whistle confidence, 2–24 kHz | **Replacement** (paper's ref. [31] unavailable) |
+| S6 | Tracker: confidence map to individual whistle contours | **Replacement** (refs. [32], [33] unavailable) |
+| S7 | One time–frequency vector per whistle | Paper |
+| S8 | Centre the whistle and re-render at a 12 kHz baseband; reject tracks > 128 frames | Paper; details are decisions |
+| S9 | 128 × 128 linear-magnitude image, normalised to its maximum | Paper |
 
-## Commands (from the project root)
-```bash
-python -m pytest                                   # all automated tests
-python whistle.py list-sets                        # validation sets (val1/val5/val10 from encounter 191, per_encounter) + files per encounter
-python whistle.py build-backgrounds                # real-background banks for synthetic training (S1-S3 on 56 non-validation files)
-python whistle.py build-ridge-masks                # label-free masks of real faint whistles in the training backgrounds; needed
-                                                   #   before training with synth.labels.ignore_background_ridges = true (v2c, v2e)
-python whistle.py train --version ridgenet-v1      # train S5 on SYNTHETIC data (checkpoints are never overwritten; --resume continues
-                                                   #   after an interruption; full settings of v2c-v2e: models/detector/<ver>/detector_config.json)
-python whistle.py eval-synth --split val --calibrate   # synthetic validation + threshold calibration
-python whistle.py eval-synth --split test              # synthetic test
-python whistle.py build-manifest                   # once: hash every raw file -> metadata/manifest_all.csv (never overwritten;
-                                                   #   check runs and build-dataset refuse files that are not in it)
-python whistle.py run --run-id v2c_check1_1file --set val1 --last s4 --storage debug     # check runs -> preprocessing_checks/
-python whistle.py run --run-id v2c_check2_val5 --set val5 --storage debug
-python whistle.py run --run-id v2c_check3_per_encounter --set per_encounter --storage debug
-python whistle.py validate-run --run-id v2c_check3_per_encounter   # automated gate: lineage, output validity, cross-stage counts
-python whistle.py report --run-id v2c_check3_per_encounter         # compact per-file table
-python whistle.py plot-waveform                    # S1 waveform of the val1 file, S1/S2 samples overlaid, S1 vs S2 spectra
-                                                   #   -> docs/figures/waveform_<stem>.png (--file <stem>, --zoom-s, --zoom-ms)
-python whistle.py build-dataset                    # FINAL dataset -> preprocessed/ (only after the checks pass; resumable)
-python whistle.py build-dataset --encounters 191 214   # a subset of encounters
-python whistle.py validate-dataset                 # automated checks of preprocessed/
-```
-Any stage range: `--first s5 --last s6 --from-run preprocessing_checks/<earlier run>` (needs that run to hold the previous stage's
-intermediate). `--override key=value` changes a config value for one run and is recorded in the run manifest.
+The model has an encoder of 589,408 parameters, a decoder of 368,097 and a critic of 184,609. The latent means of all training images are fitted by full-covariance EM. Generation samples a component, draws a latent vector and decodes it. Conditional generation (the paper's Table 3) adds component weights and a rejection step. Each image is turned back into sound by the paper's Fig. 2 chain: threshold 0.05, then contour, then a constant-amplitude tone at the whistle's own centre frequency.
 
-## Dataset layout (`preprocessed/`, built by `build-dataset`)
-```
-preprocessed/
-  README.txt  dataset_info.json          what every file is; detector, config + hash, software, counts per encounter
-  encounter_<id>/images.npy              (N, 128, 128) float32 in [0, 1]: all whistle images of the encounter
-  encounter_<id>/images.csv              one row per image (row i <-> images.npy[i]): source file, time, frequencies, contour_id
-  encounter_<id>/contours.npz            S7 contours (Hz per 5.333 ms frame); image_index = -1 + no_image_reason too_long/too_wide
-  encounter_<id>/files.csv               one row per raw file: OK/FAILED, n_images, first_image_index, n_too_long/n_too_wide,
-                                         manifest status, detector_background_split, hash check
-  _details/                              not needed for training:
-      logs/encounter_<id>_*              run log, per-file stage stats, run manifest, summary, build record
-      per_file/encounter_<id>/<stem>.json   lineage of each raw file (same content as meta/<stem>.json below)
-      failed/encounter_<id>/<stem>/      traceback + intermediates of a failed file
-      detector_output/encounter_<id>/<stem>/   S5 confidence (float16) + S6 tracks ([dataset].keep_detector_output)
-```
-Each encounter is run through the normal pipeline into a temporary run (`_details/work/`), packed into the four files and the
-temporary run is deleted. The folder is written as `encounter_<id>.partial/` and renamed last, so it exists only when complete;
-re-running `build-dataset` skips complete encounters and redoes interrupted ones; it stops if a complete encounter's raw folder
-gained or lost files since it was built (delete that encounter folder to rebuild it). One dataset = one processing config
-(`[paper]` + `[decisions]`, without the S5 device) and one detector checkpoint (anything else is refused); paths and the list of raw
-folders are not part of it, so encounters can be added later. Every raw file must be in `manifest_all.csv` before a build starts.
-* **Raw-file status** (`manifest_all.csv`): VALID, SHORT (header shorter than 60 s; processed), SUSPECT_TRUNCATED (far fewer bytes
-  than the header length implies, e.g. a cut-off download: a FLAC header keeps the full length), INVALID, UNREADABLE. S1 checks the
-  decoded length of every file against its header, so truncated files FAIL with a clear error; failures of non-VALID/SHORT files are
-  *expected* (listed by `validate-dataset`, not counted as problems).
-* **Detector-background files:** 56 files of encounter 191 provided quiet windows for the detector's synthetic data (24 train,
-  16 val, 16 test; `data/synthetic/backgrounds/*.json`). They are processed like every other file and marked in
-  `files.csv` `detector_background_split`, so they can be checked or excluded.
-* **Code version:** every run manifest, build record and `dataset_info.json` records the git commit and whether `src/`, `configs/`
-  or `whistle.py` had uncommitted changes (`git_uncommitted_code_changes`); commit before a final build.
+## Results
 
-## Storage and lineage (check runs)
-`preprocessing_checks/<run_id>/` contains `run_manifest.json` (full config snapshot + hashes, software versions, detector checkpoint
-SHA-256, file list, options), `summary.json`, `logs/`, `intermediate/<stem>/`, `final/<stem>/`, `meta/<stem>.json`,
-`failed/<stem>/`, `diagnostics/`.
-* **Lineage** `meta/<stem>.json`: raw path/size/mtime/**SHA-256 (verified against `metadata/manifest_all.csv`)** → config
-  hash → per-stage diagnostics (shapes, rate, duration, range, counts, rejections, timings) → detector name/version/
-  checkpoint hash → stored outputs. Each file also records `unchanged_after_processing` (raw immutability audit).
-* **Policy** (`[storage]`): `debug` keeps S1–S6 (+S8) intermediates and plots; `normal` keeps S5/S6; `minimal` keeps none.
-  S7 vectors, S9 images and lineage are kept in **every** mode. A **failed** file always keeps every intermediate that
-  existed, plus the traceback, under `failed/<stem>/`.
-* Runs are isolated by `--run-id`; an existing run is never overwritten.
+### Reproduction against the paper
 
-## S5 contract (`detector/interface.py`)
-Input: S4 log-magnitude spectrogram `(T, 1025)` float32 dB on the 93.75 Hz × 5.333 ms grid. Output: `DetectionMap.conf`
-`(T, F)` float32 in [0, 1], one value per S4 node for bins `[bin_lo, bin_hi]` = 2–24 kHz (`[DECISION]` for the upper edge);
-semantics = confidence that the node lies on a whistle contour (fundamental or harmonic). No thresholding in S5. Output is
-independent of the internal tiling (tested), deterministic, and CPU/GPU-consistent (tested; TF32 is disabled because it changed S6 tracks between devices). Replace the detector by
-implementing `WhistleDetector.predict(spec) -> DetectionMap`; nothing else changes.
+The model is **Nyx** (epoch 101), on 63,490 images from encounter 191. The full side-by-side record is in [`post_training/out/paper_comparison.csv`](post_training/out/paper_comparison.csv).
 
-**RidgeNet** (`detector/ridgenet.py`, ~14k parameters): fully convolutional, no pooling, dilated 3×3 blocks; receptive field
-±19 frames × ±9 bins. Input conditioning (local per-bin noise-floor subtraction, clip, scale; `detector/conditioning.py`) is
-*internal to S5* and shared by training and inference; the S4 output is never modified.
+<table>
+<tr>
+<td valign="top" width="52%">
 
-## Synthetic training (no real ground truth is used or fabricated)
-Real S3 audio windows (3 s) from raw files that belong to **no** validation set serve as backgrounds, screened by a purely
-classical label-free ridge score (windows with persistent narrow-band ridges are dropped). Synthetic whistles (random
-contours incl. crossings/parallel pairs, 0–5 simultaneous, harmonics, variable SNR) and synthetic clicks/sweeps are added in
-the time domain and passed through the *same* S4 function. Labels (Gaussian ridge targets; nodes of invisible whistle parts
-are ignored, not forced negative) come only from the known contours. The generator never imports a detector (tested).
-Train/val/test use disjoint background files. **Known limitations:** encounter 191 is whistle-dense, so clean windows are
-scarce (see `data/synthetic/backgrounds/*.json`); residual weak real whistles may remain in backgrounds as unlabeled
-negatives; synthetic metrics therefore describe the synthetic task only.
+**Table 1: reconstruction (L = 64)**
 
-## Evaluation categories (kept separate)
-* **A — synthetic** (`eval-synth`): node PR and track-level recall/precision against the generator's ground truth.
-* **B — real-data engineering validation** (`validate-run`, `report`, diagnostics figures): consistency, counts, rejections,
-  timing, visual inspection. **No real-data precision/recall/F1 is computed or claimed.**
-* **C — manually annotated real data**: not available; not implemented.
-The paper's counts (228,673 vectors, ≈ 91.98 per file) are **not** optimisation targets.
+| Metric | This work | Paper |
+|---|---:|---:|
+| MSE (per-image SSE) ↓ | 8.52 | 0.578 |
+| PSNR (dB) ↑ | 32.84 | 44.53 |
+| SSIM ↑ | **0.9898** | 0.9861 |
+| KL (latent) | 860.6 | 43.19 |
 
-## Implementation decisions that are NOT paper evidence (full list: `[DECISION]`/`[REPLACEMENT]` in `configs/pipeline.toml`)
-S1 channel 0 (arbitrary; a six-channel survey showed no anomalous channel) · S2 polyphase Kaiser FIR 48/125 · S3 4th-order
-Butterworth, zero-phase, after S2 (−6 dB at 2 kHz) · S4 periodic Hamming, dB output, no padding · S5 band 2–24 kHz and all of its
-internals · S6 entire tracker and its settings · S8 centre frequency = (f_min+f_max)/2, whistle centred in time, complex
-12 kHz baseband derived from the paper grid, 2.7 ms edge ramps, tracks > 128 frames **rejected** (counted, not cropped) ·
-S9 linear magnitude, per-image max normalisation, row 0 = highest frequency (0 Hz on row 63).
+**Table 3: conditional generation, 13 conditions**
 
-## Dataset record (ridgenet-v2c, 8 encounters: the training data)
-Built 2026-10-21 by `build-dataset` into `preprocessed/` (`dataset_info.json`): git commit `8cf3ed4` with no uncommitted code
-changes, processing config `78f1bb1b…`, detector `ridgenet-v2c` (`c00d66a0…`), manifest `d20f4b38…`. Before the build, the check
-runs `v2c_check1_1file` (S1–S4), `v2c_check2_val5` (5 files, 766 images) and `v2c_check3_per_encounter` (one file per encounter,
-1,174 tracks, 1,098 images) finished with every file OK, and `validate-run` passes on both full check runs (0 problems, one
-detector checkpoint; re-run 2026-10-31).
+| Metric | This work | Paper |
+|---|---:|---:|
+| Recall | 88.7–95.9 % | 98.2–99.3 % |
+| Precision | 64.9–77.1 % | 82.7–90.8 % |
+| F1 | 75.0–83.2 % | 90.1–94.4 % |
+
+**Table 6: decoder cost (RTX 5060 Laptop GPU)**
+
+| Measure | This work | Paper |
+|---|---:|---:|
+| Parameters | 368,097 | 368 k |
+| FLOPs | 557.3 M | 557 M |
+| Latency, B = 1 | 1.78 ms | 1.7 ms |
+| Per image, B = 16 (warm GPU) | 0.120 ms | 0.11 ms |
+
+</td>
+<td valign="top" width="48%">
+
+<img src="models/vaegmm/V1_L64_b1e-4_critic_E191/figures/fig12_lnFFD.png" alt="Fig. 12 heat map of ln FFD between real and generated whistles for 13 conditions, with the minimum of every row on the diagonal">
+
+<sub>**Fig. 12, reproduced.** ln FFD between real (rows) and generated (columns) whistles. Every diagonal entry is its row's minimum, and the paper's near pairs 4/5 and 7/8 reappear.</sub>
+
+</td>
+</tr>
+</table>
+
+**Reading the numbers.** Of the Table 1 metrics, only SSIM matches the paper. The likely causes are recorded but untested ([training spec](resources/TRAINING_SPECIFICATION.md) §3.10):
+
+- Far fewer optimiser updates. Epoch 101 had 1,111 updates and epoch 150 has 1,650, against the paper's ≈ 76,800. The large single-GPU batch causes this.
+- The BCE reconstruction loss.
+- Different images, from the replacement detector and a single encounter.
+
+Table 3 is weaker in value but matches the paper in structure. Table 6's paper-protocol timing includes the laptop GPU waking from idle after each 0.5 s pause, so a warm-GPU supplement is reported as well.
+
+### Trained checkpoints
+
+V1 was trained on a single A100 with batch 5,772 and linearly scaled learning rates (6.442e-3 for the VAE, 1.288e-3 for the critic). Each epoch is 11 updates and took about 130 s. Training stopped at epoch 101 and was later resumed to completion. Both checkpoints are kept, and visitors can choose between them in the web instrument.
+
+| | **Nyx** | **Delphi** |
+|---|---|---|
+| Checkpoint | epoch 101 of 150 | epoch 150 of 150 |
+| Reconstruction loss *(training log)* | 171.2 | 161.9 |
+| KL *(training log)* | 830.6 | 738.2 |
+| GMM, K = 3,000 | converged in 111 iterations; mean log-likelihood 221.71 | converged in 150 iterations; mean log-likelihood 211.04 |
+| Post-fit check (feature FFD / nearest-neighbour ratio) | 4.63 / 1.02 (passed) | 4.47 / 1.04 (passed) |
+| Used for | paper evaluation, WhistleCode, Try it (default) | Try it |
+| Folder | `models/vaegmm/V1_L64_b1e-4_critic_E191/` | `models/vaegmm/V1_L64_b1e-4_critic_E191_epoch150/` |
+
+For scale, the reconstruction loss is a per-image BCE sum. A perfect reconstruction scores 141.6 and always predicting the average image scores 421.9. A nearest-neighbour ratio near 1 means generated latents are no closer to training latents than those are to one another, so the mixture is not copying them.
+
+### S5 detector experiments
+
+The paper's detector is unavailable, so S5 is a new, compact network, **RidgeNet** (about 14k parameters, fully convolutional). It is trained only on synthetic whistles laid over real ocean backgrounds. Six versions were compared on identical synthetic streams, whistle by whistle. **v2c** was adopted: it is v1's network with a label-free correction for faint real whistles hidden in the training backgrounds.
+
+| Held-out synthetic test | v1 | **v2c** |
+|---|---:|---:|
+| Track recall, visible fundamentals | 0.704 | **0.729** |
+| Recall at 5–10 dB local SNR | 0.519 | **0.647** |
+| Paired whistle-by-whistle wins / losses | — | **+28 / −14** (p = 0.044) |
+| False tracks per minute, contamination-free negatives | 0.00 | 0.00 |
+
+These numbers describe the synthetic task only: no annotated 2017 data exists, so no real-data precision or recall is claimed. A 5–24 kHz variant was also scored out of domain on the DCLDE 2011 benchmark. On Li *et al.*'s nine test files it reached a species-averaged precision of 53.6 %, recall of 84.9 % and F1 of 65.2 % ([`mod_detector_5_24/`](mod_detector_5_24/README.md)). The full experiment record is in the [technical reference](docs/TECHNICAL_REFERENCE.md#s5-detector-experiments).
+
+## Dataset record
+
+All eight false killer whale encounters of ship 1705 (R/V *Lasker*) in DCLDE 2022 were processed with detector `ridgenet-v2c`. The build ran on 2026-10-21 at commit `8cf3ed4`, with no uncommitted code changes. The VAE is trained on **encounter 191 only**, an owner's decision made to save compute ([training spec](resources/TRAINING_SPECIFICATION.md) §2.1). The other seven encounters stay processed and available. WhistleCode uses encounters 214 and 276 as sea noise.
 
 | Encounter | Files | Tracks after S6 | Rejected in S8 (> 128 frames) | Images |
-|---|---|---|---|---|
+|---|---:|---:|---:|---:|
 | 191 | 363 | 67,236 | 3,746 | 63,490 |
 | 214 | 124 | 6,825 | 148 | 6,677 |
 | 276 | 120 | 14,653 | 502 | 14,151 |
@@ -197,155 +189,193 @@ detector checkpoint; re-run 2026-10-31).
 | 416 | 66 | 4,253 | 70 | 4,183 |
 | **Total** | **1,415** | **190,612** | **10,458 (5.5 %)** | **180,154** |
 
-1,415/1,415 files OK, 0 failed. Images per file: mean 127.3, median 95, max 1,003 (2 files have none). S6 rejections: too short
-71,546, harmonic 19,962, low observed fraction 7,375, synchronous comb 329, duplicate 32, too steep 1. Median whistle = 40 frames
-(213 ms); 37.3 % of images are shorter than 30 frames. Time: 71.5 min in total, 3.0 s per file (RTX 5060 Laptop GPU). The S6
-settings are those frozen in the v1 work below (threshold 0.5, not recalibrated for v2c). The paper's 228,673 vectors from 2,486
-files are not a target and not comparable (different S5/S6, different selection of files).
+The median whistle lasts 40 frames (213 ms). The whole build took 71.5 minutes, about 3.0 s per 60 s file, on an RTX 5060 Laptop GPU. The paper's 228,673 vectors from 2,486 files are not a target and not comparable, because the detector and the file selection differ.
 
-## Validation record of ridgenet-v1 (encounter 191 only; superseded)
-The v1 run folders (`runs/…`) were deleted on 2026-10-21 to make room for the v2c multi-encounter dataset; the numbers below are
-the record of that work. The v2c dataset that replaced it is recorded above.
+## WhistleCode: messages hidden in whistles
 
-| Run | Files | What happened |
-|---|---|---|
-| `phase1_1file` | 1 (`1705_20170930_015147_062`) | S1–S4 gate. 12/12 independent checks pass: S1 equals the raw channel bit-for-bit; S2 spectrum preserved (median −0.07 dB); S3 measured gain −6.01 dB at 2 kHz, ≈0 dB above 5 kHz; S4 matches scipy within 0.03 dB. A six-channel survey showed no anomalous channel. |
-| `phase2_5files`, `phase3_10files` | 5, 10 | First full S1–S9 passes. Automated gate passed, but **visual inspection found a pulse-train artefact** (17 near-identical short tracks in one burst). → S6 rule `synchronous_comb` added. |
-| `…_r2` | 5, 10 | Repeated after the rule. Artefact removed (23 → 6 tracks in that window), gate passed. |
-| `…_r3` | 5, 10 | Repeated after an **S5 numerics fix**: CUDA TF32 made confidences differ from CPU by up to 7e-3 and changed S6 tracks between devices; TF32 is now off (difference 5e-6, identical tracks). Gate passed. |
-| `phase4_full363` | 363 | First full run; **superseded** (pre-numerics-fix). |
-| **`phase4_full363_r2`** | **363** | **Final.** 363/363 OK, 0 failed, one config hash (`19aaca0b…`), one detector checkpoint (`58798cb4…`), all 363 raw SHA-256 equal to the manifest, raw files unchanged. |
+The paper motivates VAE-GMM with biomimetic underwater communication. [WhistleCode](whistlecode/PLAN.md) builds that use case on the trained model:
 
-Configuration was frozen after the synthetic validation (S6 gate 3 bins, gap 12 frames, threshold 0.5) and not changed between
-the real-data phases except for the two documented fixes above, each followed by repeating the affected gates.
+1. **Sender.** A text message is packed into a 5-bit alphabet and protected by CRC-16 and Reed–Solomon over GF(64). It is then sent as whistles. Each whistle carries 6 bits: one of 16 mixture-component shapes times one of 4 pitches chosen by the key.
+2. **Timing.** Whistle times are borrowed from real false killer whale rhythm, with cover whistles around the data whistles.
+3. **Receiver.** It runs the reproduction's own detector and tracker, reads each whistle at its key-derived slot, and repairs the message using erasures.
 
-**Final run numbers:** 61,326 tracks → **57,990 images** (mean 159.8, median 106 per file; max 926). S6 rejections: too short
-29,848, low observed fraction 4,486, harmonic 7,782, synchronous comb 699, duplicate 10, too steep 3. S8: 3,336 tracks rejected as
-longer than 128 frames (5.4 %). Median whistle = 36 frames (192 ms); 40.9 % of images are shorter than 30 frames. Time: **3.2 s per
-file** (19.3 min total): S1 1.31 s (FLAC decode of the 6-channel file) is the largest part, S2 0.36, S3 0.14, S4 0.24, S5 0.19 (GPU;
-≈0.65 CPU), S6 0.39, S7–S9 0.07, SHA-256 check 0.13. Disk: 5.8 GB for the run in `normal` mode.
-The paper's counts are not targets and are not comparable (different S5/S6, different selection of files).
+<table>
+<tr>
+<td width="55%"><img src="whistlecode/paper/figures/fig_example_message.png" alt="Spectrogram of a sent message (whistles and clicks only) and of the same message at the hydrophone in encounter-276 sea noise at 10 dB SNR"></td>
+<td width="45%"><img src="whistlecode/paper/figures/fig_success_vs_snr.png" alt="Share of messages decoded exactly against narrowband SNR for WhistleCode in two noise encounters and for a chirp baseline"></td>
+</tr>
+<tr>
+<td><sub>A sent message, then the same message at the hydrophone in encounter-276 noise at 10 dB.</sub></td>
+<td><sub>Messages decoded exactly against SNR, for WhistleCode in two noise encounters and for a 16-chirp baseline. The baseline needs about 10 dB more SNR for the same success.</sub></td>
+</tr>
+</table>
 
-**Synthetic evaluation (category A; `models/detector/ridgenet-v1/eval_*.json`):** track recall of visible synthetic fundamentals
-0.737 (validation, where S6 gate/gap were chosen) and **0.704 (held-out test)**; by median ridge SNR: ≥10 dB 94–99 %, 5–10 dB 52–55 %,
-<5 dB ≈ 0 %. 1.02–1.04 tracks per recovered whistle. **0.00 false tracks/min on 4.6 min of contamination-free negatives** (phase-
-randomised real backgrounds + synthetic clicks/sweeps). Precision against labels on real-background samples (0.60–0.62) is only a lower
-bound because unlabeled real whistles in those backgrounds count as false.
+The pass marks were set in the plan before any test ran, and the results are reported as measured. All tests use model Nyx and the frozen configuration.
 
-## S5 detector experiments (synthetic category A; they led to `ridgenet-v2c`, which the pipeline uses)
-Goal: better detection with at most **+25 % S5 time** (budget defined by measured latency, not parameter count). Measured on a real
-60 s spectrogram: depthwise-separable designs are *slower* despite fewer multiply-adds (GPU 1.3–1.7×, CPU 4–6×); 18 channels doubles
-CPU time; so the feasible family is 16 channels, 6–7 dense blocks. All candidates: same synthetic stream/seed, same frozen S6,
-**paired** whistle-by-whistle comparison on fixed sets (`python whistle.py compare-synth ...`, results in `models/detector/compare_*.json`).
+| Test | Pass mark | Measured | Verdict |
+|---|---|---|---|
+| Clean channel (E1) | 100 % exact | 200 / 200 | Pass |
+| Final run: encounter-276 noise, 10 dB | ≥ 95 % exact | 84.5 % (97 % for messages under 60 data whistles) | Fail |
+| False messages: wrong text, wrong key, or no message present | 0 | 0 in 7,900 tries | Pass |
+| Rhythm discriminator, stream on its own (E9) | AUC ≤ 0.60 | 0.440 | Pass |
+| Rhythm discriminator, inside encounter-276 noise | AUC ≤ 0.60 | 0.684 | Fail |
+| Whistle-shape discriminator (E7) | AUC ≤ 0.75 | 0.944 (two real encounters: 0.696) | Fail |
 
-| Version | Change vs v1 | Recall val | 5–10 dB val | Paired vs v1 (val) | S5 time |
-|---|---|---|---|---|---|
-| v1 | — | 0.737 | 0.554 | — | 1.0× |
-| v2a | wider context (7 blocks, ±35 × ±23) | 0.710 | 0.482 | +15 / −32, p = 0.019 (**worse**) | GPU −14 / +5 %, CPU −38 / +17 % (two runs) |
-| v2b | data only: SNR emphasis, crossings, time-reversed backgrounds (trained from a separate session; evaluated here) | 0.739 | 0.571 | +14 / −13, p = 1 (no effect) | 1.0× (v1's network) |
-| **v2c** | v2b + **background-label fix** | **0.760** | **0.631** | **+30 / −16, p = 0.054** | **1.0× (v1's network)** |
-| v2d | v2c + wider context | 0.759 | 0.619 | +23 / −10; vs v2c +16 / −17, p = 1 | GPU +20 %, CPU +60 % (one run) |
-| v2e | label fix with v1's SNR balance | 0.755 | 0.625 | +24 / −13; vs v2c +10 / −13, p = 0.68 | 1.0× (v1's network) |
+A median compact-text message (41 characters) takes 142 s of airtime, about 1.2 bit/s. Encounter noise is added only on the receiving side to stand in for the sea; the sent file contains whistles and clicks only. The open items are Doppler drift correction (closing speeds of ±2 m/s cut success to 14–22 %), shape covertness, and a real speaker-to-hydrophone test. Full tables are in [`RESULTS.md`](whistlecode/paper/RESULTS.md) and the method in [`TEST_PROTOCOL.md`](whistlecode/paper/TEST_PROTOCOL.md).
 
-S5 time = change against v1 per 60-s file, as stored in `compare_*.json`. v2b, v2c and v2e are v1's network (14,209 weights)
-with other training data, yet their stored times range from −34 % to +0 % on the CPU: one comparison run's timing is noise of
-that size, so only v2d's slowdown is clearly real.
+> **Responsible use.** WhistleCode has been tested in simulation only. Playing synthetic whistles near wild animals requires the appropriate permits.
 
-* **Background-label fix** (`synth.labels.ignore_background_ridges`): a label-free classical statistic (median dB-above-floor along
-  25-frame lines, max over 13 slopes; threshold calibrated on phase-randomised noise) marks probable *real* faint whistles in the
-  training backgrounds; those nodes get loss weight 0 instead of being taught as negatives. Masks 2.2 % of background nodes, ~70 % of
-  which is real structure (0.65 % noise loss). Isolated effect, v2c vs v2b: **+24 / −11, p = 0.041**.
-* **Held-out test, v1 vs v2c (run once):** recall **0.704 → 0.729**, 5–10 dB **0.519 → 0.647**, paired **+28 / −14, p = 0.044**,
-  0.00 false tracks/min on contamination-free negatives. Cost: clear whistles (≥ 10 dB) drop 3–4 points; the same dip appears in
-  v2b/v2e, so it comes from time reversal and/or the extra crossing scenes (not yet separated), not from the label fix or SNR mix.
-* **Real data (category B, no ground truth), 10 Phase-3 files:** v2c keeps 82–100 % of v1's tracks and adds 13 % more; the extra tracks
-  inspected in a quiet file sit on faint visible ridges. S5 time unchanged (0.23 → 0.21 s); S6 0.62 → 0.66 s (more tracks to link).
-* **v2c is adopted** (`[decisions.s5].checkpoint`) for the multi-encounter dataset; the S6 threshold 0.5 was kept (not
-  recalibrated for v2c). The check runs and the dataset build were re-run with it (see "Dataset record").
+## Getting started
 
-## Known limitations (observed, not hidden)
-* **No real-data accuracy is known.** Only synthetic metrics and engineering validation exist; do not read them as recall/precision on
-  real whistles. The S5 detector is a replacement and is **not** claimed equivalent to the paper's.
-* Encounter 191, the only source of detector backgrounds, is whistle-dense, so clean background windows are scarce (middle of the
-  encounter unusable); synthetic validation therefore covers quiet-to-moderate backgrounds, and dense scenes were judged only by
-  inspection (the v1 figures of that inspection were deleted with the run folders on 2026-10-21; the v2c check runs keep theirs in
-  `preprocessing_checks/<run_id>/diagnostics/`).
-* S5 is nearly blind below about 5 dB local SNR (synthetic test recall 0 % for v1, 5 % for v2c); S6 can fragment or swap
-  identities in very dense crossings.
-* The comb rule can discard a real whistle that starts at the same instant as a pulse-train lattice (observed once in 15 files).
-* `min_track_frames = 12` admits many short fragments (37 % of the dataset's images < 30 frames) and tracks > 128 frames are
-  rejected. Both are replacement decisions; `images.csv` carries `n_frames`, so a dataset-level filter can be applied later **without**
-  re-running preprocessing — but that is a deliberate downstream decision, not something tuned to the paper.
-* Single channel (index 0, arbitrary); channel fusion is not implemented.
+**Requirements.** You need Python 3.11 or newer. A CUDA GPU is optional for inference and the web instrument, and recommended for training and the GMM fit. The dataset was built on an RTX 5060 Laptop GPU (8 GB) and the VAE was trained on an A100 80 GB. For a GPU, install `torch` and `torchvision` from the PyTorch index for your CUDA version first.
 
-## VAE-GMM (training, GMM, evaluation)
-Authoritative: `resources/TRAINING_SPECIFICATION.md` (discrepancy report, corrected specification, decisions, deviations,
-gates); configuration `configs/vaegmm.toml` (its `[paper]` section is locked in `vaegmm/config.py`). Deviations from
-stated paper values: the batch size on one GPU (paper 7 x 128 = 896) with learning rates scaled linearly, lr x B / 896, and
-the reduced scope below (spec §2.1).
-* **Main run V1** (Colab A100 80 GB): encounter 191 only, 150 epochs planned, **stopped by the owner after epoch 101** (final
-  model = epoch 101), **B = 5772, lr 6.442e-3 (VAE) / 1.288e-3 (critic)**, 11 steps per epoch, 127.9 s per epoch. It also uses
-  cuDNN autotuning (same maths, not bit-deterministic; spec §3.9). GMM at K = 3,000.
-  Its fallback run `V1_L64_b1e-4_critic_E191_B896` (never started) uses the paper's batch and learning rates. The earlier
-  all-data run `V1_L64_b1e-4_critic` (B = 5376) stopped at epoch 7 and is not used.
-* **After training, on the laptop** (`post_training/`, the Colab notebook's cells 10-11 and the GMM check): `finalize_run.py`
-  closes a run stopped early (final.pt = byte copy of last.pt, train_info.json status `stopped_early`); `cell10_progress.py`
-  writes the loss curves to `post_training/out/`; `cell11_check_encode.py` checks the data lineage and the last epoch, then
-  encodes `latents_mu.npy`; `gmm_check.py [--tag T]` checks a fit after `fit-gmm` (spec §3.5 diagnostics, pass criteria in
-  its docstring) and writes `post_training/out/gmm_check_K<K>[_T].json` + three figures.
-* **Laptop gates and the `configs/vaegmm.toml` default:** B = 128, 1.4286e-4 / 2.8571e-5.
-
-Every run's actual values are in its `train_info.json` (`spec`, `deviations`, `runtime`).
 ```bash
-python whistle.py vae-experiments                         # experiment matrix V1-V8 (spec §3.8)
-python whistle.py vae-gates                               # gates that do not train: G1 data, G2 numerics, G6 features
-python whistle.py vae-gates --gate all --allow-training   # + G3 smoke, G4 overfit, G5 timing (short trainings)
-python whistle.py train-vae --experiment V1               # main model, 150 epochs on encounter 191 (--resume continues an interrupted run)
-# Colab A100: colab/train_V1_colab.ipynb (code bundle: python colab/make_colab_bundle.py)
-python whistle.py fit-gmm --experiment V1 --K 3000        # encode unrotated means, full-covariance EM (V1: 111 iterations, 4.3 min on the RTX 5060)
-python post_training/gmm_check.py                         # post-fit check of that fit (--tag for the ridge-sensitivity fits)
-python whistle.py vae-eval recon --experiment V1          # Table 1
-python whistle.py fetch-eval-weights --approved           # Inception-V3 + VGG-16 weights (only after approval)
-python whistle.py vae-eval gen --experiment V1 --K 10000  # Table 2 (FID1, FID2, P/R/F1); --source prior for Table 4 (1)
-python whistle.py vae-eval cluster --experiment V1        # Fig. 11 (needs the 7 K fits)
-python whistle.py vae-eval components --experiment V1     # 500 samples per component (Fig. 8)
-python whistle.py vae-eval conditional --experiment V1    # Table 3 + Fig. 12
-python whistle.py vae-eval cost --experiment V1           # Table 6
-python whistle.py vae-eval figures --experiment V1        # Figs. 7-10
-python whistle.py train-ldm --experiment V1 --T 250 500 1000   # Table 5 LDM baseline
-```
-Outputs: `models/vaegmm/<run_id>/` (`train_info.json` with full lineage, `train_log.jsonl`, `checkpoints/`, `latents_mu.npy`,
-`gmm_K<k>/`, `eval/`, `figures/`); gate records in `models/vaegmm/_gates/`. Runs and GMM fits are never overwritten.
+git clone https://github.com/anonymus-k-dot/cetacean_whistle_reproduction.git
+cd cetacean_whistle_reproduction
+pip install -r requirements.txt -r whistlecode/requirements.txt
 
-## Inference and the web demo
-A recording goes through S2-S9 exactly as the training data did (`configs/pipeline.toml`; the processing hash is checked
-against `preprocessed/dataset_info.json`), then through the trained model, and every image is turned back into sound by
-the paper's own Fig. 2 chain (threshold 0.05 -> contour -> constant-amplitude tone) at the whistle's own centre frequency
-(`sonify.py`). Settings: `configs/inference.toml`. Uploads: WAV/FLAC/OGG/MP3, any rate >= 32 kHz (below 48 kHz the top of
-the 2-24 kHz detector band is missing and the result says so), any number of channels (one is analysed: `--channel` or
-the page's Channel box, default 0), up to 120 s.
+python -m pytest                     # reproduction suite (202 tests)
+python -m pytest whistlecode/tests   # WhistleCode suite (252 tests)
+```
+
+**What is in git.** The code, configurations, detector checkpoints and both VAE checkpoints (`final.pt`) are in git, along with all evaluation records and figures. The raw audio, the built dataset and the GMM files (`gmm.npz`, about 100 MB, plus the latents and component features) are not. Refitting the GMM needs the encounter-191 dataset; refits are bit-identical.
+
+**Raw audio** (about 190 MB per file) comes from NOAA's DCLDE 2022 release, ship 1705, at `gs://noaa-passive-bioacoustic/dclde/2022/dclde_2022_1705/audio/`. [`metadata/whale_encounters_1705.csv`](metadata/whale_encounters_1705.csv) gives each encounter's first and last file. Place each encounter in `encounter_<id>_audio/` at the project root. Every file is checked against the SHA-256 manifest in [`metadata/manifest_all.csv`](metadata/manifest_all.csv), and files that are not in it are refused.
+
+**Run the web instrument** (the scroll film, Try it, Encode and Decode):
+
 ```bash
-python whistle.py model-status              # are the trained files where inference looks for them? (--all: every model on offer)
-python whistle.py infer recording.wav       # -> runs/infer/<id>/: result.json, overview.png, per-whistle PNG + WAV
-python whistle.py generate --n 8            # new whistles from the GMM; --condition 1..13 = Table 3, --fc 9000 fixes the pitch
-python whistle.py serve                     # the page + API on http://127.0.0.1:8000 ("Try it" section)
-python whistle.py export-web                # example excerpts + pre-rendered results -> web/data/ (static hosting)
-python whistle.py check-rates               # detector on 96 / 48 kHz copies of real files vs the 500 kHz originals
-                                            #   (--rates 96000 48000 44100 adds 44.1 kHz)
+python whistle.py model-status --all          # which trained files each model has
+python whistlecode/whistlecode.py serve       # http://127.0.0.1:8000
 ```
-The trained files are read from where the training commands write them; nothing else needs to change after training
-(`serve` also offers `POST /api/reload-model`):
 
-| File | Written by | Enables |
+To put it on the internet from your own machine, follow [`deploy/README.md`](deploy/README.md) (Docker + Tailscale Funnel).
+
+## Command reference
+
+All commands run from the project root. `python whistle.py <command> --help` lists every option, and the [technical reference](docs/TECHNICAL_REFERENCE.md#commands) documents each one in full.
+
+```bash
+# Preprocessing: checks first, then the final dataset
+python whistle.py run --run-id check_val5 --set val5 --storage debug   # check run -> preprocessing_checks/
+python whistle.py validate-run --run-id check_val5                     # lineage, output validity, cross-stage counts
+python whistle.py build-dataset                                        # final dataset -> preprocessed/ (resumable)
+python whistle.py validate-dataset
+
+# Replacement detector (synthetic data only)
+python whistle.py build-backgrounds                                    # real-background banks
+python whistle.py build-ridge-masks                                    # label-free masks of faint real whistles
+python whistle.py train --version ridgenet-v3                          # a new version; checkpoints are never overwritten
+python whistle.py eval-synth --version ridgenet-v2c --split test
+python whistle.py compare-synth --versions ridgenet-v1 ridgenet-v2c --split test
+
+# VAE-GMM
+python whistle.py vae-gates                                            # gates G1, G2, G6 (no training)
+python whistle.py train-vae --experiment V1                            # --resume continues a run
+python whistle.py fit-gmm --experiment V1 --K 3000
+python post_training/gmm_check.py                                      # post-fit check (--run-id for another run)
+python whistle.py vae-eval recon --experiment V1                       # also: components, conditional, cost, figures
+
+# Inference
+python whistle.py infer recording.wav                                  # whistles, recreations, types, sound
+python whistle.py generate --n 8 --condition 2                         # new whistles under a Table 3 condition
+
+# WhistleCode
+python whistlecode/whistlecode.py send --help                          # text -> WAV of whistles
+python whistlecode/whistlecode.py channel --help                       # play a WAV into real ocean noise
+python whistlecode/whistlecode.py receive --help                       # recording -> text
+```
+
+## Repository layout
+
+```
+├── whistle.py              CLI entry point
+├── src/whistlepipe/        preprocessing S1–S9, detector, VAE-GMM, inference, sonification, web API
+├── configs/                pipeline · detector · vaegmm · inference (TOML; [paper] sections are locked)
+├── resources/              the paper and the preprocessing / training specifications
+├── metadata/               encounter tables and the SHA-256 manifest of every raw file
+├── models/
+│   ├── detector/           RidgeNet v1–v2e with evaluations (v2c adopted)
+│   └── vaegmm/             training runs, GMM fits, evaluation records and figures
+├── post_training/          laptop-side checks after training; paper-comparison records
+├── colab/                  Colab notebook and code bundle for the VAE training run
+├── web/                    project page: scroll film, Try it, Encode, Decode
+├── whistlecode/            WhistleCode: code, tests, plan, paper results
+├── deploy/                 Docker + Tailscale Funnel deployment
+├── mod_detector_5_24/      5–24 kHz detector variant for the DCLDE 2011 benchmark
+├── whistleflow/            archived proposal (not implemented)
+├── tests/                  reproduction tests (small synthetic fixtures; no dataset needed)
+└── docs/                   technical reference, figures, review notes
+```
+
+These are not in git: `encounter_<id>_audio/` (raw audio, never written to), `preprocessed/` (the dataset), `preprocessing_checks/`, `data/` and `runs/`.
+
+## Research integrity
+
+> **Research-integrity statement.** The paper's S5 detector (its reference [31]) and S6 tracker (refs. [32], [33]) are unavailable, and this project does **not** reproduce them. S5 and S6 here are **newly designed replacements** that meet the functional requirements in spec §11. They are not claimed to be equivalent to the originals. Li *et al.* 2020 is **not** reference [31]. It was used only as methodological inspiration (injecting known shapes into whistle-free backgrounds; per-node confidence maps), and none of its numbers were adopted.
+
+**Evidence tags.** Every value in `configs/*.toml` and the code docstrings carries a tag:
+
+- `[EXPLICIT]`, `[IMPLIED]` and `[UNSPECIFIED]` come from the specification and refer to the paper.
+- `[DECISION]` marks a choice made here because the paper leaves the point open; it is never paper evidence.
+- `[REPLACEMENT]` marks part of the new S5/S6 design.
+
+The `[paper]` sections of `pipeline.toml` and `vaegmm.toml` are locked, and the code refuses to run if any value differs from the specification.
+
+**Deviations from the paper.** Each one is recorded in the specifications and in every run's `train_info.json`:
+
+| Topic | Paper | Here |
 |---|---|---|
-| `models/vaegmm/V1_L64_b1e-4_critic_E191/checkpoints/last.pt` | `train-vae --experiment V1` (every epoch; equals `final.pt` at the end, or after `post_training/finalize_run.py` for a run stopped early) | recreation (decoder of the encoder mean); a mid-training checkpoint is labelled as such |
-| `models/vaegmm/V1_L64_b1e-4_critic_E191/gmm_K3000/gmm.npz` + `gmm.json` | `fit-gmm --experiment V1` | whistle type (eqs. 11-12), new whistles of that type, generation |
-| `models/vaegmm/V1_L64_b1e-4_critic_E191/gmm_K3000/component_features.npy` | `vae-eval components --experiment V1` | generation under a Table 3 condition (eqs. 9-10 + rejection) |
+| Data | 2,486 files from DCLDE 2022 (selection not stated) | 1,415 files from the same collection (ship 1705, 8 encounters); model trained on encounter 191 (363 files, 63,490 images) |
+| Detector and tracker | Refs. [31]–[33] | RidgeNet + tracker (replacements, see above) |
+| Batch and learning rate | 7 × 128 = 896 | 5,772 on one GPU, with learning rates scaled linearly (lr × B / 896) |
+| Mixture size | K = 10,000 | K = 3,000 |
+| Determinism | — | cuDNN autotuning on: same maths, not bit-identical between runs |
 
-Until the files exist, the input side (detection, images, the recording and its contour as sound) works and the model
-panels say what is missing. With the VAE but no GMM, "new whistles" come from the encoder's own spread (a standard VAE
-step, labelled as not the paper's method). Checked so far: on 25 real training images, the tone run back through S2-S4
-follows the image's contour to a median of 0.6 Hz per image (worst image 1.1 Hz; re-measured 2026-10-31 with the round trip
-of tests/test_sonify.py, which itself only requires < 23 Hz, a quarter of a row); the detector on 96 / 48 / 44.1 kHz copies
-of 8 real files (one per encounter, 1,174 tracks) finds 99.8 / 99.4 / 99.7 % of the 500 kHz tracks at 99.7 / 99.5 / 99.1 %
-precision (2026-10-23, `python whistle.py check-rates --rates 96000 48000 44100`; record in `runs/infer/_checks/`).
+**Lineage.** Each raw file's SHA-256 is verified before processing, and the raw folders are opened read-only. Every run records its full configuration and hash, its software versions, the detector checkpoint hash and the git commit, including whether there were uncommitted changes. No run, dataset or GMM fit is ever overwritten.
+
+## Known limitations
+
+- **Reconstruction is below the paper's.** Only SSIM is reproduced in Table 1, and Table 3 values trail the paper's even though its structure matches.
+- **Delphi is not yet evaluated.** Tables 1 and 3 and the WhistleCode results are for Nyx (epoch 101). The epoch-150 checkpoint has its own mixture but no paper evaluation yet.
+- **No real-data detector accuracy is known.** No annotated 2017 data exists. The detector is nearly blind below about 5 dB local SNR and can swap identities in very dense crossings.
+- **Reduced scope.** The VAE is trained on one encounter. K is 3,000. Fig. 11 and Tables 2, 4 and 5 are not computed. Only one hydrophone channel is used (channel 0, chosen arbitrarily).
+- **WhistleCode is simulated only.** There is no Doppler drift correction, and a trained discriminator can still tell its whistle shapes from real ones (AUC 0.944).
+
+The full, observed list is in the [technical reference](docs/TECHNICAL_REFERENCE.md#known-limitations).
+
+## Documentation
+
+| Document | Contents |
+|---|---|
+| [`resources/PREPROCESSING_SPECIFICATION.md`](resources/PREPROCESSING_SPECIFICATION.md) | Paper evidence for every preprocessing stage, with a parameter table |
+| [`resources/TRAINING_SPECIFICATION.md`](resources/TRAINING_SPECIFICATION.md) | Discrepancy report, corrected training specification, decisions, deviations, gates |
+| [`docs/TECHNICAL_REFERENCE.md`](docs/TECHNICAL_REFERENCE.md) | Dataset layout, lineage, detector design and experiments, training record, inference, all commands |
+| [`web/README.md`](web/README.md) | Running the project page; Encode, Decode and Record; serving two computers |
+| [`deploy/README.md`](deploy/README.md) | Self-hosting with Docker and Tailscale Funnel |
+| [`whistlecode/PLAN.md`](whistlecode/PLAN.md) | WhistleCode design, experiments and pass marks |
+| [`whistlecode/paper/RESULTS.md`](whistlecode/paper/RESULTS.md) | WhistleCode test campaign: verdicts, tables, figures |
+| [`mod_detector_5_24/README.md`](mod_detector_5_24/README.md) | The 5–24 kHz detector variant and the DCLDE 2011 benchmark |
+
+## Citation
+
+If you use this work, please cite the original paper:
+
+```bibtex
+@article{park2026whistles,
+  author  = {Park, Geun-Ho and Ahn, Jongmin and Kim, Wanjin and Kim, Insoo and Lee, Dong-Hun},
+  title   = {A Generative Model for Cetacean Whistles Using Variational Autoencoder and Mixture of Gaussians},
+  journal = {IEEE Access},
+  volume  = {14},
+  pages   = {27877--27894},
+  year    = {2026},
+  doi     = {10.1109/ACCESS.2026.3664765}
+}
+```
+
+## Licence and acknowledgements
+
+- **Code.** No licence has been chosen yet.
+- **Paper.** The copy in `resources/` is licensed CC BY-NC-ND 4.0, as stated on its first page.
+- **Data.** The recordings are NOAA's DCLDE 2022 release (HICEAS 2017, R/V *Lasker*). They are public, are not redistributed here, and should be credited to NOAA when used.
+- **Web assets.** Fonts and media are credited in [`web/CREDITS.md`](web/CREDITS.md).
