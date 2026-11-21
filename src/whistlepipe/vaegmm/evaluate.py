@@ -361,7 +361,7 @@ def eval_cost(cfg, run_id: str, K: int | None = None, force: bool = False) -> Pa
         for what in ("decoder_only", "gmm_sampling_plus_decoder"):
             z0, _ = gmm.sample(B, g)
             ts = []
-            for trial in range(250):
+            for _trial in range(250):
                 time.sleep(0.5)
                 if dev.type == "cuda":
                     torch.cuda.synchronize()

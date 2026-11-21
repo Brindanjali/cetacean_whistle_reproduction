@@ -30,7 +30,7 @@ from typing import Any
 import numpy as np
 import soundfile as sf
 
-from .config import PROJECT_ROOT, Cfg, canonical_hash, project_path, protected_raw_dirs
+from .config import PROJECT_ROOT, Cfg, project_path, protected_raw_dirs
 
 STAGES_STORABLE = ("s1", "s2", "s3", "s4", "s5", "s6", "s8")
 

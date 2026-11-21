@@ -16,7 +16,7 @@ import numpy as np
 from .config import Cfg, band_bins, project_path
 from .detector.ridgenet import RidgeDetector
 from .synth.dataset import build_eval_set, build_surrogate_negative_set
-from .tracking import Track, track_confidence_map
+from .tracking import track_confidence_map
 
 SNR_BUCKETS = [(-5, 5), (5, 10), (10, 15), (15, 40)]
 TOL_BINS = 1.5

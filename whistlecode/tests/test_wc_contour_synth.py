@@ -77,6 +77,7 @@ def test_whistle_rejects_aliasing_harmonic(cfg):
         synth.whistle(Contour(np.zeros(10), 0.005), 9000.0, np.random.default_rng(0), cfg, fs=32000.0)
 
 
+@pytest.mark.localdata
 def test_fc_pool(cfg):
     fc = synth.fc_pool(cfg)
     lo, hi = cfg["synth"]["fc_range_hz"]

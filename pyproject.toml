@@ -1,0 +1,55 @@
+# The project's version, Python version and tool settings, in one place.
+#
+# The code runs straight from the checkout (python whistle.py ..., python whistlecode/whistlecode.py ...), so the project
+# is not installed as a package. Dependencies are in the requirements files, not here:
+#   requirements.txt               reproduction (lower bounds)       whistlecode/requirements.txt   WhistleCode extras
+#   deploy/requirements-serve.txt  the web server image (exact pins) constraints.txt                exact versions in use
+# The engineering systems (tests, lint, CI, releases, registers): project/README.md
+
+[project]
+name = "cetacean-whistle-reproduction"
+version = "0.9.0"                      # the release version; bump it only through project/RELEASES.md
+description = "Reproduction of VAE-GMM for cetacean whistles, and WhistleCode: text messages hidden in synthetic whistles"
+readme = "README.md"
+requires-python = ">=3.11"
+
+# ---------------------------------------------------------------------------------------------------------------- lint
+# Lint only. `ruff format` is not used [DECISION 2026-11-21, D-016]: the code keeps its compact house style.
+[tool.ruff]
+target-version = "py311"
+line-length = 140
+extend-exclude = ["floorplan", "docs/explainers"]   # local tooling pages; ruff already skips what .gitignore lists
+
+[tool.ruff.lint]
+select = [
+    "F",    # pyflakes: unused names, undefined names, real mistakes
+    "E4",   # import placement
+    "E7",   # statements
+    "E9",   # syntax errors
+    "B",    # bugbear: likely bugs
+]
+ignore = [
+    "E402",  # scripts and notebooks put src/ on sys.path before importing
+    "E701",  # house style: short one-line blocks
+    "E702",  # house style: several short statements on one line
+    "E731",  # small named lambdas
+    "E741",  # l, I and O as mathematical names
+    "B008",  # FastAPI's File() and Form() parameter defaults
+    "B905",  # zip() without strict=: lengths are checked where it matters
+]
+
+[tool.ruff.lint.per-file-ignores]
+"**/__init__.py" = ["F401"]   # re-exports
+
+# --------------------------------------------------------------------------------------------------------------- tests
+# Reproduction suite: python -m pytest           WhistleCode suite: python -m pytest whistlecode/tests
+# Tiers and markers: project/ENGINEERING.md#testing
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+addopts = "-q --strict-markers"
+markers = [
+    "gpu: needs a CUDA device (skipped without one)",
+    "realdata: reads one real raw file, read-only (skipped without the raw audio)",
+    "localdata: needs dataset or model files that git does not hold (skipped without them, as in CI)",
+]

@@ -148,7 +148,7 @@ def test_round_trip_real_training_images(cfg):
     if real is None:
         pytest.skip("preprocessed dataset not present")
     med = []
-    for img, fc, n_frames in real:
+    for img, fc, _n_frames in real:
         err, _, _ = round_trip(img, fc, cfg)
         if len(err):
             med.append(np.median(err))

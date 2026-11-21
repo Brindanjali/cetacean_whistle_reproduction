@@ -10,13 +10,14 @@ The single place for what is planned, what is waiting, and what has been done in
 |---|---|---|
 | Reproduction (VAE-GMM) | Complete. Dataset built; model V1 trained to epoch 150; Gaussian mixtures for epochs 101 and 150; paper evaluation done on epoch 101 | Nothing required (epoch-150 evaluation is optional: REP-1) |
 | WhistleCode | v1 built and tested (campaign v1). Second round: R0, R1 and R2 (drift correction, adopted) done | **WC-R3** shape covertness |
-| Detector paper | A draft exists (`docs/Mentor_Review_1.pdf`, not in git); its to-do file is older than the draft | DET-1, DET-2 |
-| Web page and deployment | Film, Try it (models Nyx and Delphi), Encode, Decode and Record; self-hosted with Docker and Tailscale | WEB-1 static examples are out of date |
+| Detector paper | A draft exists (`docs/private/Mentor_Review_1.pdf`, never in git); its to-do file is older than the draft | DET-1, DET-2 |
+| Web page and deployment | Film, Try it (models Nyx and Delphi), Encode, Decode and Record; self-hosted with Docker and Tailscale; `/healthz` and a Docker healthcheck | WEB-1 static examples are out of date |
+| Engineering | 25 systems in place ([`project/README.md`](project/README.md)): tracker, Definition of Done, review, lint, tests, CI, lock file, releases, monitoring, registers, security. Version 0.9.0 ready to tag | YOU-3, YOU-7; then OPS-4 (first CI run) |
 | Course | Week 7 of 8 | Final review at the end of Week 8 |
 
 ## Key dates
 
-- **29 Nov 2026**: end of Week 8, final evaluation and review: report, slides, code freeze (milestone M8 of the plan in `docs/Review-I-Guidelines.md`).
+- **29 Nov 2026**: end of Week 8, final evaluation and review: report, slides, code freeze (milestone M8 of the plan in `docs/course/Review-I-Guidelines.md`). The frozen code is released as **v1.0.0** (`project/RELEASES.md`).
 
 ## To do
 
@@ -28,10 +29,19 @@ Only you can do these.
 
 - [ ] **YOU-1** Agree the pivot to covert biomimetic communication with your mentor and team.
 - [ ] **YOU-2** Get the paywalled papers through your college library (list in `whistlecode/RELATED_WORK.md` section 7).
-- [ ] **YOU-3** Enable the work-log check once in this clone: `git config core.hooksPath .githooks`.
+- [ ] **YOU-3** Enable the pre-commit checks once in this clone (work log, secrets, lint): `git config core.hooksPath .githooks`.
 - [ ] **YOU-4** Decide on the optional encounter-308 download (33 files, about 6 GB) for a never-used test encounter. Needed only by WC-R6.
 - [ ] **YOU-5** Find 10 volunteers for the listening test (WC-R4): 20 pairs each, anonymous.
-- [ ] **YOU-6** Choose a licence for the code (the README says none is chosen).
+- [ ] **YOU-6** Choose a licence for the code (the README says none is chosen). Recommended: MIT; reasons and steps in `project/LICENSING.md`.
+- [ ] **YOU-7** After committing the engineering systems: tag and push release v0.9.0 (`python tools/repo.py release-check 0.9.0` prints the commands), then check the first CI run on GitHub (Actions tab).
+- [ ] **YOU-8** First backup of the three things that exist only on this laptop: `whistlecode/outputs/paper/`, `docs/private/` and the WhistleCode result summaries. Commands in `project/STORAGE.md`; then monthly.
+- [ ] **YOU-9** Delete the three local branches already merged into `main`: `git branch -d preprocessing-v2c-multi-encounter vaegmm-colab-training vaegmm-training`. Optionally the two merged remote ones: `git push origin --delete preprocessing-v2c-multi-encounter vaegmm-training`.
+
+### Bugs
+
+Format and severity levels: `project/WORKFLOW.md`, "Task tracker".
+
+None open.
 
 ### WhistleCode, second round
 
@@ -71,12 +81,16 @@ The plan, pass marks and rules are frozen in `whistlecode/PLAN.md` section 8.7.
 
 - [ ] **WEB-1** Re-run `python whistle.py export-web`. The static examples in `web/data/` date from 24 Oct, before any model existed.
 - [ ] **WEB-2** Replace the film's hand-made research illustration (Listen → Learn → Imagine) with real model output. This is the page's Phase 4; it overlaps WC-R7.
-- [ ] **WEB-3** Decide what to do with the untracked `cluster/` kit (running the demo on the college cluster): commit it, or ignore it.
+- [x] **WEB-3** Decide what to do with the untracked `cluster/` kit (running the demo on the college cluster): commit it, or ignore it. Decided: commit it (D-021).
 
 ### Repository housekeeping
 
-- [ ] **OPS-1** Decide which untracked files in `docs/` go into git: the week 1-2 notes, the training-plan PDF, the review slides, and the detector draft.
-- [ ] **OPS-2** Keep `docs/Whistle extraction.pdf` out of git: it is a published Elsevier paper, and the repository is public.
+- [x] **OPS-1** Decide which untracked files in `docs/` go into git: the week 1-2 notes, the training-plan PDF, the review slides, and the detector draft. Decided: all but the draft, in `docs/course/` (D-020).
+- [x] **OPS-2** Keep `docs/Whistle extraction.pdf` out of git: it is a published Elsevier paper, and the repository is public. Now in the ignored `docs/private/`.
+- [x] **OPS-3** Engineering systems for a one-owner, one-engineer team (`project/README.md`).
+- [ ] **OPS-4** Read the first CI run on GitHub (after YOU-7) and fix anything that fails only on Linux. CI has not run yet; the tests were simulated locally on a git-only copy.
+- [ ] **OPS-5** Copy the records behind three reported results into git (`whistlecode/paper/records/`): EXP-015 (normal conditions), EXP-019 (SNR gap), EXP-020 (R2). Today they exist only in `whistlecode/outputs/` (`project/TRACEABILITY.md`, "Gap").
+- [ ] **OPS-6** Confirm the reuse terms of the two NOAA files in `metadata/` (`DCLDE2020_DetectionData.xlsx`, `Dataset_DCLDE_Oahu.pdf`) and note them in `project/LICENSING.md`.
 
 ## Decided not to do
 
@@ -93,6 +107,16 @@ Newest first. Older history is grouped by stage. Commit hashes are given where t
 
 ### 2026-11-21
 
+- **Repository**: engineering systems for the whole project (OPS-3), indexed in the new `project/README.md`.
+  - **Process:** task tracker rules with a new "Bugs" list in this file, Definition of Done and code review (`project/WORKFLOW.md`).
+  - **Code:** `pyproject.toml` (version 0.9.0, ruff lint settings, pytest settings; replaces `pytest.ini`), `.python-version`, `.editorconfig`, the lock file `constraints.txt`, and the rules for quality, test tiers, CI, environment and configuration (`project/ENGINEERING.md`).
+  - **Checks:** new `tools/repo.py` (one `check` command for lint, configs, secrets, links, checksums and both test suites, plus `lock`, `health` and `release-check`); `.githooks/pre-commit` now also scans staged files for secrets and lints staged Python files; CI in `.github/workflows/ci.yml` (lint, secret scan of files and history, links, checksums, both suites on CPU, advisory dependency audit).
+  - **Releases and monitoring:** `CHANGELOG.md`, `CITATION.cff`, `project/RELEASES.md` (versions, release steps, deployment checklist, what is live, monitoring); `GET /healthz` in `whistlecode/wcode/web.py` (with `project_version()` in `whistlecode/wcode/config.py`) and a Docker healthcheck in `deploy/docker-compose.yml`.
+  - **Registers:** `project/TRACEABILITY.md`, `EXPERIMENTS.md` (EXP-001 to EXP-025), `MODELS.md` with `project/checksums/models.sha256` (28 files; all match), `DATA.md`, `DECISIONS.md` (D-001 to D-021), `INCIDENTS.md` (INC-001, INC-002), `STORAGE.md`, `LICENSING.md`, `HANDOVER.md`; `.github/SECURITY.md`; `docs/INDEX.md` and `docs/ARCHITECTURE.md`.
+  - **Tests:** 4 new `/healthz` tests (`whistlecode/tests/test_wc_web.py`). A git-only copy of the repository (what CI sees) showed 42 WhistleCode tests crashing instead of skipping without the local dataset and latents. Ten are now marked `localdata`, and four fixtures request the new `local_data` fixture (`whistlecode/tests/conftest.py`, `test_wc_codebook.py`, `test_wc_contour_synth.py`, `test_wc_pipeline.py`, `test_wc_transmitter.py`, `test_wc_realism.py`). Result: laptop 202 + 269 passed; git-only copy 199 + 208 passed, 3 + 61 skipped, none failed.
+  - **Lint fixes:** unused imports and loop variables removed in 25 files across `src/`, `tests/`, `whistlecode/` and `mod_detector_5_24/`; seven false alarms annotated. No behaviour change.
+  - **Layout:** `docs/` sorted into `course/` (in git), `explainers/` and `private/` (both ignored); `.gitignore` covers every `encounter_*_audio/`, `.ruff_cache/`, `floorplan/`. Caches deleted. The `cluster/` kit and the untracked course files are ready to commit (D-020, D-021). Ticks OPS-1, OPS-2 and WEB-3.
+  - **Scans:** no secret in 374 files or in the full history; 286 relative links and anchors, none broken; all 28 recorded checksums match.
 - **WhistleCode**: R2 Doppler and clock-drift correction, adopted.
   - **Receiver** (`whistlecode/wcode/receiver.py`, new `[receiver] drift_*` settings in `whistlecode/config.toml`): the frame search also searches time scales of 1 ± 0.25 %. A whole-message fit over every known whistle then refines the drift, and the payload is read on the sender's clock. With `drift_correction = false` it is exactly campaign v1's receiver.
   - **Measured on encounter-214 noise only,** with the new `whistlecode/experiments/drift_dev.py` (results in `whistlecode/outputs/drift_dev/`, not in git):
@@ -184,6 +208,7 @@ Newest first. Older history is grouped by stage. Commit hashes are given where t
 
 - **Every change gets a line** under today's date in Done, newest date first. The line names the area (Reproduction, WhistleCode, Detector, Web, Deploy, Docs, Repository) and says in plain words what changed and where. Add a new date heading when needed.
 - **Planned work goes into To do** with an ID before it starts. Only items for you go under "Waiting on you". When it is finished, tick it (`[x]`) and log it under Done.
+- **Bugs go under "Bugs"** as `BUG-n`, with how to make them happen and how bad they are (`project/WORKFLOW.md`).
 - **Update "At a glance" and "Updated"** when the picture changes.
 - **Don't rewrite old entries.** Correct them with a new dated line.
 - **Commits.** Include `WORKLOG.md` in every commit. Once YOU-3 is done, git refuses a commit that changes other files without it. To skip the check for one commit, use `WORKLOG_SKIP=1 git commit ...` in Git Bash, or `$env:WORKLOG_SKIP=1; git commit ...` in PowerShell, then `Remove-Item Env:WORKLOG_SKIP`.

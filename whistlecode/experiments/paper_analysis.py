@@ -599,7 +599,7 @@ def report() -> int:
         y = np.arange(len(order))[::-1]
         ax.barh(y, vals, xerr=err, color=[INK2 if k == "real_214" else (S1 if k == "whistlecode" else "#86b6ef") for k in order],
                 height=0.62, error_kw={"ecolor": INK2, "elinewidth": 1, "capsize": 2})
-        for kk, yy, v, e_ in zip(order, y, vals, err):
+        for _kk, yy, v, e_ in zip(order, y, vals, err):
             if v + e_ < 0.75 < v + e_ + 0.06:          # the label would sit on the pass-mark line: put it inside the bar
                 ax.text(v - 0.008, yy, f"{v:.3f}", va="center", ha="right", fontsize=8, color="#ffffff")
             else:

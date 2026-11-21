@@ -1,7 +1,6 @@
 """realism.py and the upgraded sender: real shapes, recorded voices, virtual animals and recorded clicks."""
 import numpy as np
 import pytest
-from scipy import signal
 from test_wc_pipeline import HOP, KEY, fake_bank, tracks_of
 
 from wcode import channel, classify, codebook, realism, receiver, sender, synth
@@ -55,7 +54,7 @@ def real_shape_config():
 
 
 @pytest.fixture(scope="module")
-def tx(book, small_bank, lib):
+def tx(book, small_bank, lib, local_data):
     return sender.Sender(real_shape_config(), codebook_path=book, check_model=False, rhythm_bank=small_bank, library=lib)
 
 
@@ -180,6 +179,7 @@ def test_no_sea_background_is_added(tx):
     assert np.abs(sent.audio).max() < 1.0
 
 
+@pytest.mark.localdata
 def test_type_without_real_shapes_keeps_its_vae_shapes(book, small_bank, monkeypatch):
     lib = fake_library(codebook.load(path=book, check=False), small_bank, empty_type=2)
     tx = sender.Sender(real_shape_config(), codebook_path=book, check_model=False, rhythm_bank=small_bank, library=lib)
@@ -197,6 +197,7 @@ def test_type_without_real_shapes_keeps_its_vae_shapes(book, small_bank, monkeyp
     assert sent.n_real_shapes == len(sent.data) - len(twos)
 
 
+@pytest.mark.localdata
 def test_default_sender_keeps_vae_shapes_with_real_voices_and_clicks(book, small_bank, lib, monkeypatch):
     tx = sender.Sender(codebook_path=book, check_model=False, rhythm_bank=small_bank, library=lib)
     monkeypatch.setattr(tx, "_shapes", lambda idx, tau, rng: ([tx.templates[int(i)] for i in idx], np.zeros(len(idx), np.int64),

@@ -1,17 +1,22 @@
 #!/bin/sh
-# Work-log check: refuses a commit that changes project files without also changing WORKLOG.md.
+# Pre-commit checks (project/ENGINEERING.md). Enable once per clone, from the repository root:
+#     git config core.hooksPath .githooks
 #
-# Enable once per clone (from the repository root):   git config core.hooksPath .githooks
-# Skip for a single commit:  Git Bash    WORKLOG_SKIP=1 git commit ...
-#                            PowerShell  $env:WORKLOG_SKIP=1; git commit ...; Remove-Item Env:WORKLOG_SKIP
+#   1. Work log: refuses a commit that changes project files without also changing WORKLOG.md.
+#   2. Secrets:  refuses a commit whose staged files hold a key, a token or a private key.
+#   3. Lint:     refuses a commit whose staged Python files fail `ruff check` (skipped if ruff is not installed).
+#
+# Skip check 1 for a single commit:  Git Bash    WORKLOG_SKIP=1 git commit ...
+#                                    PowerShell  $env:WORKLOG_SKIP=1; git commit ...; Remove-Item Env:WORKLOG_SKIP
+# Checks 2 and 3 have no switch: fix what they report.
 
-[ "${WORKLOG_SKIP:-0}" = "1" ] && exit 0
+changed=$(git diff --cached --name-only)                      # every staged change, deletions too
+staged=$(git diff --cached --name-only --diff-filter=ACMR)    # files with content to check
+[ -z "$changed" ] && exit 0
 
-staged=$(git diff --cached --name-only)
-[ -z "$staged" ] && exit 0
-printf '%s\n' "$staged" | grep -qx 'WORKLOG.md' && exit 0
-
-cat >&2 <<'MSG'
+# ---- 1. work log
+if [ "${WORKLOG_SKIP:-0}" != "1" ] && ! printf '%s\n' "$changed" | grep -qx 'WORKLOG.md'; then
+    cat >&2 <<'MSG'
 
 Commit refused: WORKLOG.md is not part of this commit.
 
@@ -22,4 +27,29 @@ Commit refused: WORKLOG.md is not part of this commit.
 To skip this check for one commit, see the top of .githooks/pre-commit.
 
 MSG
-exit 1
+    exit 1
+fi
+
+# `python` first: on Windows, `python3` can be the Microsoft Store placeholder
+PY=$(command -v python || command -v python3)
+
+# ---- 2. secrets
+if [ -n "$PY" ]; then
+    if ! "$PY" tools/repo.py secrets --staged >/dev/null; then
+        "$PY" tools/repo.py secrets --staged >&2
+        printf '\nCommit refused: a staged file looks like it holds a secret (above). Remove it, then commit again.\n\n' >&2
+        exit 1
+    fi
+fi
+
+# ---- 3. lint (staged Python files only)
+py_files=$(printf '%s\n' "$staged" | grep '\.py$')
+if [ -n "$py_files" ] && command -v ruff >/dev/null 2>&1; then
+    # shellcheck disable=SC2086  (one file name per word; the repository has no spaces in .py names)
+    if ! ruff check --force-exclude $py_files >&2; then
+        printf '\nCommit refused: ruff found problems in the staged Python files (above). Fix them, git add, commit again.\n\n' >&2
+        exit 1
+    fi
+fi
+
+exit 0

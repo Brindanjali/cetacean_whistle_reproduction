@@ -25,6 +25,15 @@ SUPPORTED = {
 RS_MAX_N = 255                                     # GF(2^8): at most 255 bytes per codeword
 
 
+def project_version() -> str:
+    """The release version in the repository's pyproject.toml (project/RELEASES.md); "unknown" if it cannot be read."""
+    try:
+        with open(PROJECT_ROOT / "pyproject.toml", "rb") as f:
+            return str(tomllib.load(f)["project"]["version"])
+    except (OSError, KeyError, tomllib.TOMLDecodeError):
+        return "unknown"
+
+
 class WhistleCodeError(RuntimeError):
     """Base of the errors the command line reports as one line (config, model files, codebook)."""
 

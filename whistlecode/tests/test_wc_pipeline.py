@@ -6,7 +6,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from wcode import bank, channel, codebook, detect, format2, layout, receiver, schedule, sender
+from wcode import bank, channel, codebook, detect, format2, layout, receiver, sender
 from wcode.contour import Contour
 from wcode.framing import DecodeError
 
@@ -64,12 +64,12 @@ def fake_book(tmp_path_factory):
 
 
 @pytest.fixture(scope="module")
-def tx(fake_book, small_bank):
+def tx(fake_book, small_bank, local_data):
     return sender.Sender(codebook_path=fake_book, check_model=False, rhythm_bank=small_bank)
 
 
 @pytest.fixture(scope="module")
-def rx(fake_book, small_bank):
+def rx(fake_book, small_bank, local_data):
     return receiver.Receiver(codebook_path=fake_book, check_model=False, rhythm_bank=small_bank)
 
 

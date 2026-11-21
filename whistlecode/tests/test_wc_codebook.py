@@ -46,6 +46,7 @@ def fake_codebook(lineage):
     return codebook.Codebook(types, sig, {"model": lineage, "quick": False})
 
 
+@pytest.mark.localdata
 def test_save_load_round_trip(tmp_path, cfg):
     lineage = model.check_lineage(cfg)
     cb = fake_codebook(lineage)
@@ -56,6 +57,7 @@ def test_save_load_round_trip(tmp_path, cfg):
     assert np.array_equal(got.types[3].chol, np.eye(64))
 
 
+@pytest.mark.localdata
 def test_load_refuses_another_model(tmp_path, cfg):
     lineage = copy.deepcopy(model.check_lineage(cfg))
     lineage["checkpoint_sha256"] = "0" * 64                  # as if built before the training resume
@@ -64,6 +66,7 @@ def test_load_refuses_another_model(tmp_path, cfg):
         codebook.load(cfg, tmp_path, check=True)
 
 
+@pytest.mark.localdata
 def test_lineage_of_the_current_model(cfg):
     lin = model.check_lineage(cfg)
     assert lin["checkpoint"].endswith("checkpoints/final.pt")

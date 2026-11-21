@@ -1,6 +1,5 @@
 """S5 contract, determinism, tiling invariance, conditioning, checkpoint safety (random-weight model: no training needed)."""
 import ast
-import copy
 from pathlib import Path
 
 import numpy as np

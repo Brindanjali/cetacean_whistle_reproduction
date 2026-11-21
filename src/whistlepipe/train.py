@@ -13,7 +13,7 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 
-from .config import Cfg, band_bins, canonical_hash, project_path
+from .config import Cfg, band_bins, project_path
 from .detector.ridgenet import RidgeNet, resolve_device, set_deterministic, sha256_file
 from .storage import software_versions
 from .synth.dataset import SynthTrainDataset, build_eval_set

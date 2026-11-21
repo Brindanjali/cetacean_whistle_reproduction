@@ -117,7 +117,7 @@ def main() -> int:
         if CONDITIONS[condition][0]:
             km = sorted({r["sea"]["range_m"] / 1000.0 for r in part})
             entry["by_range_km"] = {f"{k:g}": count([r for r in part if r["sea"]["range_m"] / 1000.0 == k]) for k in km}
-            log(f"          by range: " + ", ".join(f"{k} km {v}" for k, v in entry["by_range_km"].items()))
+            log("          by range: " + ", ".join(f"{k} km {v}" for k, v in entry["by_range_km"].items()))
         if CONDITIONS[condition][1]:
             entry["by_drift_ms"] = {f"{lo:g}-{hi:g}": count([r for r in part if lo <= abs(r["drift_ms"]) < hi]) for lo, hi in DRIFT_BINS_MS}
             entry["closing"] = count([r for r in part if r["drift_ms"] > 0])

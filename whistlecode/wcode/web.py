@@ -19,6 +19,8 @@ routes sit in front of it:
     POST /api/wc/check       {send, decode}      the decoder's reading of each whistle against the sender's record
     GET  /api/wc/jobs/{id}                       state, stage, error, result URL
     GET  /api/wc/files/{id}/{name}               result.json, PNG and WAV files of a job
+    GET  /healthz                                for monitoring: 200 while messages can be served ("ok", or "starting"
+                                                 while the models load), 503 when they cannot ("down"); with the version
 
 What keeps the demonstration honest:
 
@@ -52,7 +54,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel
 
 from . import bank, channel, codebook, format2, layout, receiver, schedule, sender
-from .config import PROJECT_ROOT, default_config
+from .config import PROJECT_ROOT, default_config, project_version
 from .framing import FramingError
 
 JOB_ID = re.compile(r"^wc_\d{8}T\d{6}Z_[0-9a-f]{6}$")
@@ -441,7 +443,7 @@ class Jobs:
             job["state"] = "running"
 
             def progress(stage):
-                job["stage"] = stage
+                job["stage"] = stage  # noqa: B023 -- runs during this job only
 
             d = self.root / jid
             try:
@@ -606,10 +608,21 @@ def create_app(engine: Engine | None = None, page=None, warm: bool = True):
         return FileResponse(d / name)
 
     app = FastAPI(title="WhistleCode", docs_url=None, redoc_url=None, openapi_url=None)
+    started, version = time.monotonic(), project_version()
 
     @app.exception_handler(InputError)
     async def input_error(_, e: InputError):
         return JSONResponse({"detail": str(e)}, status_code=400)
+
+    @app.get("/healthz", include_in_schema=False)
+    def healthz():
+        """Docker's healthcheck and `python tools/repo.py health` (project/RELEASES.md, Monitoring) read this."""
+        problem = engine.error or engine.warm_error
+        body = {"status": "down" if problem else ("ok" if engine.warm else "starting"), "version": version,
+                "uptime_s": round(time.monotonic() - started), "queue": jobs.q.qsize()}
+        if problem:
+            body["problem"] = problem
+        return JSONResponse(body, status_code=503 if problem else 200)
 
     app.include_router(api)
     app.state.engine, app.state.jobs = engine, jobs

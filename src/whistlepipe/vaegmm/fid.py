@@ -18,7 +18,6 @@ from pathlib import Path
 import numpy as np
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 
 WEIGHT_URLS = {   # torchvision release files
     "inception_v3": "https://download.pytorch.org/models/inception_v3_google-0cc3c7bd.pth",

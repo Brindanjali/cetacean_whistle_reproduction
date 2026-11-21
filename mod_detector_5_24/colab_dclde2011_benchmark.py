@@ -5,7 +5,14 @@
 #   MyDrive/whistle_detector_5_24/dclde2011/                   <- colab_download_dclde2011.py (29 files)
 # Writes detections and score_*.json files to MyDrive/whistle_detector_5_24/dclde2011_detections/<tag>/.
 # Safe to re-run (detections are recomputed, scores overwritten).
-import importlib, importlib.util, json, os, shutil, subprocess, sys, zipfile
+import importlib
+import importlib.util
+import json
+import os
+import shutil
+import subprocess
+import sys
+import zipfile
 from pathlib import Path
 from google.colab import drive
 

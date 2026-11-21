@@ -81,7 +81,7 @@ class Jobs:
             job["state"] = "running"
 
             def progress(stage, frac=None):
-                job["stage"], job["frac"] = stage, frac
+                job["stage"], job["frac"] = stage, frac  # noqa: B023 -- runs during this job only
 
             try:
                 with self.engine.lock:

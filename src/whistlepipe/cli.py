@@ -177,7 +177,7 @@ def cmd_compare_synth(args) -> int:
 
 
 # ----------------------------------------------------------------------------- inference / web demo
-def _progress(stage, frac=None, _last=[None]):
+def _progress(stage, frac=None, _last=[None]):  # noqa: B006 -- deliberate: remembers the last stage
     if stage != _last[0]:
         _last[0] = stage
         print(f"  {stage}", flush=True)

@@ -375,7 +375,7 @@ def run_empty(quick: bool, out_root: Path) -> int:
         x, used = channel.noise_stretch(276, int(EMPTY_S * fs), rng, cfg, tx.pcfg)
         tracks = rx.tracks(x.astype(np.float32), fs)
         save_tracks(d / "tracks" / f"00_{i:03d}.npz", tracks)
-        for j in range(k):
+        for _j in range(k):
             key = _key(rng)
             got = rx.decode_tracks(tracks, key)
             rows.append({"recording": i, "files": used, "key": key, "n_tracks": len(tracks), "false_message": bool(got.ok),

@@ -15,12 +15,14 @@ HOP = 1024 / 192000
 
 
 # ---------------------------------------------------------------------------------------------- schedule
+@pytest.mark.localdata
 def test_counts_and_parts(cfg):
     s = schedule.frame_slots("reef42", 7, 2, cfg)
     assert len(s) == 39 and [x.index for x in s] == list(range(39))
     assert [x.part for x in s] == ["preamble"] * 3 + ["header"] * 12 + ["payload"] * 24
 
 
+@pytest.mark.localdata
 def test_intervals_and_pitches_in_range(cfg):
     s = schedule.frame_slots("reef42", 7, 140, cfg)
     gaps = np.diff([x.start_s for x in s])
@@ -31,6 +33,7 @@ def test_intervals_and_pitches_in_range(cfg):
     assert gaps.min() * 1000 > cfg["codebook"]["duration_ms"][1]         # whistles can never overlap
 
 
+@pytest.mark.localdata
 def test_header_slots_use_the_key_only(cfg):
     a, b = schedule.frame_slots("k", 1, 5, cfg), schedule.frame_slots("k", 200, 60, cfg)
     assert a[:15] == b[:15]
@@ -38,6 +41,7 @@ def test_header_slots_use_the_key_only(cfg):
     assert schedule.header_slots("k2", cfg) != a[:15]
 
 
+@pytest.mark.localdata
 def test_payload_slots_change_with_the_nonce(cfg):
     a, b = schedule.frame_slots("k", 1, 5, cfg), schedule.frame_slots("k", 2, 5, cfg)
     assert [x.start_s for x in a[15:]] != [x.start_s for x in b[15:]]
@@ -55,7 +59,7 @@ def test_interval_rule_is_enforced(cfg):
 
 # ---------------------------------------------------------------------------------------------- transmitter
 @pytest.fixture(scope="module")
-def fake_book(tmp_path_factory):
+def fake_book(tmp_path_factory, local_data):
     """17 well-separated synthetic types: tau = 0 needs no VAE."""
     from wcode.config import default_config
 

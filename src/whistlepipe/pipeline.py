@@ -16,7 +16,7 @@ from pathlib import Path
 import numpy as np
 
 from . import audio, dsp
-from .config import PROJECT_ROOT, Cfg, band_bins, canonical_hash, project_path
+from .config import PROJECT_ROOT, Cfg, band_bins, project_path
 from .storage import RunStore, load_stage_array, load_tracks
 
 STAGE_ORDER = ["s1", "s2", "s3", "s4", "s5", "s6", "s7", "s8", "s9"]

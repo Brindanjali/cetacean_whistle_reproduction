@@ -121,6 +121,34 @@ def test_check_sorts_each_whistle_into_right_wrong_or_lost():
     assert not web.check(send, {"nonce": None, "slots": []})["comparable"]
 
 
+# ---------------------------------------------------------------------------------------------- /healthz (monitoring)
+class _StubEngine:
+    """Only what create_app and /healthz touch, so these run without the model files (CI)."""
+
+    def __init__(self, cfg, error=None, warm_error=None, warm=True):
+        self.cfg, self.error, self.warm_error, self.warm = cfg, error, warm_error, warm
+
+
+@pytest.mark.parametrize("kw, code, state", [
+    ({}, 200, "ok"),
+    ({"warm": False}, 200, "starting"),
+    ({"error": "FileNotFoundError: codebook.npz"}, 503, "down"),
+    ({"warm_error": "RuntimeError: detector"}, 503, "down"),
+])
+def test_healthz_reports_whether_messages_can_be_served(cfg, tmp_path, kw, code, state):
+    from fastapi.testclient import TestClient
+
+    from wcode.config import project_version
+
+    cfg["web"]["out_dir"] = str(tmp_path / "web")
+    with TestClient(web.create_app(_StubEngine(cfg, **kw), warm=False)) as c:
+        r = c.get("/healthz")
+    body = r.json()
+    assert r.status_code == code and body["status"] == state and body["queue"] == 0
+    assert body["version"] == project_version() != "unknown"
+    assert ("problem" in body) == (code == 503)
+
+
 # ---------------------------------------------------------------------------------------------- the routes, on the real model
 @pytest.fixture(scope="module")
 def client(tmp_path_factory):

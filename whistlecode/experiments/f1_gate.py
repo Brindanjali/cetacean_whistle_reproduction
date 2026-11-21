@@ -36,7 +36,7 @@ from sklearn.metrics import roc_auc_score
 WC = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(WC))
 
-from wcode import channel, classify, detect, schedule, synth, transmitter  # noqa: E402
+from wcode import channel, classify, detect, synth, transmitter  # noqa: E402
 from wcode.config import PROJECT_ROOT, default_config, payload_parity  # noqa: E402
 from wcode.contour import Contour, centred  # noqa: E402
 
@@ -373,7 +373,7 @@ def measure_v2(snr: float, sends: int, banks: dict, tx, shapes, noise: Noise, de
         for g in info:
             near = (ts >= g["start"] - S["slot_early_s"]) & (ts <= g["start"] + S["slot_late_s"])
             dist = np.abs(cs[:, None] - g["cand"][None, :]) if len(cs) else np.zeros((0, 4))
-            pick = lambda m: None if not m.any() else min(np.where(m)[0], key=lambda k: (abs(ts[k] - g["start"]), -ns[k]))
+            pick = lambda m: None if not m.any() else min(np.where(m)[0], key=lambda k: (abs(ts[k] - g["start"]), -ns[k]))  # noqa: B023 -- used at once
             ka = pick(near & (np.abs(cs - g["fc"]) <= pw))
             kb = pick(near & (dist.min(axis=1) <= pw)) if len(cs) else None
             band_hat = None if kb is None else int(np.argmin(dist[kb]))

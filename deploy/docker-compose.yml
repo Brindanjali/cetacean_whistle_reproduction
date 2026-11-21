@@ -35,6 +35,12 @@ services:
       - ../whistlecode/outputs:/app/whistlecode/outputs   # writable: WhistleCode jobs (outputs/web) and the noise cache
       - ../runs:/app/runs                                 # writable: Try it jobs (runs/infer)
     restart: unless-stopped
+    healthcheck:                            # `docker compose ps` shows healthy / unhealthy (project/RELEASES.md, Monitoring)
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz', timeout=5)"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 180s                    # the models load in the first minute or two
 
 volumes:
   tailscale-state:

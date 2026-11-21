@@ -257,7 +257,7 @@ def report() -> int:
         groups: dict = {}
         for r in rows:
             groups.setdefault((r["exp"], r["cond_index"]), []).append(r)
-        for (exp, ci), g in sorted(groups.items()):
+        for (exp, _ci), g in sorted(groups.items()):
             n = len(g)
             eb = sum(r["before"]["exact"] for r in g)
             ea = sum(r["after"]["exact"] for r in g)

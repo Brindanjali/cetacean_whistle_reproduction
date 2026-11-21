@@ -4,7 +4,11 @@
 # Paste this whole file into ONE Colab cell and run it. Nothing touches your own computer.
 # Safe to re-run: files already in Drive with the right size and MD5 are skipped; a broken download is retried.
 # Data: Roch et al. (2025) DCLDE 2011 Conference Data, doi:10.25921/wsnc-js16 (research and educational use).
-import hashlib, os, shutil, time, urllib.request
+import hashlib
+import os
+import shutil
+import time
+import urllib.request
 from google.colab import drive
 
 DRIVE_DIR = "/content/drive/MyDrive/whistle_detector_5_24/dclde2011"   # where the files end up (bucket layout kept)

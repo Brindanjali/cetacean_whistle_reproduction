@@ -20,7 +20,6 @@ from dataclasses import dataclass
 import numpy as np
 
 from . import bank, format2, keys, layout, realism, synth, transmitter
-from .config import default_config
 from .contour import Contour, centred
 from .transmitter import SIGNATURE, write_wav  # noqa: F401  (write_wav is part of this module's interface)
 

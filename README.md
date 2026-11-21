@@ -8,7 +8,8 @@ From raw hydrophone recordings to a generative model of false killer whale whist
 
 [![Python](https://img.shields.io/badge/python-3.11%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![PyTorch](https://img.shields.io/badge/PyTorch-2.11%2B-EE4C2C?logo=pytorch&logoColor=white)](https://pytorch.org/)
-[![Tests](https://img.shields.io/badge/tests-454%20passing-2E7D32)](#getting-started)
+[![CI](https://github.com/anonymus-k-dot/cetacean_whistle_reproduction/actions/workflows/ci.yml/badge.svg)](https://github.com/anonymus-k-dot/cetacean_whistle_reproduction/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/badge/release-0.9.0-555555)](CHANGELOG.md)
 [![Paper](https://img.shields.io/badge/IEEE%20Access-10.1109%2FACCESS.2026.3664765-00629B)](https://doi.org/10.1109/ACCESS.2026.3664765)
 [![Data](https://img.shields.io/badge/data-NOAA%20DCLDE%202022-1F4E79)](#dataset-record)
 
@@ -232,10 +233,12 @@ A median compact-text message (41 characters) takes 142 s of airtime, about 1.2 
 ```bash
 git clone https://github.com/anonymus-k-dot/cetacean_whistle_reproduction.git
 cd cetacean_whistle_reproduction
-pip install -r requirements.txt -r whistlecode/requirements.txt
+pip install -r requirements.txt -r whistlecode/requirements.txt -c constraints.txt
+git config core.hooksPath .githooks   # pre-commit checks: work log, secrets, lint
 
 python -m pytest                     # reproduction suite (202 tests)
-python -m pytest whistlecode/tests   # WhistleCode suite (252 tests)
+python -m pytest whistlecode/tests   # WhistleCode suite (269 tests)
+python tools/repo.py check           # everything: lint, configs, secrets, links, checksums, both suites
 ```
 
 **What is in git.** The code, configurations, detector checkpoints and both VAE checkpoints (`final.pt`) are in git, along with all evaluation records and figures. The raw audio, the built dataset and the GMM files (`gmm.npz`, about 100 MB, plus the latents and component features) are not. Refitting the GMM needs the encounter-191 dataset; refits are bit-identical.
@@ -289,7 +292,7 @@ python whistlecode/whistlecode.py receive --help                       # recordi
 ## Repository layout
 
 ```
-├── whistle.py              CLI entry point
+├── whistle.py              CLI entry point of the reproduction
 ├── src/whistlepipe/        preprocessing S1–S9, detector, VAE-GMM, inference, sonification, web API
 ├── configs/                pipeline · detector · vaegmm · inference (TOML; [paper] sections are locked)
 ├── resources/              the paper and the preprocessing / training specifications
@@ -299,15 +302,24 @@ python whistlecode/whistlecode.py receive --help                       # recordi
 │   └── vaegmm/             training runs, GMM fits, evaluation records and figures
 ├── post_training/          laptop-side checks after training; paper-comparison records
 ├── colab/                  Colab notebook and code bundle for the VAE training run
+├── whistlecode/            WhistleCode: code, tests, experiments, plan, paper results
 ├── web/                    project page: scroll film, Try it, Encode, Decode
-├── whistlecode/            WhistleCode: code, tests, plan, paper results
 ├── deploy/                 Docker + Tailscale Funnel deployment
+├── cluster/                running the demo on the college cluster
 ├── mod_detector_5_24/      5–24 kHz detector variant for the DCLDE 2011 benchmark
 ├── tests/                  reproduction tests (small synthetic fixtures; no dataset needed)
-└── docs/                   technical reference, figures, review notes
+├── docs/                   technical reference, architecture, index; course/ (course deliverables)
+├── project/                engineering systems: workflow, engineering rules, releases, registers
+├── tools/repo.py           one command for every check, plus lock, health and release-check
+├── .github/                CI workflow and security policy
+├── .githooks/              pre-commit checks (work log, secrets, lint)
+├── pyproject.toml          version, Python version, lint and test settings
+├── requirements.txt        dependencies (constraints.txt: the exact versions in use)
+├── WORKLOG.md              what is planned, waiting and done
+└── CHANGELOG.md            changes per release
 ```
 
-These are not in git: `encounter_<id>_audio/` (raw audio, never written to), `preprocessed/` (the dataset), `preprocessing_checks/`, `data/` and `runs/`.
+These are not in git: `encounter_<id>_audio/` (raw audio, never written to), `preprocessed/` (the dataset), `preprocessing_checks/`, `data/`, `runs/`, `whistlecode/outputs/`, `docs/explainers/` and `docs/private/`. Where each comes from and how it is backed up: [`project/STORAGE.md`](project/STORAGE.md).
 
 ## Research integrity
 
@@ -355,6 +367,10 @@ The full, observed list is in the [technical reference](docs/TECHNICAL_REFERENCE
 | [`whistlecode/PLAN.md`](whistlecode/PLAN.md) | WhistleCode design, experiments and pass marks |
 | [`whistlecode/paper/RESULTS.md`](whistlecode/paper/RESULTS.md) | WhistleCode test campaign: verdicts, tables, figures |
 | [`mod_detector_5_24/README.md`](mod_detector_5_24/README.md) | The 5–24 kHz detector variant and the DCLDE 2011 benchmark |
+| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | How the components, modules, web server and deployment fit together |
+| [`docs/INDEX.md`](docs/INDEX.md) | Every document, and what each is the authority on |
+| [`project/README.md`](project/README.md) | The engineering systems: workflow, tests and CI, releases, registers of experiments, models, data, decisions and incidents |
+| [`CHANGELOG.md`](CHANGELOG.md) · [`WORKLOG.md`](WORKLOG.md) | Changes per release · what is planned, waiting and done |
 
 ## Citation
 
@@ -374,7 +390,7 @@ If you use this work, please cite the original paper:
 
 ## Licence and acknowledgements
 
-- **Code.** No licence has been chosen yet.
+- **Code.** No licence has been chosen yet. Licences of everything third-party: [`project/LICENSING.md`](project/LICENSING.md). Security policy: [`.github/SECURITY.md`](.github/SECURITY.md).
 - **Paper.** The copy in `resources/` is licensed CC BY-NC-ND 4.0, as stated on its first page.
 - **Data.** The recordings are NOAA's DCLDE 2022 release (HICEAS 2017, R/V *Lasker*). They are public, are not redistributed here, and should be credited to NOAA when used.
 - **Web assets.** Fonts and media are credited in [`web/CREDITS.md`](web/CREDITS.md).

@@ -1,0 +1,36 @@
+# GitHub shows "Cite this repository" from this file. Anyone using this work should cite the base paper first.
+cff-version: 1.2.0
+message: "If you use this software, please cite the original paper (preferred-citation) and this repository."
+title: "Cetacean whistle reproduction: VAE-GMM for false killer whale whistles, and WhistleCode"
+type: software
+authors:
+  - name: "anonymus-k-dot"
+version: 0.9.0
+date-released: 2026-11-21
+repository-code: "https://github.com/anonymus-k-dot/cetacean_whistle_reproduction"
+keywords:
+  - bioacoustics
+  - cetacean whistles
+  - variational autoencoder
+  - gaussian mixture model
+  - covert underwater communication
+preferred-citation:
+  type: article
+  title: "A Generative Model for Cetacean Whistles Using Variational Autoencoder and Mixture of Gaussians"
+  authors:
+    - family-names: Park
+      given-names: Geun-Ho
+    - family-names: Ahn
+      given-names: Jongmin
+    - family-names: Kim
+      given-names: Wanjin
+    - family-names: Kim
+      given-names: Insoo
+    - family-names: Lee
+      given-names: Dong-Hun
+  journal: "IEEE Access"
+  volume: 14
+  start: 27877
+  end: 27894
+  year: 2026
+  doi: "10.1109/ACCESS.2026.3664765"

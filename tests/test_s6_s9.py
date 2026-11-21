@@ -3,7 +3,6 @@ import numpy as np
 import pytest
 
 from whistlepipe import representation as rep
-from whistlepipe.config import band_bins
 from whistlepipe.tracking import Track, filter_tracks, track_confidence_map
 
 BIN_LO = 22

@@ -74,7 +74,7 @@ def read_slots(tracks, items, lead):
         s = lead + it["on"]
         near = (ts >= s - S["slot_early_s"]) & (ts <= s + S["slot_late_s"])
         dist = np.abs(cs[:, None] - it["cand"][None, :]) if len(cs) else np.zeros((0, 4))
-        pick = lambda m: None if not m.any() else min(np.where(m)[0], key=lambda k: (abs(ts[k] - s), -ns[k]))
+        pick = lambda m: None if not m.any() else min(np.where(m)[0], key=lambda k: (abs(ts[k] - s), -ns[k]))  # noqa: B023 -- used at once
         ka = pick(near & (np.abs(cs - it["fc"]) <= pw))
         kb = pick(near & (dist.min(axis=1) <= pw)) if len(cs) else None
         hat = None if kb is None else int(np.argmin(dist[kb]))
