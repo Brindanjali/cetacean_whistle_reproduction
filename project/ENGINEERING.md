@@ -53,7 +53,9 @@ On the project laptop every test runs. In CI (and any fresh clone) 64 tests skip
 |---|---|---|
 | Lint, secrets, links, checksums | `ruff check .`; the secret scan over all files and every past commit; relative Markdown links; checksums of the models git holds | yes |
 | Tests (CPU) | CPU PyTorch and the pinned requirements, then `check config` and both suites (tier 1) | yes |
-| Dependency audit | `pip-audit` on the server image's pins and the lock file | no (advisory; read it before a release) |
+| Dependency audit | `pip-audit` on the server image's pins and the lock file; each vulnerable package becomes a warning on the run, with the version that fixes it | no (it fails only if the audit cannot run; read its warnings before a release) |
+
+**Reading a run.** GitHub shows the logs only to signed-in users, so CI also posts failing tests, lint findings and audit warnings as annotations, which anyone can read. `python tools/repo.py ci-report` prints the latest run: each job, the failed step and its annotations.
 
 A red CI run on `main` is fixed before any other work. The README badge shows the state of `main`.
 
@@ -63,9 +65,9 @@ A red CI run on `main` is fixed before any other work. The README badge shows th
 |---|---|---|
 | [`.python-version`](../.python-version) | Python 3.11 | CI, pyenv, uv |
 | [`requirements.txt`](../requirements.txt) | reproduction packages, lower bounds | everyone |
-| [`whistlecode/requirements.txt`](../whistlecode/requirements.txt) | WhistleCode's extra package (`reedsolo`, exact) | everyone |
+| [`whistlecode/requirements.txt`](../whistlecode/requirements.txt) | WhistleCode's extra packages (`reedsolo`, exact; `cryptography` for `serve --lan`) | everyone |
 | [`deploy/requirements-serve.txt`](../deploy/requirements-serve.txt) | the web server image, exact pins | `deploy/Dockerfile` |
-| [`constraints.txt`](../constraints.txt) | **the lock file:** exact versions of all 55 packages in use, including the ones they pull in | CI; a new machine |
+| [`constraints.txt`](../constraints.txt) | **the lock file:** exact versions of all 56 packages in use, including the ones they pull in | CI; a new machine |
 
 **Set up a machine** (CPU; for a GPU, install `torch` and `torchvision` from the PyTorch index for your CUDA version first):
 
