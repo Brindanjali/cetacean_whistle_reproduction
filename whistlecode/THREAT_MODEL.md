@@ -37,6 +37,7 @@ Covertness also rests on conditions WhistleCode cannot test in simulation, state
 | A3 | Steganalyst | Has recordings of the species, including the public DCLDE 2022 data; knows WhistleCode's design; trains classifiers on whistle shapes and timing | Shape statistics (E7); timing (E9); real whistle timing and cover contours matched against the public recordings the bank came from | E7 and E9; matching against public recordings not tested | Rhythm alone passes; rhythm in noise and shapes fail |
 | A4 | Array listener | Several hydrophones; localises sources | Every whistle comes from one point, which a group of animals does not do | Not tested | Stated limitation |
 | A5 | Channel-stability interceptor (added 2026-11-21 from R1) | One hydrophone; compares the propagation channel between consecutive calls (IEEE IoT J. 2024, 10.1109/jiot.2024.3399742) | A fixed source gives a far more stable channel from call to call than moving, turning animals | Not tested; the simulated sea gives every whistle of a message the same channel, so the simulation cannot show this weakness | Stated limitation |
+| A6 | Projector-distortion detector (added 2026-11-21, R1 review) | One hydrophone; entropy metrics on received calls (*Sci. Rep.* 2023, 10.1038/s41598-023-29413-2; shown in two field experiments) | An electro-acoustic projector distorts animal sounds differently from an animal's own sound-producing organs | Not tested: no test plays WhistleCode through a projector or speaker model. The in-air test (R5) uses a laptop speaker but measures delivery only | Stated limitation |
 
 Out of scope: an adversary who holds the key; active attacks such as jamming, or replaying and injecting recorded messages.
 
@@ -59,6 +60,8 @@ Out of scope: an adversary who holds the key; active attacks such as jamming, or
 | Replay protection | No | A recorded message decodes again when it is played again |
 | Unlinkability | No | The opening stretch (start signal and header) is chosen by the key alone, so it repeats in every message under that key |
 | Source anonymity | No | One source (A4) |
+
+A published remedy for the missing authentication and replay protection exists for bionic underwater communication: a hash-tree scheme that resists replayed, forged and altered messages (FITEE 2021, 10.1631/fitee.2000043). WhistleCode does not implement it.
 
 ## 6. Claims
 
@@ -93,3 +96,4 @@ State on 2026-11-21: campaign v1 ([`paper/RESULTS.md`](paper/RESULTS.md)), model
 
 - **2026-11-21:** first version, with the claims of campaign v1. After campaign v2, its results are added as a new column in section 6; the v1 column stays.
 - **2026-11-21, after R1 ([`RELATED_WORK.md`](RELATED_WORK.md)):** adversary A5 added, a single-hydrophone interceptor that uses the stability of the propagation channel, from the published literature. No claim changed.
+- **2026-11-21, after the R1 review:** adversary A6 added, a projector-distortion detector from the published literature. A note under section 5 names a published remedy for the missing authentication and replay protection (not built). No claim changed.

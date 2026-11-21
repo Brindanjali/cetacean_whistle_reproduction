@@ -660,6 +660,23 @@ Reported without a mark: closing speeds of ±3 m/s, random sea at 5 and 10 dB, t
 - the share of coded data whistles that a whistle-against-noise classifier accepts as whistles;
 - the ECSM3 covertness score, if its definition can be obtained.
 
+Definitions `[DECISION]` (added the same day, after the R1 review, and before any second-round work):
+
+- **In-band SNR, per trial:**
+  - **Formula:** 10 log10((A^2 / 2) / P), as in [`experiments/snr_inband.py`](experiments/snr_inband.py).
+  - **A** is the amplitude `through_channel()` gives the quietest data whistle for the trial's narrowband SNR.
+  - **P** is the mean power of the trial's noise level window (`channel.level_window_s`) after an 8th-order zero-phase Butterworth band-pass to 2.5-14.5 kHz.
+  - **Reporting:** results give, per condition, the median and the 5-95 % range over trials.
+  - **Measured beforehand** on 12 files per encounter (narrowband minus in-band):
+    - encounter 214: 22.3 dB median (20.6-33.4);
+    - encounter 276: 25.3 dB median (23.0-43.2).
+- **Whistle-against-noise classifier,** the weaker test used by Bilal *et al.* 2026:
+  - **Model:** a small CNN (two convolutional layers, as theirs) on 0.5 s log-spectrogram patches of 2-16 kHz.
+  - **Training data:** encounter-214 recordings only. The whistle class is patches centred on real whistles that the reproduction's detector finds. The noise class is patches at random times with no detected track within 0.5 s.
+  - **Acceptance:** a patch counts as accepted when the whistle probability exceeds 0.5.
+  - **Reported:** the share accepted among coded data whistles detected in encounter-276 noise at each campaign SNR, beside the share among real encounter-276 whistles.
+  - **Difference from theirs:** their noise class also held music and boat noise. This one holds only what the sea recordings contain.
+
 ## 9. Phases
 
 | Phase | Model | Work | Done when |
@@ -916,3 +933,12 @@ Format v2 values (section 4.6). They replace the v1 values above once phase F is
   - New `RELATED_WORK.md`: the field in four families, a comparison with ten published schemes, how to make SNR, error and rate figures comparable, what appears new and what does not, a draft novelty statement, and the papers still to read in full.
   - Section 8.7 gains four reported-only measures for campaign v2 (in-band SNR, whistle error rate, whistle-against-noise acceptance, ECSM3 if obtainable); no pass mark changed.
   - `THREAT_MODEL.md` gains adversary A5, the single-hydrophone channel-stability interceptor.
+- **2026-11-21, R1 review fixes:**
+  - **SNR gap measured on real noise** with the new `experiments/snr_inband.py`: 22.3 dB (encounter 214) and 25.3 dB (276) median, not the flat-noise 21 dB. WhistleCode's 15 dB is about -10 dB in-band.
+  - **`RELATED_WORK.md` revised:**
+    - a second search over 2012-2023;
+    - a learned-embedding family;
+    - a narrower novelty statement;
+    - an extended reading list.
+  - **`THREAT_MODEL.md`** gains adversary A6, the projector-distortion detector, and names a published replay and forgery remedy (not built).
+  - **Section 8.7** now defines the in-band SNR and the whistle-against-noise classifier. No pass mark changed.
