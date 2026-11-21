@@ -2,7 +2,7 @@
 
 The single place for what is planned, what is waiting, and what has been done in this project: the reproduction, WhistleCode, the detector paper, the web page and the repository itself. Every change to the project adds a line here ([how](#how-this-log-works)).
 
-**Updated:** 2026-11-21
+**Updated:** 2026-11-22
 
 ## At a glance
 
@@ -12,7 +12,7 @@ The single place for what is planned, what is waiting, and what has been done in
 | WhistleCode | v1 built and tested (campaign v1). Second round: R0, R1 and R2 (drift correction, adopted) done | **WC-R3** shape covertness |
 | Detector paper | A draft exists (`docs/private/Mentor_Review_1.pdf`, never in git); its to-do file is older than the draft | DET-1, DET-2 |
 | Web page and deployment | Film, Try it (models Nyx and Delphi), Encode, Decode and Record; self-hosted with Docker and Tailscale; `/healthz` and a Docker healthcheck | WEB-1 static examples are out of date |
-| Engineering | 25 systems in place ([`project/README.md`](project/README.md)): tracker, Definition of Done, review, lint, tests, CI, lock file, releases, monitoring, registers, security. Version 0.9.0 ready to tag | YOU-3, YOU-7; then OPS-4 (first CI run) |
+| Engineering | 25 systems in place ([`project/README.md`](project/README.md)): tracker, Definition of Done, review, lint, tests, CI, lock file, releases, monitoring, registers, security. v0.9.0 tagged; code licensed under Apache 2.0. The first CI run failed (BUG-1, fixed; waiting for the next run) | Push, then `python tools/repo.py ci-report` (BUG-1, OPS-4); OPS-7 package upgrades |
 | Course | Week 7 of 8 | Final review at the end of Week 8 |
 
 ## Key dates
@@ -29,19 +29,19 @@ Only you can do these.
 
 - [ ] **YOU-1** Agree the pivot to covert biomimetic communication with your mentor and team.
 - [ ] **YOU-2** Get the paywalled papers through your college library (list in `whistlecode/RELATED_WORK.md` section 7).
-- [ ] **YOU-3** Enable the pre-commit checks once in this clone (work log, secrets, lint): `git config core.hooksPath .githooks`.
+- [x] **YOU-3** Enable the pre-commit checks once in this clone (work log, secrets, lint): `git config core.hooksPath .githooks`.
 - [ ] **YOU-4** Decide on the optional encounter-308 download (33 files, about 6 GB) for a never-used test encounter. Needed only by WC-R6.
 - [ ] **YOU-5** Find 10 volunteers for the listening test (WC-R4): 20 pairs each, anonymous.
-- [ ] **YOU-6** Choose a licence for the code (the README says none is chosen). Recommended: MIT; reasons and steps in `project/LICENSING.md`.
-- [ ] **YOU-7** After committing the engineering systems: tag and push release v0.9.0 (`python tools/repo.py release-check 0.9.0` prints the commands), then check the first CI run on GitHub (Actions tab).
+- [x] **YOU-6** Choose a licence for the code (the README says none is chosen). Recommended: MIT; reasons and steps in `project/LICENSING.md`. Decided: Apache 2.0 (D-022).
+- [x] **YOU-7** After committing the engineering systems: tag and push release v0.9.0 (`python tools/repo.py release-check 0.9.0` prints the commands), then check the first CI run on GitHub (Actions tab).
 - [ ] **YOU-8** First backup of the three things that exist only on this laptop: `whistlecode/outputs/paper/`, `docs/private/` and the WhistleCode result summaries. Commands in `project/STORAGE.md`; then monthly.
-- [ ] **YOU-9** Delete the three local branches already merged into `main`: `git branch -d preprocessing-v2c-multi-encounter vaegmm-colab-training vaegmm-training`. Optionally the two merged remote ones: `git push origin --delete preprocessing-v2c-multi-encounter vaegmm-training`.
+- [x] **YOU-9** Delete the three local branches already merged into `main`: `git branch -d preprocessing-v2c-multi-encounter vaegmm-colab-training vaegmm-training`. Optionally the two merged remote ones: `git push origin --delete preprocessing-v2c-multi-encounter vaegmm-training`.
 
 ### Bugs
 
 Format and severity levels: `project/WORKFLOW.md`, "Task tracker".
 
-None open.
+- [ ] **BUG-1** (high, CI) The WhistleCode suite fails on GitHub (first run, 2026-11-21, run 44936177193): `cryptography`, which `serve --lan` and its test import, is in no requirements file, so CI never installs it. Fix made 2026-11-22 (added to `whistlecode/requirements.txt` and `constraints.txt`); tick when the next run is green.
 
 ### WhistleCode, second round
 
@@ -88,9 +88,10 @@ The plan, pass marks and rules are frozen in `whistlecode/PLAN.md` section 8.7.
 - [x] **OPS-1** Decide which untracked files in `docs/` go into git: the week 1-2 notes, the training-plan PDF, the review slides, and the detector draft. Decided: all but the draft, in `docs/course/` (D-020).
 - [x] **OPS-2** Keep `docs/Whistle extraction.pdf` out of git: it is a published Elsevier paper, and the repository is public. Now in the ignored `docs/private/`.
 - [x] **OPS-3** Engineering systems for a one-owner, one-engineer team (`project/README.md`).
-- [ ] **OPS-4** Read the first CI run on GitHub (after YOU-7) and fix anything that fails only on Linux. CI has not run yet; the tests were simulated locally on a git-only copy.
+- [ ] **OPS-4** Read the first CI run on GitHub (after YOU-7) and fix anything that fails only on Linux. CI has not run yet; the tests were simulated locally on a git-only copy. First run read 2026-11-22: lint, secrets, links, checksums, configs and the reproduction suite passed; the WhistleCode suite failed (BUG-1); the audit flagged eight packages (OPS-7). Tick when a run is green.
 - [ ] **OPS-5** Copy the records behind three reported results into git (`whistlecode/paper/records/`): EXP-015 (normal conditions), EXP-019 (SNR gap), EXP-020 (R2). Today they exist only in `whistlecode/outputs/` (`project/TRACEABILITY.md`, "Gap").
 - [ ] **OPS-6** Confirm the reuse terms of the two NOAA files in `metadata/` (`DCLDE2020_DetectionData.xlsx`, `Dataset_DCLDE_Oahu.pdf`) and note them in `project/LICENSING.md`.
+- [ ] **OPS-7** Upgrade the eight pinned packages with published advisories (OSV, 2026-11-22) to the versions that fix them: anyio 4.14.2, certifi 2026.10.18, cryptography 49.0.0, filelock 4.2.1, fsspec 2026.6.0, pillow 13.0.0, pytest 9.0.3, setuptools 84.1.0. Needs your OK to download them. Then `python tools/repo.py lock`, `check`, update `deploy/requirements-serve.txt` and redeploy. Pillow 13 is a major version: check the page's pictures.
 
 ## Decided not to do
 
@@ -104,6 +105,16 @@ The plan, pass marks and rules are frozen in `whistlecode/PLAN.md` section 8.7.
 ## Done
 
 Newest first. Older history is grouped by stage. Commit hashes are given where the work was committed; an entry's own commit is the one that adds it.
+
+### 2026-11-22
+
+- **Repository**: code licensed under the Apache License 2.0 (YOU-6, D-022). `LICENSE` is the unmodified apache.org text (SHA-256 `cfc7749b…3d30`); new `NOTICE` names the copyright holders and lists the third-party material the licence does not cover. Recorded in `pyproject.toml`, `CITATION.cff`, `README.md`, `project/LICENSING.md`, `project/DECISIONS.md` and `CHANGELOG.md`.
+- **CI**: first run read (OPS-4). Cause of the WhistleCode-suite failure found (BUG-1): `cryptography` missing from the requirements; now in `whistlecode/requirements.txt` and `constraints.txt` (56 packages).
+  - `.github/workflows/ci.yml`: failing tests (`pytest-github-actions-annotate-failures`) and lint findings become annotations, which anyone can read without signing in; the dependency audit turns findings into warnings and fails only if it cannot run; `actions/checkout` v5 and `actions/setup-python` v6 replace versions on a deprecated Node.js.
+  - `tools/repo.py`: new `ci-report` (the latest run's jobs, failed steps and annotations, from GitHub's public API) and `audit-report` (used by CI).
+  - Audit of the pins against OSV: eight packages have published advisories (OPS-7). Noted in `.github/SECURITY.md`.
+  - Docs: `project/ENGINEERING.md` (CI, environment), `project/HANDOVER.md` and `project/README.md` (`ci-report`).
+- **Repository**: the three merged branches are deleted (YOU-9); v0.9.0 is tagged and pushed (YOU-7); the pre-commit checks are on (YOU-3).
 
 ### 2026-11-21
 
