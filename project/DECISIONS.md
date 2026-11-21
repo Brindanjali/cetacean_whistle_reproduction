@@ -34,6 +34,7 @@ Project-level choices: what was decided, why, what else was considered, and what
 | [D-019](#d-019) | 2026-11-21 | One release version for the repository: 0.9.0 now, 1.0.0 at the freeze | in force |
 | [D-020](#d-020) | 2026-11-21 | What from `docs/` goes into git | in force |
 | [D-021](#d-021) | 2026-11-21 | The cluster kit goes into git | in force |
+| [D-022](#d-022) | 2026-11-22 | The code is licensed under Apache 2.0 | in force |
 
 ## Reproduction
 
@@ -126,6 +127,10 @@ Project-level choices: what was decided, why, what else was considered, and what
 ### D-021
 
 **The cluster kit (`cluster/`) goes into git** (WEB-3): two bundle scripts and the node scripts for running the demo on the college cluster. It holds no secrets (checked by the secret scan); its build outputs stay ignored.
+
+### D-022
+
+**The code and documents written here are licensed under the Apache License 2.0** (YOU-6). *Decided by:* the owner, 2026-11-22. *Why:* permissive like MIT, plus an explicit patent grant from every contributor, which suits a new communication scheme (WhistleCode). *Alternative:* MIT (shorter, no patent clause). *Consequence:* `LICENSE` holds the unmodified Apache text; `NOTICE` names the copyright holders and lists the third-party material the licence does not cover (the base paper, NOAA files, page footage and fonts). See `project/LICENSING.md`.
 
 ## Inline decision tags
 
