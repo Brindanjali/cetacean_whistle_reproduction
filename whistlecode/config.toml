@@ -134,6 +134,15 @@ max_header_readings = 3            # [DECISION] valid header readings tried per 
 silence_fraction    = 0.01         # [DECISION] a recording with at least this share of exactly-zero samples is digital silence (a file straight from the sender)
 silence_floor_snr_db = 40.0        # [PLAN] E1: such a recording first gets white noise this far under its loud whistles; the detector misses whistles in pure silence
 silence_floor_seed  = 0            # [DECISION] fixed, so one file always gives the same tracks
+# Drift correction (WC-R2, PLAN 7 step 4 and 8.7): a closing speed v heard at time scale s = 1 + v / c, or two sound cards whose
+# clocks differ, moves late whistles out of their slot windows. Developed on encounter-214 noise only (experiments/drift_dev.py).
+drift_correction    = true         # [DECISION] estimate the time scale and read the payload on the sender's clock
+drift_max           = 0.0025       # [DECISION] time scales searched: 1 +/- this (+/- 3.75 m/s at 1,500 m/s; sound cards differ by about 0.01 %)
+drift_sync_step     = 0.00025      # [DECISION] grid step of the frame search (10 ms over a 40 s start signal and header)
+drift_sync_sigma_s  = 0.02         # [DECISION] width of the score that picks the frame search's time scale among equal votes
+drift_fine_step     = 0.00002      # [DECISION] grid step of the whole-message search (5 ms over 250 s), before the least-squares fit
+drift_fit_tolerance_s = 0.04       # [DECISION] whistles this close to the grid search's line enter the least-squares fit
+drift_min_matches   = 8            # [DECISION] fewer matched whistles than this: keep the frame search's start and time scale
 
 [model]                      # PLAN 3 (paths relative to the repository root)
 run_dir      = "models/vaegmm/V1_L64_b1e-4_critic_E191"

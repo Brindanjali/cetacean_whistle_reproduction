@@ -247,8 +247,9 @@ def run_trial(ctx: Context, exp: str, ci: int, cond: dict, mi: int, m: dict, tra
     times["decode_s"] = time.perf_counter() - t
     save_tracks(tracks_dir / f"{ci:02d}_{mi:03d}.npz", tracks)
 
-    # whistle by whistle, at the true frame start (what perfect synchronisation would read)
-    ts = receiver.TrackSet(tracks)
+    # whistle by whistle, at the true frame start and time scale (what perfect synchronisation would read; WC-R2 added the
+    # time scale, which changes nothing without Doppler)
+    ts = receiver.TrackSet(receiver.warp(tracks, true_start, scale))
     n_pre = int(cfg["framing"]["n_preamble"])
     n_head = int(cfg["format2"]["header_data_symbols"]) + int(cfg["format2"]["header_parity"])
     slots = [d.slot for d in sent.data[n_pre:]]
@@ -258,7 +259,7 @@ def run_trial(ctx: Context, exp: str, ci: int, cond: dict, mi: int, m: dict, tra
     body_part = receiver.SlotReadout(read.symbols[n_head:], 0, 0, read.doubt[n_head:], None if read.missed is None else read.missed[n_head:])
     whole = _counts(read, truth)
     head_layout = layout.header_layout(key, rx.bank, rx.pool, cfg)
-    oracle = rx._attempt(ts, head_layout, true_start, 0.0, key)
+    oracle = rx._attempt(receiver.TrackSet(tracks), head_layout, true_start, 0.0, key, scale, fit=False)
     t = time.perf_counter()
     wrong_key = rx.decode_tracks(tracks, key + WRONG_KEY_SUFFIX)
     times["wrong_key_s"] = time.perf_counter() - t
@@ -275,6 +276,7 @@ def run_trial(ctx: Context, exp: str, ci: int, cond: dict, mi: int, m: dict, tra
         "stage": got.stage, "detail": got.detail, "attempts": int(got.attempts),
         "frame_found": bool(got.offset_s is not None and abs(got.offset_s - true_start) <= FRAME_TOLERANCE_S),
         "frame_error_ms": None if got.offset_s is None else 1000.0 * (got.offset_s - true_start),
+        "time_scale_found": float(got.time_scale), "drift_matches": int(got.drift_matches),
         "oracle_ok": bool(oracle is not None and oracle.ok), "oracle_exact": bool(oracle is not None and oracle.ok and oracle.payload == expected),
         "oracle_stage": None if oracle is None else oracle.stage,
         "wrong_key_accepted": bool(wrong_key.ok), "wrong_key_stage": wrong_key.stage,

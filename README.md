@@ -221,7 +221,7 @@ The pass marks were set in the plan before any test ran, and the results are rep
 | Rhythm discriminator, inside encounter-276 noise | AUC ≤ 0.60 | 0.684 | Fail |
 | Whistle-shape discriminator (E7) | AUC ≤ 0.75 | 0.944 (two real encounters: 0.696) | Fail |
 
-A median compact-text message (41 characters) takes 142 s of airtime, about 1.2 bit/s. Encounter noise is added only on the receiving side to stand in for the sea; the sent file contains whistles and clicks only. The open items are Doppler drift correction (closing speeds of ±2 m/s cut success to 14–22 %), shape covertness, and a real speaker-to-hydrophone test. Full tables are in [`RESULTS.md`](whistlecode/paper/RESULTS.md) and the method in [`TEST_PROTOCOL.md`](whistlecode/paper/TEST_PROTOCOL.md).
+A median compact-text message (41 characters) takes 142 s of airtime, about 1.2 bit/s. Encounter noise is added only on the receiving side to stand in for the sea; the sent file contains whistles and clicks only. In campaign v1, closing speeds of ±2 m/s cut success to 14–22 %. The receiver has since gained Doppler and clock-drift correction (second round, WC-R2). On the encounter-214 development noise it decodes 49–50 of 50 messages at every speed from −3 to +3 m/s; campaign v2 will test it on encounter 276. The open items are echoes, shape covertness, and a real speaker-to-hydrophone test. Full tables are in [`RESULTS.md`](whistlecode/paper/RESULTS.md) and the method in [`TEST_PROTOCOL.md`](whistlecode/paper/TEST_PROTOCOL.md).
 
 > **Responsible use.** WhistleCode has been tested in simulation only. Playing synthetic whistles near wild animals requires the appropriate permits.
 
@@ -339,7 +339,7 @@ The `[paper]` sections of `pipeline.toml` and `vaegmm.toml` are locked, and the 
 - **Delphi is not yet evaluated.** Tables 1 and 3 and the WhistleCode results are for Nyx (epoch 101). The epoch-150 checkpoint has its own mixture but no paper evaluation yet.
 - **No real-data detector accuracy is known.** No annotated 2017 data exists. The detector is nearly blind below about 5 dB local SNR and can swap identities in very dense crossings.
 - **Reduced scope.** The VAE is trained on one encounter. K is 3,000. Fig. 11 and Tables 2, 4 and 5 are not computed. Only one hydrophone channel is used (channel 0, chosen arbitrarily).
-- **WhistleCode is simulated only.** There is no Doppler drift correction, and a trained discriminator can still tell its whistle shapes from real ones (AUC 0.944).
+- **WhistleCode is simulated only.** Its new drift correction has been measured on development noise only, echoes still cost messages, and a trained discriminator can still tell its whistle shapes from real ones (AUC 0.944).
 
 The full, observed list is in the [technical reference](docs/TECHNICAL_REFERENCE.md#known-limitations).
 

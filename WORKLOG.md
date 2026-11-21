@@ -9,7 +9,7 @@ The single place for what is planned, what is waiting, and what has been done in
 | Area | Where it stands | Next |
 |---|---|---|
 | Reproduction (VAE-GMM) | Complete. Dataset built; model V1 trained to epoch 150; Gaussian mixtures for epochs 101 and 150; paper evaluation done on epoch 101 | Nothing required (epoch-150 evaluation is optional: REP-1) |
-| WhistleCode | v1 built and tested (campaign v1). Second round: R0 and R1 done | **WC-R2** Doppler drift correction |
+| WhistleCode | v1 built and tested (campaign v1). Second round: R0, R1 and R2 (drift correction, adopted) done | **WC-R3** shape covertness |
 | Detector paper | A draft exists (`docs/Mentor_Review_1.pdf`, not in git); its to-do file is older than the draft | DET-1, DET-2 |
 | Web page and deployment | Film, Try it (models Nyx and Delphi), Encode, Decode and Record; self-hosted with Docker and Tailscale | WEB-1 static examples are out of date |
 | Course | Week 7 of 8 | Final review at the end of Week 8 |
@@ -43,8 +43,8 @@ The plan, pass marks and rules are frozen in `whistlecode/PLAN.md` section 8.7.
   - search IEEE Xplore, Google Scholar and CNKI;
   - read the four open-access papers and the seven with no abstract;
   - re-check the novelty statement.
-- [ ] **WC-R2** Doppler and clock-drift correction in the receiver. Develop on encounter 214 only. **Next.**
-- [ ] **WC-R3** Shape covertness: find what gives the shapes away, try the epoch-150 voice (Delphi), tau and codebook choice. Shape AUC is 0.944 against a mark of 0.75.
+- [x] **WC-R2** Doppler and clock-drift correction in the receiver. Develop on encounter 214 only.
+- [ ] **WC-R3** Shape covertness: find what gives the shapes away, try the epoch-150 voice (Delphi), tau and codebook choice. Shape AUC is 0.944 against a mark of 0.75. **Next.**
 - [ ] **WC-R4** Baselines and listeners: matched-filter modem, listening test (needs YOU-5), whistle-against-noise classifier, likelihood under the species model, ECSM3 if its definition can be found.
 - [ ] **WC-R5** In-air test between two laptops (20 messages at 2 m; also 1 m and 4 m).
 - [ ] **WC-R6** Freeze, then run campaign v2 once, overnight (seed 20261205; encounter 276; encounter 308 if YOU-4).
@@ -93,6 +93,14 @@ Newest first. Older history is grouped by stage. Commit hashes are given where t
 
 ### 2026-11-21
 
+- **WhistleCode**: R2 Doppler and clock-drift correction, adopted.
+  - **Receiver** (`whistlecode/wcode/receiver.py`, new `[receiver] drift_*` settings in `whistlecode/config.toml`): the frame search also searches time scales of 1 ± 0.25 %. A whole-message fit over every known whistle then refines the drift, and the payload is read on the sender's clock. With `drift_correction = false` it is exactly campaign v1's receiver.
+  - **Measured on encounter-214 noise only,** with the new `whistlecode/experiments/drift_dev.py` (results in `whistlecode/outputs/drift_dev/`, not in git):
+    - Doppler at 15 dB, -3 to +3 m/s: 49-50 of 50 exact at every speed (was 0-50).
+    - Random sea at 5 / 10 / 20 dB: 18 / 42 / 39 of 50 (was 4 / 15 / 14). Echoes remain the main loss.
+  - **Adoption check** on campaign v1's encounter-214 sweep: 8 / 50 / 49 / 50 → 10 / 50 / 49 / 50 at 5 / 10 / 15 / 20 dB. No wrong text, wrong-key message or message in empty noise.
+  - **Campaign script** (`whistlecode/experiments/paper_eval.py`): oracle synchronisation now also reads at the true time scale.
+  - **Tests and docs:** 13 new receiver test cases (`whistlecode/tests/test_wc_pipeline.py`), including sound-card offsets of -120 to +250 ppm on synthetic tracks. `whistlecode/PLAN.md` updated (new "Drift correction" section, sections 7, 13 and 14). Stale "no drift correction" lines corrected in `README.md` and `docs/TECHNICAL_REFERENCE.md`.
 - **Repository**: work log system added: this file, the log rule in `CLAUDE.md`, and an optional git check in `.githooks/pre-commit` (enable with YOU-3).
 - **WhistleCode**: R1 review fixes:
   - **SNR gap** measured on real noise with the new `whistlecode/experiments/snr_inband.py`: 22.3 dB (encounter 214) and 25.3 dB (276).

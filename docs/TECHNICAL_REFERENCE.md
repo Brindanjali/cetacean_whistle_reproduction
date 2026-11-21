@@ -461,5 +461,5 @@ Observed, not hidden.
 * The VAE is trained on one encounter with about 46× fewer optimiser updates than the paper (1,650 vs ≈ 76,800); Table 1
   reproduces only SSIM, and Table 3 trails the paper in value while matching its structure.
 * The paper evaluation and WhistleCode use epoch 101; epoch 150 has its own GMM but no paper evaluation yet.
-* WhistleCode is tested in simulation only: no Doppler drift correction, shape covertness fails (discriminator AUC 0.944),
+* WhistleCode is tested in simulation only: drift correction (WC-R2) is measured on encounter-214 development noise only, shape covertness fails (discriminator AUC 0.944),
   and no message has been played through a speaker and recorded ([`whistlecode/paper/RESULTS.md`](../whistlecode/paper/RESULTS.md)).

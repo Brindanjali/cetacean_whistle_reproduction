@@ -151,6 +151,35 @@ Normal conditions means the sent file plus real ocean noise, with no echoes or m
 - **False messages:** no wrong text was accepted in those 180 messages. The 20 recordings without a message reported none, and 360 tries with a wrong key reported none.
 - **Not covered:** echoes, absorption and Doppler, and the epoch-150 model. Data whistles still sit 0-5 dB above the level the SNR refers to.
 
+### Drift correction (2026-11-21, WC-R2)
+
+**The change** (`Receiver.find_frame`, `Receiver._fit_drift`, `receiver.warp`; settings `[receiver] drift_*`; the sender is unchanged). A moving source or two mismatched sound-card clocks play the message at a time scale s (a moment t of the sent file is heard at t / s). The receiver now finds s in two steps:
+
+1. **Frame search:** votes for a start and a time scale together, over 1 +/- 0.25 % in steps of 0.025 %. The header is read on that clock.
+2. **Whole-message fit:** once a header reading gives the nonce, every whistle whose place the key and nonce give (data slots and cover whistles, start signal to last payload whistle) is matched again. A grid search over the same range in steps of 0.002 % finds the line most of them sit on, and a least-squares fit over the whistles within 40 ms of that line refines it.
+
+The tracks are then moved onto the sender's clock and read as before. The number of frame starts and header readings tried is unchanged. With `drift_correction = false` the receiver is exactly campaign v1's: it reproduces v1's encounter-214 sweep message for message.
+
+**How it was measured** (`experiments/drift_dev.py`, results in `outputs/drift_dev/`). Encounter-214 noise only, 50 new sweep-set messages from development seed 20261121 `[DECISION]`, both receivers on the same saved tracks. The Doppler and random-sea conditions are those of campaign v1's E3, moved to encounter 214.
+
+| Condition (encounter 214) | Before | After | Whistles lost / wrong, read at the true start and time scale |
+|---|---|---|---|
+| Doppler -3 / -2 / -1 / -0.5 m/s, 15 dB | 0 / 4 / 28 / 45 | **49 / 49 / 50 / 49** | 1.8-3.1 % / 0.9-1.5 % |
+| Doppler 0 m/s, 15 dB | 50 | 50 | 2.5 % / 1.1 % |
+| Doppler +0.5 / +1 / +2 / +3 m/s, 15 dB | 49 / 36 / 11 / 4 | **49 / 49 / 49 / 50** | 1.6-2.9 % / 0.9-1.6 % |
+| Random sea, 5 / 10 / 20 dB | 4 / 15 / 14 | **18 / 42 / 39** | 25.8 / 9.4 / 6.5 % lost; 9.7 / 4.9 / 7.4 % wrong |
+| No sea, 5 / 10 / 15 / 20 dB (development sweep) | 14 / 46 / 50 / 50 | 15 / 46 / 50 / 50 | |
+
+- **The time scale found** is within 19-38 ppm (median) of the true one at every speed, about 2-3 ms over a 90 s message.
+- **Adoption check (rule of 8.7):** campaign v1's saved encounter-214 sweep tracks, which were not used while building the correction, decoded with both receivers. Before 8 / 50 / 49 / 50, after **10 / 50 / 49 / 50** exact at 5 / 10 / 15 / 20 dB. It was run once, on the version first built; nothing that changes a result was altered afterwards.
+- **False messages:** no wrong text in 1,000 decoded recordings (800 development and 200 check), no wrong-key message in 1,000 tries, and none in 500 keyed tries on encounter-214 noise without a message, for either receiver.
+- **Verdict: adopted.** It improves its target conditions, loses no message at 5, 10, 15 or 20 dB, and keeps wrong text at 0. Pass marks D and S are judged only in campaign v2, on encounter 276.
+- **What is left in the random sea is echoes.** Read at the true start and time scale, sea recordings at 10 and 20 dB lose 9.4 and 6.5 % of their whistles and read 4.9 and 7.4 % wrong. With no sea the figures are 5.4 and 1.2 % lost, and 3.0 and 0.9 % wrong. 20 dB is no better than 10 dB, as in campaign v1's range test.
+- **Failures at nonzero speeds:** 6 remain. One lost its frame. In the other 5, 22-48 % of the whistles are lost or wrong even when read at the true start and time scale, so whistle errors, not the time scale, explain them.
+- **Sound-card clocks** (needed by the in-air test, WC-R5): tested on synthetic tracks only. Offsets of -120 to +250 ppm decode, and the scale is found within 50 ppm (`tests/test_wc_pipeline.py`).
+- **Decoding time:** median 0.084 s before and 0.089 s after, per recording.
+- **Campaign script:** `paper_eval.py`'s oracle synchronisation and whistle counts now read at the true start and the true time scale. This changes nothing without Doppler. Each trial also records the time scale found.
+
 ## 1. The idea
 
 A text message is turned into a sequence of synthetic false killer whale whistles. The sequence is sent through an underwater channel, and a receiver turns the whistles back into the exact text.
@@ -489,7 +518,7 @@ P4 builds the receiver for the format phase F settles. With format v2 (section 4
    - starts between 60 ms before and 150 ms after the expected time `[DECISION]` (late starts are the common error, and the next whistle starts at least 550 ms later, so the windows never overlap);
    - has its centre within +/- 1.5 kHz of the expected pitch `[DECISION]`.
 
-   If several qualify, take the one with the closest start; ties go to the longer track. An empty slot is marked **erased**. A running linear fit of observed against expected start times, over confident matches only, corrects clock drift from Doppler.
+   If several qualify, take the one with the closest start; ties go to the longer track. An empty slot is marked **erased**. A running linear fit of observed against expected start times, over confident matches only, corrects clock drift from Doppler. (Built in WC-R2, 2026-11-21, as a time-scale search plus a whole-message linear fit: "Drift correction" at the top of this plan, and section 13.)
 5. **Classify.** Two classifiers are built. The one with the lower symbol error on encounter-214 noise becomes the default; both are reported.
    - **A, DTW templates:** DTW distance between the track's contour and each template contour, plus a duration term. Measured on encounter-214 noise at 10 dB (17 types x 40 sends) during P1:
      - `[DECISION]` The track's offsets are measured from the centre frequency the key gives for its slot, not from the track's own mid-range. The detector trims faint ends (median 21 ms shorter at 10 dB), which shifts a re-centred track; correct calls rose from 59 % to 79 %.
@@ -870,6 +899,15 @@ Format v2 values (section 4.6). They replace the v1 values above once phase F is
 | Rhythm pass mark (E9) | detection score <= 0.60 against encounter 276 |
 | Baseline modem | 16 straight-line chirps of 200 ms, slopes -1.5 to +1.5 kHz, same four pitch candidates |
 
+Drift correction (WC-R2, added 2026-11-21; `config.toml` `[receiver]` `drift_*`):
+
+| Parameter | Default |
+|---|---|
+| Time scales searched | 1 +/- 0.25 % (+/- 3.75 m/s at 1,500 m/s) |
+| Frame search | votes for (start, time scale) over a grid in steps of 0.025 %; starts within 0.1 s are one candidate, ranked by votes and read at the time scale whose matches sit tightest (Gaussian score, 20 ms) |
+| Whole-message fit | after each header reading: every known whistle of the frame, grid search in steps of 0.002 % (30 ms offset windows), then least squares over whistles within 40 ms of the line; at least 8 matches, else the frame search's values |
+| Reading | tracks moved onto the sender's clock, then read as before; frame starts and header readings tried are unchanged |
+
 ## 14. Revision history
 
 - **2026-11-17, first version.**
@@ -942,3 +980,12 @@ Format v2 values (section 4.6). They replace the v1 values above once phase F is
     - an extended reading list.
   - **`THREAT_MODEL.md`** gains adversary A6, the projector-distortion detector, and names a published replay and forgery remedy (not built).
   - **Section 8.7** now defines the in-band SNR and the whistle-against-noise classifier. No pass mark changed.
+- **2026-11-21, R2 drift correction (adopted):**
+  - The receiver searches time scales of 1 +/- 0.25 % in the frame search and fits the drift over the whole message before reading the payload. The settings are new `[receiver] drift_*` values (section 13).
+  - Measured on encounter-214 noise only, with the new `experiments/drift_dev.py`:
+    - Doppler at 15 dB, -3 to +3 m/s: 49-50 of 50 exact at every speed (was 0-50);
+    - random sea at 5 / 10 / 20 dB: 18 / 42 / 39 (was 4 / 15 / 14);
+    - no loss on v1's encounter-214 sweep;
+    - no false message.
+    Details under "Drift correction" at the top of this plan.
+  - `paper_eval.py`: oracle synchronisation reads at the true time scale as well as the true start.

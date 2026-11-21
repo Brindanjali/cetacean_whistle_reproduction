@@ -254,6 +254,74 @@ def test_wrong_key_and_empty_recordings_report_nothing(tx, rx, small_bank):
     assert not empty.ok and empty.stage == "sync"
 
 
+# ---------------------------------------------------------------------------------------------- drift (WC-R2)
+LONG = "THE TIDE TURNS SOON BRING TWO BOATS ACROSS THE CHANNEL NOW"
+
+
+def heard_at(sent: sender.Transmission, offset: float, scale: float, jitter_s: float = 0.0, seed: int = 0) -> list:
+    """Perfect tracks of a transmission heard at a time scale (channel.Received.time_scale): a moment t of the sent file is heard
+    at offset + t / scale, and every pitch is multiplied by scale. jitter_s: random error of each track's start."""
+    jit = np.random.default_rng(seed).normal(0.0, jitter_s, len(sent.data))
+    out = [detect.Track(offset + (d.slot.start_s + j) / scale, (d.fc_hz + d.contour.offset_hz) * scale, HOP / scale)
+           for d, j in zip(sent.data, jit)]
+    return sorted(out, key=lambda t: t.start_s)
+
+
+def no_drift_receiver(fake_book, small_bank, cfg):
+    cfg["receiver"]["drift_correction"] = False
+    return receiver.Receiver(cfg, codebook_path=fake_book, check_model=False, rhythm_bank=small_bank)
+
+
+def test_warp_puts_tracks_back_on_the_senders_clock():
+    t = detect.Track(12.0, np.array([8000.0, 8100.0]), HOP)
+    s = 1.002
+    heard = detect.Track(2.0 + (12.0 - 2.0) / s, t.freq_hz * s, HOP / s)
+    back = receiver.warp([heard], 2.0, s)[0]
+    assert back.start_s == pytest.approx(12.0) and back.hop_s == pytest.approx(HOP) and back.freq_hz == pytest.approx(t.freq_hz)
+    assert receiver.warp([t], 2.0, 1.0)[0] is t
+
+
+@pytest.mark.parametrize("speed", [-3.0, -2.0, -1.0, 1.0, 2.0, 3.0])
+def test_reads_a_message_heard_with_doppler(tx, rx, small_bank, fake_book, cfg, speed):
+    sent = tx.send(LONG, KEY, 11, tau=0)
+    s = 1.0 + speed / 1500.0
+    tracks = heard_at(sent, 4.0, s, jitter_s=0.01, seed=int(speed * 10) % 7)
+    got = rx.decode_tracks(tracks, KEY)
+    assert got.ok and got.text == LONG
+    assert got.time_scale == pytest.approx(s, abs=1e-4) and got.offset_s == pytest.approx(4.0, abs=0.02)
+    assert not no_drift_receiver(fake_book, small_bank, cfg).decode_tracks(tracks, KEY).ok    # the gap this closes
+
+
+@pytest.mark.parametrize("ppm", [-120.0, 45.0, 250.0])
+def test_reads_a_message_through_mismatched_sound_card_clocks(tx, rx, small_bank, ppm):
+    """Two sound cards at nominally the same rate differ by up to a few hundred parts per million (the in-air test, WC-R5)."""
+    sent = tx.send(LONG, KEY, 5, tau=0)
+    got = rx.decode_tracks(heard_at(sent, 1.5, 1.0 + ppm * 1e-6, jitter_s=0.005), KEY)
+    assert got.ok and got.text == LONG and got.time_scale == pytest.approx(1.0 + ppm * 1e-6, abs=5e-5)
+
+
+def test_no_drift_reads_at_scale_one(tx, rx, small_bank):
+    got = rx.decode_tracks(tracks_of(tx.send(LONG, KEY, 11, tau=0), small_bank, 3.0), KEY)
+    assert got.ok and got.time_scale == pytest.approx(1.0, abs=1e-5) and got.drift_matches > 0
+
+
+def test_drift_correction_never_reads_a_wrong_key(tx, rx):
+    sent = tx.send(LONG, KEY, 11, tau=0)
+    for speed in (-3.0, 0.0, 2.0):
+        assert not rx.decode_tracks(heard_at(sent, 2.0, 1.0 + speed / 1500.0), "not the key").ok
+
+
+def test_without_drift_correction_the_frame_search_is_unchanged(tx, small_bank, fake_book, cfg):
+    """With drift_correction off the receiver is campaign v1's: one time scale, and candidates ranked by votes alone."""
+    old = no_drift_receiver(fake_book, small_bank, cfg)
+    sent = tx.send("MEET AT DAWN", KEY, 11, tau=0)
+    tr = receiver.TrackSet(tracks_of(sent, small_bank, 37.25))
+    found = old.find_frame(tr, layout.header_layout(KEY, small_bank, old.pool, old.cfg))
+    assert all(s == 1.0 for _, _, s in found) and found[0][0] == pytest.approx(37.25, abs=0.02)
+    got = old.decode_tracks(tr.tracks, KEY)
+    assert got.ok and got.time_scale == 1.0 and got.drift_matches == 0
+
+
 # ---------------------------------------------------------------------------------------------- channel
 def test_channel_sets_the_level_and_hides_the_start(monkeypatch, cfg):
     fs = 96000
