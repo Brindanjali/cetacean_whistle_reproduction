@@ -1,3 +1,4 @@
 # WhistleCode's own dependencies, on top of the reproduction's requirements.txt at the repository root
 # (numpy, scipy, soundfile, torch, scikit-learn, pytest are taken from there).
 reedsolo==1.7.0        # Reed-Solomon with erasures (PLAN.md section 4.2); pure Python, public domain
+cryptography>=42.0     # `serve --lan`: the self-signed https certificate (wcode/web.py tls_files); Apache-2.0 or BSD-3-Clause
