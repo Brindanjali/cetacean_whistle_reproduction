@@ -4,6 +4,19 @@ Notable changes to this project, release by release. The format follows [Keep a 
 
 ## [Unreleased]
 
+### Added
+
+- **Licence**: Apache License 2.0 (`LICENSE`), with a `NOTICE` listing the third-party material it does not cover.
+- **`tools/repo.py ci-report`**: the latest CI run's jobs, failed steps and annotations, read from GitHub without signing in; **`audit-report`** turns the dependency audit into warnings on the run.
+
+### Changed
+
+- CI posts failing tests and lint findings as annotations; the dependency audit reports vulnerable packages as warnings instead of failing; `actions/checkout` v5 and `actions/setup-python` v6 (the old ones ran on a deprecated Node.js).
+
+### Fixed
+
+- CI's WhistleCode suite failed on GitHub because `cryptography` (used by `serve --lan` and its test) was in no requirements file. It is now in `whistlecode/requirements.txt` and the lock file.
+
 ## [0.9.0] - 2026-11-21
 
 The first versioned release. It covers everything up to this date.
