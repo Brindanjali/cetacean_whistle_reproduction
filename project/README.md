@@ -43,6 +43,7 @@ Everything is plain files in this repository, checked by one command (`python to
 python tools/repo.py check            # everything (about 2 minutes); --quick skips the test suites
 python tools/repo.py check lint links # just those
 python tools/repo.py health           # is the web server up?
+python tools/repo.py ci-report        # the last CI run on GitHub: jobs, failed steps, annotations
 ```
 
 The ID prefixes used across these files: YOU, WC, DET, REP, WEB, OPS (tasks), BUG, D (decisions), EXP (experiments), INC (incidents), R and C (requirements and claims).
