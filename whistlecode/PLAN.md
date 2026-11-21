@@ -608,7 +608,7 @@ The project now presents WhistleCode as covert biomimetic communication. Its thr
 | Step | Work |
 |---|---|
 | R0 | Threat model, claims and this section (done 2026-11-21) |
-| R1 | Literature: the base paper's references [1]-[11]; comparison table and novelty statement |
+| R1 | Literature: the base paper's references [1]-[11]; comparison table and novelty statement (done 2026-11-21: [`RELATED_WORK.md`](RELATED_WORK.md)) |
 | R2 | Sea channel: Doppler and clock-drift correction in the receiver |
 | R3 | Shape covertness: diagnosis, epoch-150 voice ablation, tau and codebook selection |
 | R4 | Baselines and listeners: matched-filter modem, listening test, likelihood under the species model |
@@ -652,6 +652,13 @@ Reported without a mark: closing speeds of ±3 m/s, random sea at 5 and 10 dB, t
 - **In-air test (A):** two laptops 2 m apart in an ordinary quiet room. One plays the sent WAV through its speaker at a comfortable listening level, set once before the first message and never changed. The other records it with the project page's Record button (`serve --lan`), with the key typed beforehand. The messages are the first 20 of the v2 sweep set. Also reported, without a mark: 10 messages each at 1 m and 4 m.
 - **Listening test (L):** two-alternative forced choice. Each pair holds two 30 s clips of encounter-276 recordings. One clip is untouched; the other has a WhistleCode message added at 15 dB, with the whole clip lying inside the message. The order is random. Listeners hear audio only, on headphones, with no training and no feedback. There are 10 listeners with 20 pairs each, drawn from the v2 sweep set's messages without repeats, which gives exactly 200 judgements, fixed in advance. Listeners are volunteers, anonymous, and no personal data is stored.
 - **Matched-filter modem (R4):** the same frame, Reed-Solomon code and 16 chirps x 4 pitches as the E8 baseline, but at a steady 0.5 s symbol spacing with no cover whistles. It has its own receiver, which correlates against the 64 chirp-pitch templates at the known symbol times after start-signal synchronisation. It is run as an SNR sweep in encounter-276 noise with the sweep set, as a reliability reference only.
+
+**Added 2026-11-21 after R1** (reported only; no pass mark is added or changed). These make campaign v2 comparable with published schemes ([`RELATED_WORK.md`](RELATED_WORK.md) section 3):
+
+- SNR given in in-band terms (signal power against all noise in 2.5-14.5 kHz) beside the narrowband SNR;
+- the whistle (symbol) error rate before repair, against SNR;
+- the share of coded data whistles that a whistle-against-noise classifier accepts as whistles;
+- the ECSM3 covertness score, if its definition can be obtained.
 
 ## 9. Phases
 
@@ -905,3 +912,7 @@ Format v2 values (section 4.6). They replace the v1 values above once phase F is
   - New `THREAT_MODEL.md`: adversaries A1-A4, covertness levels, security properties, and claims C1-C13 with campaign v1's evidence.
   - New section 8.7 freezes the second round before any of its work: steps R0-R8, data hygiene (development on encounter 214 only; encounter 276 only in campaign v2; optional fresh encounter 308), adoption rules, pass marks v2 (new: Doppler D, random sea S, in-air A, listening L, fresh encounter F308), and the definitions of the new tests.
   - The v1 pass marks in section 8.6 are unchanged and stay in force for campaign v2.
+- **2026-11-21, R1 literature review:**
+  - New `RELATED_WORK.md`: the field in four families, a comparison with ten published schemes, how to make SNR, error and rate figures comparable, what appears new and what does not, a draft novelty statement, and the papers still to read in full.
+  - Section 8.7 gains four reported-only measures for campaign v2 (in-band SNR, whistle error rate, whistle-against-noise acceptance, ECSM3 if obtainable); no pass mark changed.
+  - `THREAT_MODEL.md` gains adversary A5, the single-hydrophone channel-stability interceptor.

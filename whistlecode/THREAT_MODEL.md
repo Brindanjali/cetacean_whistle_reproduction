@@ -36,6 +36,7 @@ Covertness also rests on conditions WhistleCode cannot test in simulation, state
 | A2 | Automated monitoring pipeline | Whistle detectors and species classifiers run over long recordings; flags unusual sounds | Coded whistles not detected or not classified as false killer whale, or scored as anomalies | The reproduction's detector picks the whistles up (it is the receiver); likelihood under the species model was planned (PLAN 8.5) but not yet reported | Partly tested |
 | A3 | Steganalyst | Has recordings of the species, including the public DCLDE 2022 data; knows WhistleCode's design; trains classifiers on whistle shapes and timing | Shape statistics (E7); timing (E9); real whistle timing and cover contours matched against the public recordings the bank came from | E7 and E9; matching against public recordings not tested | Rhythm alone passes; rhythm in noise and shapes fail |
 | A4 | Array listener | Several hydrophones; localises sources | Every whistle comes from one point, which a group of animals does not do | Not tested | Stated limitation |
+| A5 | Channel-stability interceptor (added 2026-11-21 from R1) | One hydrophone; compares the propagation channel between consecutive calls (IEEE IoT J. 2024, 10.1109/jiot.2024.3399742) | A fixed source gives a far more stable channel from call to call than moving, turning animals | Not tested; the simulated sea gives every whistle of a message the same channel, so the simulation cannot show this weakness | Stated limitation |
 
 Out of scope: an adversary who holds the key; active attacks such as jamming, or replaying and injecting recorded messages.
 
@@ -91,3 +92,4 @@ State on 2026-11-21: campaign v1 ([`paper/RESULTS.md`](paper/RESULTS.md)), model
 ## 8. Revisions
 
 - **2026-11-21:** first version, with the claims of campaign v1. After campaign v2, its results are added as a new column in section 6; the v1 column stays.
+- **2026-11-21, after R1 ([`RELATED_WORK.md`](RELATED_WORK.md)):** adversary A5 added, a single-hydrophone interceptor that uses the stability of the propagation channel, from the published literature. No claim changed.
