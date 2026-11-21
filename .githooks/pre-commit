@@ -1,0 +1,25 @@
+#!/bin/sh
+# Work-log check: refuses a commit that changes project files without also changing WORKLOG.md.
+#
+# Enable once per clone (from the repository root):   git config core.hooksPath .githooks
+# Skip for a single commit:  Git Bash    WORKLOG_SKIP=1 git commit ...
+#                            PowerShell  $env:WORKLOG_SKIP=1; git commit ...; Remove-Item Env:WORKLOG_SKIP
+
+[ "${WORKLOG_SKIP:-0}" = "1" ] && exit 0
+
+staged=$(git diff --cached --name-only)
+[ -z "$staged" ] && exit 0
+printf '%s\n' "$staged" | grep -qx 'WORKLOG.md' && exit 0
+
+cat >&2 <<'MSG'
+
+Commit refused: WORKLOG.md is not part of this commit.
+
+  1. Add a line for this change under today's date in WORKLOG.md (section "Done").
+  2. git add WORKLOG.md
+  3. Commit again.
+
+To skip this check for one commit, see the top of .githooks/pre-commit.
+
+MSG
+exit 1
