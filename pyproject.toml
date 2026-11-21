@@ -12,6 +12,7 @@ version = "0.9.0"                      # the release version; bump it only throu
 description = "Reproduction of VAE-GMM for cetacean whistles, and WhistleCode: text messages hidden in synthetic whistles"
 readme = "README.md"
 requires-python = ">=3.11"
+license = "Apache-2.0"                 # LICENSE, NOTICE; third-party terms: project/LICENSING.md
 
 # ---------------------------------------------------------------------------------------------------------------- lint
 # Lint only. `ruff format` is not used [DECISION 2026-11-21, D-016]: the code keeps its compact house style.
