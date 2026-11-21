@@ -10,6 +10,7 @@ From raw hydrophone recordings to a generative model of false killer whale whist
 [![PyTorch](https://img.shields.io/badge/PyTorch-2.11%2B-EE4C2C?logo=pytorch&logoColor=white)](https://pytorch.org/)
 [![CI](https://github.com/anonymus-k-dot/cetacean_whistle_reproduction/actions/workflows/ci.yml/badge.svg)](https://github.com/anonymus-k-dot/cetacean_whistle_reproduction/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/badge/release-0.9.0-555555)](CHANGELOG.md)
+[![Licence](https://img.shields.io/badge/licence-Apache%202.0-blue)](LICENSE)
 [![Paper](https://img.shields.io/badge/IEEE%20Access-10.1109%2FACCESS.2026.3664765-00629B)](https://doi.org/10.1109/ACCESS.2026.3664765)
 [![Data](https://img.shields.io/badge/data-NOAA%20DCLDE%202022-1F4E79)](#dataset-record)
 
@@ -390,7 +391,7 @@ If you use this work, please cite the original paper:
 
 ## Licence and acknowledgements
 
-- **Code.** No licence has been chosen yet. Licences of everything third-party: [`project/LICENSING.md`](project/LICENSING.md). Security policy: [`.github/SECURITY.md`](.github/SECURITY.md).
+- **Code.** [Apache License 2.0](LICENSE), with a [`NOTICE`](NOTICE) that lists what it does not cover. Licences of everything third-party: [`project/LICENSING.md`](project/LICENSING.md). Security policy: [`.github/SECURITY.md`](.github/SECURITY.md).
 - **Paper.** The copy in `resources/` is licensed CC BY-NC-ND 4.0, as stated on its first page.
 - **Data.** The recordings are NOAA's DCLDE 2022 release (HICEAS 2017, R/V *Lasker*). They are public, are not redistributed here, and should be credited to NOAA when used.
 - **Web assets.** Fonts and media are credited in [`web/CREDITS.md`](web/CREDITS.md).
