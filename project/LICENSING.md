@@ -4,9 +4,13 @@ What licence covers each part of the repository, and every third-party work it u
 
 ## This project's code
 
-**No licence has been chosen yet** (YOU-6). Until there is one, the code is public to read but nobody else may legally reuse it.
+**Apache License 2.0** ([`LICENSE`](../LICENSE), the unmodified text from apache.org, SHA-256 `cfc7749b…3d30`), chosen 2026-11-22 ([D-022](DECISIONS.md#d-022)).
 
-Recommendation: **MIT**. It is short and permissive, and every dependency below is permissive too (BSD, MIT, Apache-2.0, PSF, public domain), so there is no conflict. To adopt it, the owner adds a `LICENSE` file with the MIT text and their name, and the README's "Licence" section is updated. The licence covers the code and documents written here only, not the third-party material below.
+- **What it allows:** anyone may use, change and redistribute the code, also commercially, if they keep the licence and the [`NOTICE`](../NOTICE) file and mark the files they changed.
+- **Patents:** every contributor grants a patent licence for their contributions, and loses it if they sue over patents in the work. This matters for a new communication scheme such as WhistleCode.
+- **Compatibility:** every dependency below is permissive (BSD, MIT, Apache-2.0, PSF, public domain), so there is no conflict.
+- **Scope:** the code and documents written here. `NOTICE` lists the third-party material it does not cover (below).
+- **Copyright line:** "The cetacean_whistle_reproduction contributors" in `NOTICE`, which covers the teammates who contributed. The owner may put their own name there instead.
 
 ## Third-party material in the repository
 
