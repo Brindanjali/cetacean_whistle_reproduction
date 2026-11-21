@@ -6,7 +6,7 @@ How either of us picks the work up cold: at the start of a session, on a new mac
 
 1. **Read the state:** [`WORKLOG.md`](../WORKLOG.md), "At a glance" (what is next), "Waiting on you" and "Bugs".
 2. **See what changed:** `git status` and `git log --oneline -10`. Uncommitted work belongs to the last session's last Done entry.
-3. **Check health:** `python tools/repo.py check --quick` (everything but the test suites, under a minute).
+3. **Check health:** `python tools/repo.py check --quick` (everything but the test suites, under a minute), and `python tools/repo.py ci-report` (the last CI run on GitHub).
 4. **Claude also reads** `CLAUDE.md` and its memory, and checks that any file or flag a memory names still exists.
 
 ## End of every session
