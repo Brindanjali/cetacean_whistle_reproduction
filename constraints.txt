@@ -1,7 +1,7 @@
 # Exact versions of every package the project uses, as installed on the project laptop. Written by
 # `python tools/repo.py lock`; never edit by hand. Use with: pip install -r requirements.txt -c constraints.txt
 # Local build labels (+cu130) are dropped, so the CPU and CUDA builds of the same version both satisfy a pin.
-# Python 3.11.0, win32, 2026-11-21.
+# Python 3.11.0, win32, 2026-11-22.
 annotated-doc==0.0.4
 annotated-types==0.7.0
 anyio==4.13.0
@@ -10,6 +10,7 @@ cffi==2.0.0
 click==8.5.0
 colorama==0.4.6
 contourpy==1.3.3
+cryptography==42.0.5
 cycler==0.12.1
 fastapi==0.141.1
 filelock==3.25.2
