@@ -28,6 +28,13 @@
     python tools/repo.py release-check VERSION
         everything a release needs (project/RELEASES.md): matching version, changelog section, clean tree, unused tag,
         and a clean `check`
+
+    python tools/repo.py ci-report [RUN]
+        the latest CI run on GitHub (or run RUN): each job's result, the failed step and its annotations (failing tests,
+        lint findings, audit warnings). Reads GitHub's public API; no sign-in needed
+
+    python tools/repo.py audit-report REPORT.json
+        used by CI: turns pip-audit's JSON report into warnings on the run and a summary table
 """
 from __future__ import annotations
 
@@ -421,6 +428,75 @@ def health(url: str, every: float | None, log: Path) -> bool:
         time.sleep(every)
 
 
+# ---------------------------------------------------------------------------------------------- CI helpers
+def audit_report(path: Path) -> bool:
+    """pip-audit's JSON report as warnings: GitHub annotations and a step summary in CI, a table elsewhere.
+    False only when there is no readable report (the audit itself failed)."""
+    import os
+    gha = os.environ.get("GITHUB_ACTIONS") == "true"
+    try:
+        deps = json.loads(path.read_text(encoding="utf-8"))["dependencies"]
+    except (OSError, ValueError, KeyError) as e:
+        print(f"::error title=pip-audit::no readable report ({e})" if gha else f"  [FAIL] audit: no readable report ({e})")
+        return False
+    vulnerable = [d for d in deps if d.get("vulns")]
+    skipped = [d for d in deps if d.get("skip_reason")]
+    try:
+        from packaging.version import Version as order       # installed with pip-audit
+    except ImportError:
+        order = str
+    rows = []
+    for d in vulnerable:
+        fixes = sorted({f for v in d["vulns"] for f in v.get("fix_versions") or []}, key=order)
+        fix = fixes[-1] if fixes else "no fix yet"
+        ids = ", ".join(v["id"] for v in d["vulns"][:4]) + (" ..." if len(d["vulns"]) > 4 else "")
+        rows.append((d["name"], d["version"], len(d["vulns"]), fix, ids))
+        if gha:
+            print(f"::warning title=pip-audit: {d['name']} {d['version']}::{len(d['vulns'])} known vulnerabilities ({ids}); fixed in {fix}")
+        else:
+            print(f"    {d['name']}=={d['version']}: {len(d['vulns'])} advisories, fixed in {fix} ({ids})")
+    for d in skipped:
+        print(f"::notice title=pip-audit skipped {d['name']}::{d['skip_reason']}" if gha else f"    skipped {d['name']}: {d['skip_reason']}")
+    summary = os.environ.get("GITHUB_STEP_SUMMARY")
+    if summary:
+        with open(summary, "a", encoding="utf-8") as f:
+            f.write(f"### Dependency audit\n\n{len(vulnerable)} of {len(deps)} pinned packages have known vulnerabilities.\n\n")
+            if rows:
+                f.write("| Package | Version | Advisories | Fixed in | IDs |\n|---|---|---|---|---|\n")
+                f.writelines(f"| {n} | {v} | {k} | {fx} | {i} |\n" for n, v, k, fx, i in rows)
+    if not gha:
+        say(not vulnerable, f"audit: {len(vulnerable)} of {len(deps)} pinned package(s) with known vulnerabilities")
+    return True
+
+
+def ci_report(run_id: str | None = None) -> bool:
+    """The latest CI run on GitHub (or RUN): each job's result and its annotations. Public data, no sign-in needed."""
+    remote = git("remote", "get-url", "origin").strip()
+    m = re.search(r"github\.com[:/]([^/]+/[^/.]+)", remote)
+    if not m:
+        say(False, f"ci-report: origin is not a GitHub repository ({remote})")
+        return False
+    api = f"https://api.github.com/repos/{m.group(1)}"
+
+    def get(url: str):
+        req = urllib.request.Request(url, headers={"Accept": "application/vnd.github+json", "User-Agent": "repo-tools"})
+        with urllib.request.urlopen(req, timeout=30) as r:
+            return json.load(r)
+
+    run = get(f"{api}/actions/runs/{run_id}") if run_id else get(f"{api}/actions/runs?per_page=1")["workflow_runs"][0]
+    print(f"Run {run['id']} ({run['head_branch']} {run['head_sha'][:7]}, {run['created_at']}): {run['status']} / {run['conclusion']}")
+    print(f"  {run['html_url']}")
+    for job in get(f"{api}/actions/runs/{run['id']}/jobs")["jobs"]:
+        failed = [s["name"] for s in job["steps"] if s["conclusion"] == "failure"]
+        print(f"\n  [{(job['conclusion'] or job['status']).upper()}] {job['name']}" + (f"  (failed step: {', '.join(failed)})" if failed else ""))
+        for a in get(f"{api}/check-runs/{job['id']}/annotations"):
+            if "Node.js" in (a.get("message") or ""):
+                continue                                 # GitHub's own runner notices
+            where = f"{a['path']}:{a['start_line']}" if a.get("path") not in (None, ".github") else ""
+            print(f"      {a['annotation_level']}: {where} {(a.get('title') or '')} {(a.get('message') or '').strip()[:300]}".rstrip())
+    return run["conclusion"] == "success"
+
+
 # ---------------------------------------------------------------------------------------------- release
 def release_check(version: str) -> bool:
     version = version.lstrip("v")
@@ -466,6 +542,10 @@ def main(argv: list[str] | None = None) -> int:
     h.add_argument("--log", type=Path, default=ROOT / "runs" / "health.log")
     r = sub.add_parser("release-check", help="check that VERSION can be released")
     r.add_argument("version")
+    au = sub.add_parser("audit-report", help="turn a pip-audit JSON report into warnings (CI)")
+    au.add_argument("report", type=Path)
+    cr = sub.add_parser("ci-report", help="the latest CI run on GitHub: jobs and annotations")
+    cr.add_argument("run", nargs="?", help="a run id (default: the latest run)")
     a = ap.parse_args(argv)
 
     if a.cmd == "check":
@@ -480,6 +560,10 @@ def main(argv: list[str] | None = None) -> int:
         ok = lock()
     elif a.cmd == "health":
         ok = health(a.url, a.every, a.log)
+    elif a.cmd == "audit-report":
+        ok = audit_report(a.report)
+    elif a.cmd == "ci-report":
+        ok = ci_report(a.run)
     else:
         ok = release_check(a.version)
     return 0 if ok else 1
