@@ -1,5 +1,7 @@
 # Continuous integration (project/ENGINEERING.md#ci): on every push to main and every pull request.
 # It sees only what git holds, so tests that need the local dataset or model files skip themselves (marker localdata).
+# Failing tests and audit findings are posted as annotations on the run, which anyone can read without signing in
+# (the logs need a sign-in): python tools/repo.py ci-report reads them back.
 name: CI
 
 on:
@@ -26,16 +28,16 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0                 # the secret scan reads every commit
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version-file: .python-version
       - name: Install ruff (the version in constraints.txt)
         run: pip install "$(grep -E '^ruff==' constraints.txt)"
       - name: Lint
-        run: ruff check .
+        run: ruff check --output-format github .
       - name: Secrets (files and history), links, checksums of the tracked models
         run: |
           python tools/repo.py check secrets links checksums
@@ -46,8 +48,8 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version-file: .python-version
           cache: pip
@@ -61,6 +63,7 @@ jobs:
           TV=$(grep -E '^torchvision==' constraints.txt | cut -d= -f3)
           pip install --index-url https://download.pytorch.org/whl/cpu "torch==$TORCH" "torchvision==$TV"
           pip install -r requirements.txt -r whistlecode/requirements.txt -c constraints.txt
+          pip install pytest-github-actions-annotate-failures==0.2.0   # each failing test becomes an annotation
       - name: Configs (every loader accepts its file)
         run: python tools/repo.py check config
       - name: Reproduction suite
@@ -72,12 +75,13 @@ jobs:
     name: Dependency audit (advisory)
     runs-on: ubuntu-24.04
     timeout-minutes: 10
-    continue-on-error: true              # reports known vulnerabilities without blocking; read it before a release
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version-file: .python-version
       - run: pip install pip-audit
-      - name: Audit the server image's pins and the lock file (both fully pinned, so nothing is installed)
-        run: pip-audit --strict --no-deps --disable-pip -r deploy/requirements-serve.txt -r constraints.txt
+      - name: Audit the server image's pins and the lock file (findings become warnings; the job fails only if the audit cannot run)
+        run: |
+          pip-audit --no-deps --disable-pip -r deploy/requirements-serve.txt -r constraints.txt -f json -o audit.json || true
+          python tools/repo.py audit-report audit.json
