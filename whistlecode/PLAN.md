@@ -7,7 +7,8 @@ This enhancement replaces WhistleFlow. WhistleFlow was dropped and its folder re
 How to read this document:
 
 - `[DECISION]` marks a choice made here because nothing fixes it. It is the same tag the reproduction's configs use. Every one is listed again in section 13 with its default.
-- Thresholds in section 8.6 are frozen before the final test runs, so a result cannot move its own goalpost.
+- Thresholds in sections 8.6 and 8.7 are frozen before the test runs they govern, so a result cannot move its own goalpost.
+- The threat model and the claims that may be made today are in [`THREAT_MODEL.md`](THREAT_MODEL.md).
 - "The reproduction" means `src/whistlepipe`, `configs/`, `models/`, `preprocessed/` and the encounter audio folders. WhistleCode only imports from them and never edits them.
 - "Message encoder" is the transmitter and "message decoder" is the receiver. The VAE has its own encoder and decoder, which appear inside them: the VAE decoder makes the whistles, and the VAE encoder is one way to read them back.
 
@@ -600,6 +601,58 @@ Against all whistles a classifier can win from the limits alone. The in-range co
 
 A failed mark is reported as failed, with the measured value; it is never rewritten as a pass.
 
+### 8.7 Second round: protocol and pass marks v2 `[DECISION]`, frozen 2026-11-21 before any second-round work
+
+The project now presents WhistleCode as covert biomimetic communication. Its threat model and current claims are in [`THREAT_MODEL.md`](THREAT_MODEL.md). The second round works on the sea channel, shape covertness and baselines, adds an in-air test and a listening test, and then reruns the whole evaluation once as **campaign v2**. Everything in this section is fixed before that work starts, and it follows the same rule as 8.6: a mark is never moved and a failure is reported as measured.
+
+| Step | Work |
+|---|---|
+| R0 | Threat model, claims and this section (done 2026-11-21) |
+| R1 | Literature: the base paper's references [1]-[11]; comparison table and novelty statement |
+| R2 | Sea channel: Doppler and clock-drift correction in the receiver |
+| R3 | Shape covertness: diagnosis, epoch-150 voice ablation, tau and codebook selection |
+| R4 | Baselines and listeners: matched-filter modem, listening test, likelihood under the species model |
+| R5 | In-air test between two computers |
+| R6 | Freeze, then campaign v2 |
+| R7 | Documents and project page reframed |
+| R8 | Write-up and review |
+
+**Data hygiene**
+
+- Development in R2-R4 uses encounter-214 noise and encounter-214 real whistles only. During development, shape covertness is measured against in-range encounter-214 whistles with the E7 features and classifier.
+- Encounter 276 is used only by campaign v2. Its v1 results are known, but nothing is tuned on it.
+- **Optional fresh test encounter:** encounter 308, which WhistleCode has never used. It needs every fifth raw file (33 files, about 6 GB) downloaded from NOAA's public bucket, and the download needs the owner's approval. If those files are present, campaign v2 repeats the final run on encounter-308 noise and the E7 test against encounter-308 whistles.
+- Campaign v2 generates its messages from seed **20261205**, which no development run may use. v1's seed 20261120 is not reused either. v1's records stay in `outputs/paper/`; campaign v2 writes to its own folder and never overwrites them.
+
+**Adoption rules for second-round changes** (decided on encounter 214 only):
+
+- **Sender** (voice model, codebook, tau): adopted only if the shape AUC against encounter-214 whistles falls by at least 0.03 (about twice v1's split-to-split s.d. of 0.013), and exact messages at 10 dB (sweep set) fall by at most 2 of 50.
+- **Receiver:** adopted only if it improves the condition it targets, costs at most 1 of 50 messages at each of 5, 10, 15 and 20 dB of the encounter-214 sweep, and keeps wrong text at 0.
+- The epoch-150 voice (Delphi) is one such sender change. Its codebook is built in a separate folder, and if it is adopted, campaign v2's frozen record pins the epoch-150 files.
+
+**Pass marks v2** (campaign v2 unless marked):
+
+| Id | Test | Pass mark |
+|---|---|---|
+| E1 | Clean channel, full set | 100 % exact (unchanged) |
+| Final | Encounter 276, 10 dB, full set | >= 95 % exact (unchanged) |
+| False | Wrong text accepted, wrong-key messages, messages found in noise without one | 0 (unchanged) |
+| E7 | Shape AUC against in-range encounter-276 whistles, deployed sender | <= 0.75 (unchanged) |
+| E9 | Rhythm AUC against encounter 276, for the stream on its own and inside encounter-276 noise at 10 dB | <= 0.60 for both (unchanged) |
+| D | Doppler alone, encounter 276, 15 dB, sweep set, closing speeds -2, -1, -0.5, +0.5, +1 and +2 m/s | >= 90 % exact at every one of the six speeds |
+| S | Random sea per message (as E3 `sea`), encounter 276, 20 dB, sweep set | >= 80 % exact |
+| A | In-air test (R5) | >= 18 of 20 messages exact, and no wrong text |
+| L | Listening test (R4) | The 95 % Wilson interval of the pooled accuracy includes 50 % |
+| F308 | Encounter 308, 10 dB, full set (only if downloaded) | >= 95 % exact |
+
+Reported without a mark: closing speeds of ±3 m/s, random sea at 5 and 10 dB, the echo-only ranges, the matched-filter modem, the Delphi ablation, E7 against encounter 308, and the likelihood under the species model.
+
+**New tests, defined now:**
+
+- **In-air test (A):** two laptops 2 m apart in an ordinary quiet room. One plays the sent WAV through its speaker at a comfortable listening level, set once before the first message and never changed. The other records it with the project page's Record button (`serve --lan`), with the key typed beforehand. The messages are the first 20 of the v2 sweep set. Also reported, without a mark: 10 messages each at 1 m and 4 m.
+- **Listening test (L):** two-alternative forced choice. Each pair holds two 30 s clips of encounter-276 recordings. One clip is untouched; the other has a WhistleCode message added at 15 dB, with the whole clip lying inside the message. The order is random. Listeners hear audio only, on headphones, with no training and no feedback. There are 10 listeners with 20 pairs each, drawn from the v2 sweep set's messages without repeats, which gives exactly 200 judgements, fixed in advance. Listeners are volunteers, anonymous, and no personal data is stored.
+- **Matched-filter modem (R4):** the same frame, Reed-Solomon code and 16 chirps x 4 pitches as the E8 baseline, but at a steady 0.5 s symbol spacing with no cover whistles. It has its own receiver, which correlates against the 64 chirp-pitch templates at the known symbol times after start-signal synchronisation. It is run as an SNR sweep in encounter-276 noise with the sweep set, as a reliability reference only.
+
 ## 9. Phases
 
 | Phase | Model | Work | Done when |
@@ -848,3 +901,7 @@ Format v2 values (section 4.6). They replace the v1 values above once phase F is
   - Final gate run with own-length whistles: reliable, and the rhythm passes on quiet noise (0.56 and 0.55). The gate still fails on wrong pitch and on one 60-character case; both stay open as known gaps.
   - Stretching is dropped and the current codebook is kept.
   - The "Final idea" section at the top of this plan is now the design. Multipath, Doppler, classifier B and the baseline modem wait until the pipeline works.
+- **2026-11-21, presented as covert biomimetic communication (second round, step R0):**
+  - New `THREAT_MODEL.md`: adversaries A1-A4, covertness levels, security properties, and claims C1-C13 with campaign v1's evidence.
+  - New section 8.7 freezes the second round before any of its work: steps R0-R8, data hygiene (development on encounter 214 only; encounter 276 only in campaign v2; optional fresh encounter 308), adoption rules, pass marks v2 (new: Doppler D, random sea S, in-air A, listening L, fresh encounter F308), and the definitions of the new tests.
+  - The v1 pass marks in section 8.6 are unchanged and stay in force for campaign v2.
