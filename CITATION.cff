@@ -5,6 +5,7 @@ title: "Cetacean whistle reproduction: VAE-GMM for false killer whale whistles, 
 type: software
 authors:
   - name: "anonymus-k-dot"
+license: Apache-2.0
 version: 0.9.0
 date-released: 2026-11-21
 repository-code: "https://github.com/anonymus-k-dot/cetacean_whistle_reproduction"
