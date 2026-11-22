@@ -4,6 +4,10 @@ Notable changes to this project, release by release. The format follows [Keep a 
 
 ## [Unreleased]
 
+### Changed
+
+- **README files rewritten for credibility** (no numbers changed): the main README now says the work is an independent, unofficial course project, written with an AI assistant; states the gaps to the paper beside the matches; uses the paper's term "biomimetic" instead of "covert"; names checkpoints by epoch; shows the DCLDE 2011 score beside Li et al.'s; gives full references; and has a "What runs from a clone" table with download sizes. `CITATION.cff` gains an abstract. `project/README.md`, `web/README.md`, `deploy/README.md` and `cluster/node/README_CLUSTER.md` are written for an outside reader.
+
 ## [0.10.0] - 2026-11-22
 
 ### Security

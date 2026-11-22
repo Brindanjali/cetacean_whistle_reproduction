@@ -1,11 +1,11 @@
-# Deploy from this computer: Docker + Tailscale Funnel
+# Self-hosting: Docker + Tailscale Funnel
 
-Serves the whole project page (the film, Try it, 05 · Encode, 06 · Decode) from this laptop in Docker, and puts it on
-the internet at a fixed https address, `https://whistle.<your tailnet>.ts.net`. Free, with no card: Tailscale's
+Serves the whole project page (the film, Try it, 05 · Encode, 06 · Decode) from your own computer in Docker, and puts
+it on the internet at a fixed https address, `https://whistle.<your tailnet>.ts.net`. Free, with no card: Tailscale's
 Personal plan is free for non-commercial use. Because the address is https, Record (the microphone) works on other
-computers too.
+computers too. The steps are written for Windows with Docker Desktop, where they were tested.
 
-**The address works only while this laptop is on, awake and running Docker Desktop.** When it is off, visitors get a
+**The address works only while your computer is on, awake and running Docker Desktop.** When it is off, visitors get a
 connection error; the site comes back by itself when Docker Desktop starts again (both containers restart
 automatically).
 
@@ -26,7 +26,7 @@ The image holds only Python and the packages in `requirements-serve.txt`. The re
 1. **Docker Desktop**: start it and wait until it says the engine is running. To have the site come back after a
    restart, turn on Settings → General → "Start Docker Desktop when you sign in to your computer".
 2. **Tailscale account**: sign in at https://login.tailscale.com with Google, GitHub or Microsoft. This creates your
-   tailnet. You do not need the Tailscale app on the laptop: the container is its own Tailscale machine.
+   tailnet. You do not need the Tailscale app on your computer: the container is its own Tailscale machine.
 3. **HTTPS certificates**: admin console → DNS → make sure MagicDNS is on, then press "Enable HTTPS". Funnel needs both.
 4. **Funnel permission**: admin console → Access controls. New tailnets already have this in the policy file; add it if
    it is missing:
@@ -63,15 +63,15 @@ Check that the app is ready (it prints `Try it : ...` and `messages: ready` once
 docker compose -f deploy/docker-compose.yml logs -f app
 ```
 
-- On this laptop: http://localhost:8000
+- On your computer: http://localhost:8000
 - Everyone else: `https://whistle.<your tailnet>.ts.net`; the exact name is on the Machines page. The first visit can
   take up to a minute while the certificate is issued, and a new Funnel name can take a few minutes to be found.
 
 ## Speed over Funnel
 
-Funnel carried about 1-1.6 Mbit/s per connection on 2026-11-20 (this laptop's own upload: about 32 Mbit/s), so the
-limit is Tailscale's relay, not the internet line. The 4K film clips need 17-30 Mbit/s, so internet visitors get the
-720p copies in `web/mediaweb/` (under 0.9 Mbit/s) and this laptop keeps the 4K files. Without the copies the page falls
+Funnel carried about 1-1.6 Mbit/s per connection when measured on 2026-11-20, on a line with about 32 Mbit/s of upload,
+so the limit was Tailscale's relay, not the internet line. The 4K film clips need 17-30 Mbit/s, so internet visitors
+get the 720p copies in `web/mediaweb/` (under 0.9 Mbit/s), and the server's own computer keeps the 4K files. Without the copies the page falls
 back to the 4K files, which do not play at that speed (visitors see the posters); `web/README.md` ("Video and example
 files") has the two commands that make them. Uploads in Try it and Decode cross the same relay and may be as slow (not
 measured).
@@ -97,7 +97,7 @@ Use the same two `-f` options for the other commands while you run the GPU versi
 | a changed `requirements-serve.txt` or `Dockerfile` | `docker compose -f deploy/docker-compose.yml up -d --build` |
 | sign the machine out of Tailscale for good | `docker compose -f deploy/docker-compose.yml down -v` (deletes the saved sign-in) |
 
-Port 8000 on this laptop is taken while the containers run. To run `python whistlecode/whistlecode.py serve` at the same
+Port 8000 on your computer is taken while the containers run. To run `python whistlecode/whistlecode.py serve` at the same
 time, set `LOCAL_PORT=8001` in `deploy/.env`.
 
 ## Who can open it

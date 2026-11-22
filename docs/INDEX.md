@@ -6,7 +6,7 @@ Every document in the repository: what it is the authority on, and its state. Wh
 
 | Document | Authority on |
 |---|---|
-| [`README.md`](../README.md) | what the project is, its results, how to run it, the repository layout |
+| [`README.md`](../README.md) | what the project is (and that it is unofficial), its results, what runs from a clone, the repository layout |
 | [`WORKLOG.md`](../WORKLOG.md) | what is planned, waiting and done; the current state ("At a glance") |
 | [`CHANGELOG.md`](../CHANGELOG.md) | what changed in each release |
 | [`project/HANDOVER.md`](../project/HANDOVER.md) | how to pick the work up cold |
@@ -40,7 +40,7 @@ Every document in the repository: what it is the authority on, and its state. Wh
 | [`web/README.md`](../web/README.md) | running the page; Encode, Decode, Record; video files | static examples out of date (WEB-1) |
 | [`web/CREDITS.md`](../web/CREDITS.md) | footage and font sources and licences | current |
 | [`deploy/README.md`](../deploy/README.md) | self-hosting with Docker and Tailscale Funnel | current |
-| [`cluster/node/README_CLUSTER.md`](../cluster/node/README_CLUSTER.md) | running the demo on the college cluster | current |
+| [`cluster/node/README_CLUSTER.md`](../cluster/node/README_CLUSTER.md) | course lab: running the demo on the college's teaching cluster | current |
 | `colab/train_V1_colab.ipynb` | the VAE training run on Colab (its first cell explains each step) | current |
 
 ## Detector paper
@@ -55,7 +55,7 @@ Every document in the repository: what it is the authority on, and its state. Wh
 
 | Document | Authority on |
 |---|---|
-| [`project/README.md`](../project/README.md) | the list of systems, where each lives, what enforces it |
+| [`project/README.md`](../project/README.md) | how the project is run: who does what, each record and check, where it lives |
 | [`project/WORKFLOW.md`](../project/WORKFLOW.md) | task tracker rules, Definition of Done, code review |
 | [`project/ENGINEERING.md`](../project/ENGINEERING.md) | code quality, testing, CI, environment, configuration |
 | [`project/RELEASES.md`](../project/RELEASES.md) | versions, release procedure, deployment checklist, monitoring |

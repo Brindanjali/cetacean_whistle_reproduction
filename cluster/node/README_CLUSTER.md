@@ -1,4 +1,8 @@
-# Running the whistle demo on slave 7
+# Course lab: running the whistle demo on a cluster node
+
+Instructions for one lab exercise of the course: running the web demo on node 7 (host name `slave7`) of the college's
+teaching cluster, a Hadoop setup with HDFS. They are specific to that cluster and are kept here because
+`cluster/make_cluster_bundle.py` packs this file into `whistle_app.zip`. Nothing else in the project needs them.
 
 `whistle_app.zip` is the whole runnable app: the web page (frontend), the FastAPI inference API (backend), the trained
 models (whistle detector, VAE, GMM) and the settings that connect them. The page calls the API with relative URLs
@@ -7,8 +11,8 @@ models (whistle detector, VAE, GMM) and the settings that connect them. The page
 HDFS only stores and hands over the zip. Slave 7 copies it out of HDFS onto its own disk and runs it there, because
 Python cannot run a program straight out of HDFS and the app writes its results next to itself (`runs/infer/`).
 
-**Everyone logs in as `student`, so the HDFS home `/user/student` and the home folder on each slave are shared with the
-other teams.** Everything below uses one folder of our own, `whistle_slave7`, so nobody's files collide.
+**On this cluster every team logs in as `student`, so the HDFS home `/user/student` and the home folder on each node are
+shared with the other teams.** Everything below uses one folder of its own, `whistle_slave7`, so nobody's files collide.
 
 ## 1. Laptop -> HDFS (browser)
 
@@ -24,8 +28,7 @@ put them into HDFS from there (`hdfs dfs -mkdir -p whistle_slave7 && hdfs dfs -p
 
     ssh student@<slave 7 IP>
 
-The sample used `192.168.5.105` for slave 5, so slave 7 is probably `192.168.5.107`; the prompt must then read
-`student@slave7`.
+Take slave 7's address from the lab's node list. Once logged in, the prompt must read `student@slave7`.
 
 ## 3. HDFS -> slave 7
 
@@ -36,16 +39,15 @@ The sample used `192.168.5.105` for slave 5, so slave 7 is probably `192.168.5.1
     unzip -q whistle_app.zip          # no unzip?  python3 -m zipfile -e whistle_app.zip .
     cd whistle_app
 
-A path without a leading `/` is read from the HDFS home `/user/student`. In the sample, `hdfs dfs -copyToLocal Temp Temp`
-said "No such file or directory" because `/user/student/Temp` did not exist in HDFS; `hdfs dfs -ls` first shows what is
-really there.
+A path without a leading `/` is read from the HDFS home `/user/student`. If `hdfs dfs -copyToLocal` says "No such file
+or directory", the folder does not exist in HDFS under that home; `hdfs dfs -ls` first shows what is really there.
 
 ## 4. Check what slave 7 has (installs nothing)
 
     python3 check_node.py
 
 It lists Python, the 10 packages the app needs (OK / NO), memory, disk, GPU and internet, and ends with what to ask
-the mentor for when something is missing. Run it again with another Python to check that one, for example the
+the course mentor for when something is missing. Run it again with another Python to check that one, for example the
 mentor's Anaconda: `/path/to/anaconda/envs/<env>/bin/python check_node.py`. When everything is OK, add `--run`: it runs
 the real app once (model, an analysis, generation, the web server and the page) and ends with "THE APP RUNS HERE".
 
@@ -55,7 +57,7 @@ Either with the mentor's ready Python (check_node.py says OK for it), nothing to
 
     PYTHON=/path/to/anaconda/envs/<env>/bin/python bash run_node.sh
 
-or, if slave 7 has internet, with a Python and packages of our own in this folder:
+or, if slave 7 has internet, with a Python and packages of its own in this folder:
 
     bash setup_node.sh
     bash run_node.sh

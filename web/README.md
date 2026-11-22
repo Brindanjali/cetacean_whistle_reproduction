@@ -51,9 +51,9 @@ Browsers allow the microphone only on https pages or on the computer that runs t
 python whistlecode/whistlecode.py serve --lan
 ```
 
-It prints an address such as `https://192.168.18.39:8000` for the other computer. Its browser warns once that the
-certificate is not trusted (this computer made it for itself and keeps it in `whistlecode/outputs/web_tls/`): choose
-Advanced, then Proceed. Windows may ask whether Python may use the network; allow private networks only. While it runs,
+It prints an address such as `https://192.168.1.20:8000` for the other computer. Its browser warns once that the
+certificate is not trusted (the server's computer made it for itself and keeps it in `whistlecode/outputs/web_tls/`):
+choose Advanced, then Proceed. Windows may ask whether Python may use the network; allow private networks only. While it runs,
 anyone on the network can open the page.
 
 Then: write the message in Encode on one computer, press Hide it and play the sound (or its downloaded WAV) aloud; on the
@@ -63,7 +63,7 @@ laptops is a new channel for the decoder (room echoes, speaker and microphone li
 ### On the internet: Docker and Tailscale Funnel
 
 `deploy/` runs the same server in Docker and gives it a fixed https address, `https://whistle.<tailnet>.ts.net`, while
-this computer is on. It is free and needs no card. Steps in `deploy/README.md`; in short:
+the computer running it is on. It is free and needs no card. Steps in `deploy/README.md`; in short:
 
 ```
 docker compose -f deploy/docker-compose.yml up -d --build
@@ -117,8 +117,9 @@ The first plays the 60 fps clip at half speed (every frame real) and appends it 
 `reverse` holds the clip in memory (several GB at 4K).
 
 Visitors over the internet get 720p copies in `mediaweb/` instead (`app.js`, `VIDEO`): the 4K whale needs about
-17 Mbit/s, and Tailscale Funnel (`deploy/`) gave about 1-1.6 Mbit/s per connection (measured 2026-11-20). This computer
-and its local network keep the 4K files; `?video=4k` or `?video=web` in the address overrides the choice. Make the
+17 Mbit/s, and Tailscale Funnel (`deploy/`) gave about 1-1.6 Mbit/s per connection (measured 2026-11-20). Visitors on
+the server's own computer or local network keep the 4K files; `?video=4k` or `?video=web` in the address overrides the
+choice. Make the
 copies from the 4K clips, from `web/` (about 3.4 MB and 0.9 MB, under 0.9 Mbit/s):
 
 ```
@@ -149,6 +150,6 @@ Without them, an internet visitor's page falls back to the 4K files. Without the
 On Windows the browser decodes video on the same GPU thread that draws the page, so decoder work for a clip that is off
 screen costs frames on screen. `app.js` therefore prerolls every later clip while the opening frame holds still (at
 most 1.5 s, typically about 0.35 s), folds the depth shade into the planes' opacity instead of drawing a full-screen
-layer, and hides the plot canvas and the text veil whenever they are empty. On a 2560×1600, 240 Hz display driven by a
-Radeon 610M this removed every frame stall measured during a fast scroll from the top (95th-percentile frame time
-16.6–20.9 ms → 4.3 ms) and through the whole film.
+layer, and hides the plot canvas and the text veil whenever they are empty. Measured on a test laptop with integrated
+graphics (AMD Radeon 610M, 2560×1600 display at 240 Hz), these changes removed every frame stall during a fast scroll
+from the top and through the whole film: the 95th-percentile frame time fell from 16.6–20.9 ms to 4.3 ms.

@@ -3,6 +3,11 @@ cff-version: 1.2.0
 message: "If you use this software, please cite the original paper (preferred-citation) and this repository."
 title: "Cetacean whistle reproduction: VAE-GMM for false killer whale whistles, and WhistleCode"
 type: software
+abstract: >-
+  An independent, unofficial reproduction of Park et al. (IEEE Access, 2026), built as a student course project and
+  not affiliated with the paper's authors. It covers preprocessing of NOAA DCLDE 2022 false killer whale recordings
+  with a newly designed detector, VAE-GMM training and evaluation against the paper, a web demo, and WhistleCode, a
+  simulated biomimetic message channel built on the trained model.
 authors:
   - name: "anonymus-k-dot"
 license: Apache-2.0
@@ -14,7 +19,7 @@ keywords:
   - cetacean whistles
   - variational autoencoder
   - gaussian mixture model
-  - covert underwater communication
+  - biomimetic underwater communication
 preferred-citation:
   type: article
   title: "A Generative Model for Cetacean Whistles Using Variational Autoencoder and Mixture of Gaussians"

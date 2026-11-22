@@ -2,7 +2,7 @@
 
 The single place for what is planned, what is waiting, and what has been done in this project: the reproduction, WhistleCode, the detector paper, the web page and the repository itself. Every change to the project adds a line here ([how](#how-this-log-works)).
 
-**Updated:** 2026-11-22
+**Updated:** 2026-11-23
 
 ## At a glance
 
@@ -36,6 +36,9 @@ Only you can do these.
 - [x] **YOU-7** After committing the engineering systems: tag and push release v0.9.0 (`python tools/repo.py release-check 0.9.0` prints the commands), then check the first CI run on GitHub (Actions tab).
 - [ ] **YOU-8** First backup of the three things that exist only on this laptop: `whistlecode/outputs/paper/`, `docs/private/` and the WhistleCode result summaries. Commands in `project/STORAGE.md`; then monthly.
 - [ ] **YOU-10** Commit, then release v0.10.0 and rebuild the server so the page runs pillow 13: `python tools/repo.py release-check 0.10.0` prints the tag commands; then `docker compose -f deploy/docker-compose.yml up -d --build` and the deployment checklist in `project/RELEASES.md`.
+- [ ] **YOU-11** Attach both `gmm.npz` files (about 100 MB each) and the WhistleCode codebook to a GitHub release, so a clone can generate whistles and run WhistleCode without the 68 GB of encounter-191 audio. Files: `models/vaegmm/V1_L64_b1e-4_critic_E191/gmm_K3000/gmm.npz`, `models/vaegmm/V1_L64_b1e-4_critic_E191_epoch150/gmm_K3000/gmm.npz`, `whistlecode/outputs/codebook/codebook.npz` and `codebook.json`. Then the README's "What runs from a clone" table gets a download line with their SHA-256 (OPS-9).
+- [ ] **YOU-12** Check that the college's own course material in `docs/course/` may be published in a public repository (for example `Acoustic Projects Review-I Guidelines.pdf`). Your own notes and slides there are yours to publish.
+- [ ] **YOU-13** Optional: add your name (or your institution) to `README.md` "About this project" and `CITATION.cff`. A named author is the strongest single sign that a repository is legitimate; it stays a handle until you decide (D-023).
 - [x] **YOU-9** Delete the three local branches already merged into `main`: `git branch -d preprocessing-v2c-multi-encounter vaegmm-colab-training vaegmm-training`. Optionally the two merged remote ones: `git push origin --delete preprocessing-v2c-multi-encounter vaegmm-training`.
 
 ### Bugs
@@ -94,6 +97,9 @@ The plan, pass marks and rules are frozen in `whistlecode/PLAN.md` section 8.7.
 - [ ] **OPS-6** Confirm the reuse terms of the two NOAA files in `metadata/` (`DCLDE2020_DetectionData.xlsx`, `Dataset_DCLDE_Oahu.pdf`) and note them in `project/LICENSING.md`.
 - [x] **OPS-7** Upgrade the eight pinned packages with published advisories (OSV, 2026-11-22) to the versions that fix them: anyio 4.14.2, certifi 2026.10.18, cryptography 49.0.0, filelock 4.2.1, fsspec 2026.6.0, pillow 13.0.0, pytest 9.0.3, setuptools 84.1.0. Needs your OK to download them. Then `python tools/repo.py lock`, `check`, update `deploy/requirements-serve.txt` and redeploy. Pillow 13 is a major version: check the page's pictures. Done 2026-11-22 (your OK); the redeploy is YOU-10.
 
+- [x] **OPS-8** README audit and fixes: the facts checked out, but the presentation read as a product launch by an anonymous account (no author or "unofficial" line, "covert" in the tagline, highlights that picked the best numbers, many brand names, decoration badges). Fix every README except `mod_detector_5_24/`.
+- [ ] **OPS-9** After YOU-11: add the release download (files and SHA-256) to the README's "What runs from a clone" table and to `project/MODELS.md`.
+
 ## Decided not to do
 
 | What | Decided | Why |
@@ -106,6 +112,16 @@ The plan, pass marks and rules are frozen in `whistlecode/PLAN.md` section 8.7.
 ## Done
 
 Newest first. Older history is grouped by stage. Commit hashes are given where the work was committed; an entry's own commit is the one that adds it.
+
+### 2026-11-23
+
+- **Docs (OPS-8)**: README audit, then fixes in every README except `mod_detector_5_24/README.md`. Every number in the main README was checked against its record first (citation against the paper PDF, dataset sums, `paper_comparison.csv`, `RESULTS.md`, test counts 202 + 269, CI green); none was wrong.
+  - `README.md`: new title (the repository's name) and an "independent, unofficial; not affiliated with or endorsed by the authors" line; "covert" replaced by the paper's own term, biomimetic underwater communication; "Highlights" replaced by "At a glance", which states the gaps (PSNR, KL, Table 3 precision) beside the matches; only the CI and licence badges remain; checkpoints called epoch 101 and epoch 150 (the page's names Nyx and Delphi mentioned once); status as of 23 Nov, web demo "runs locally" instead of "deployed"; MSE footnote (spec §3.7); the 7,900 false-message tries broken down; DCLDE 2011 score shown beside Li et al. 2023's best, as context; full references for Li et al. 2020 (the paper's ref. [30]) and 2023 and for refs. [31]-[33]; new "What runs from a clone" table with download sizes (68 GB for encounter 191, about 270 GB for all eight); "Not peer reviewed" limitation; new "About this project" section (course project, one maintainer, written with Claude Code at the maintainer's direction); hard-coded test counts removed.
+  - `CITATION.cff`: abstract added (unofficial, course project); keyword "covert underwater communication" is now "biomimetic underwater communication".
+  - `project/README.md`: "Two people run it" replaced by one maintainer working with an AI assistant (Claude Code); title "How the project is run".
+  - `web/README.md`, `deploy/README.md`: written for "your computer" instead of "this laptop"; example LAN address instead of a real one; the frame-time note says what machine it was measured on.
+  - `cluster/node/README_CLUSTER.md`: framed as a course-lab exercise on the college's teaching cluster; the lab's IP addresses and the "sample" anecdotes removed. It stays in `cluster/node/` because `make_cluster_bundle.py` packs it into `whistle_app.zip`.
+  - Registers: `docs/INDEX.md` (three descriptions), `project/TRACEABILITY.md` (DCLDE 2011 score, Li et al. baseline, download sizes), `project/DECISIONS.md` (D-023), `CHANGELOG.md`. New owner items YOU-11 (release the GMMs and codebook), YOU-12 (course material rights), YOU-13 (optional name); follow-up OPS-9.
 
 ### 2026-11-22
 

@@ -76,6 +76,9 @@ Every number the README, the review slides or a paper reports, and the record th
 | Delphi GMM: 150 iterations; check | **`.../E191_epoch150/gmm_K3000/gmm.json`**, **`post_training/out/gmm_check_V1_L64_b1e-4_critic_E191_epoch150_K3000.json`** | EXP-011 |
 | Detector v2c: 14,209 weights; node precision 0.675, recall 0.715, F1 0.695 | **`models/detector/ridgenet-v2c/train_info.json`**, `preprocessed/dataset_info.json` | EXP-001 |
 | Learning curves, epochs 1-150 | **`.../E191/train_log.jsonl`**, **`.../E191_epoch150/train_log.jsonl`** | EXP-005, EXP-010 |
+| Detector 5-24 kHz on DCLDE 2011 (Li et al. 2023 test files): species-average P 53.6, R 84.9, F1 65.2 | `mod_detector_5_24/TODO.md` (summary); the score files are on Google Drive until DET-2 copies them into `mod_detector_5_24/results/` | the DCLDE 2011 benchmark (`mod_detector_5_24/dclde2011.py score`) |
+| Li et al. 2023 best system on the same files: P 88.8, R 85.8, F1 87.2 (5-50 kHz, context only) | the published paper (J. Acoust. Soc. Am., doi:10.1121/10.0020274), as recorded in `mod_detector_5_24/TODO.md` | not ours |
+| Raw audio: about 190 MB per file; 68 GB for encounter 191, about 23 GB each for 214 and 276, about 270 GB for all eight | `du -sb encounter_<id>_audio` on the project laptop, 2026-11-23 (all eight: 1,415 files × 190 MB) | measured |
 
 ### WhistleCode
 

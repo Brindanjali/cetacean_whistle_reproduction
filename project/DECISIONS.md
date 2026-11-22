@@ -35,6 +35,7 @@ Project-level choices: what was decided, why, what else was considered, and what
 | [D-020](#d-020) | 2026-11-21 | What from `docs/` goes into git | in force |
 | [D-021](#d-021) | 2026-11-21 | The cluster kit goes into git | in force |
 | [D-022](#d-022) | 2026-11-22 | The code is licensed under Apache 2.0 | in force |
+| [D-023](#d-023) | 2026-11-23 | How the public README presents the project: unofficial, a course project, written with an AI assistant | in force |
 
 ## Reproduction
 
@@ -131,6 +132,10 @@ Project-level choices: what was decided, why, what else was considered, and what
 ### D-022
 
 **The code and documents written here are licensed under the Apache License 2.0** (YOU-6). *Decided by:* the owner, 2026-11-22. *Why:* permissive like MIT, plus an explicit patent grant from every contributor, which suits a new communication scheme (WhistleCode). *Alternative:* MIT (shorter, no patent clause). *Consequence:* `LICENSE` holds the unmodified Apache text; `NOTICE` names the copyright holders and lists the third-party material the licence does not cover (the base paper, NOAA files, page footage and fonts). See `project/LICENSING.md`.
+
+### D-023
+
+**How the public README presents the project** (OPS-8). *Decided by:* the owner, 2026-11-23 ("fix all" after the README audit). *What:* the README says near the top that the work is an independent, unofficial reproduction, not affiliated with or endorsed by the paper's authors; an "About this project" section says it is a student course project with one maintainer and that much of the code and documentation was written with Claude Code at the maintainer's direction; the author stays the GitHub handle until the owner chooses to add a name (YOU-13); the headline states the gaps to the paper beside the matches; checkpoints are named by epoch, not by the page's names; only badges that update themselves (CI) or state a fact (licence) are shown. *Why:* the audit found every number correct, but an anonymous, unofficial-looking repository that leads with its best number reads as untrustworthy. *Alternative:* keep the launch-style README and rely on the detail further down. *Consequence:* the tagline uses the paper's own term, biomimetic underwater communication. This does not decide D-013: if the covert framing is agreed, WC-R7 should attribute the covert aim to the paper and put the measured covertness results (E7, E9) beside it.
 
 ## Inline decision tags
 

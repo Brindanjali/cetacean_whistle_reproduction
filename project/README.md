@@ -1,15 +1,15 @@
-# Engineering systems
+# How the project is run
 
-How this project is run: who does what, where each system lives, and what enforces it. Two people run it:
+How this project is run: who does what, where each record lives, and what checks it. The project has one maintainer, called the owner in these files, who works with an AI coding assistant:
 
-- **The owner** decides, approves, downloads, commits and pushes, and does anything only a person can do (volunteers, licences, the mentor).
-- **Claude (the engineer)** keeps every system below current in the same turn as the work, runs the checks, and lists what waits on the owner.
+- **The owner** decides, approves, downloads, commits and pushes, and does anything only a person can do (volunteers, licences, the course mentor).
+- **Claude Code**, the AI assistant, writes most of the code and documents at the owner's direction, keeps the records below current in the same turn as the work, runs the checks, and lists what waits on the owner.
 
-Everything is plain files in this repository, checked by one command (`python tools/repo.py check`), a git hook and CI. No outside service is needed.
+Each entry below is a plain file in this repository or a check, not an outside service. They are checked by one command (`python tools/repo.py check`), a git hook and CI.
 
-## The systems
+## The records and checks
 
-| # | System | Lives in | Enforced by |
+| # | What | Lives in | Checked by |
 |---|---|---|---|
 | 1 | Work log | [`../WORKLOG.md`](../WORKLOG.md) "Done" | pre-commit hook (refuses a commit without `WORKLOG.md`) |
 | 2 | Task tracker | [`../WORKLOG.md`](../WORKLOG.md) "To do" and "Bugs" | [WORKFLOW.md](WORKFLOW.md#task-tracker) rules |
