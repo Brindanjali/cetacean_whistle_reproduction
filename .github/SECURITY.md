@@ -42,7 +42,7 @@ WhistleCode is a research prototype. Its message encryption is **not** claimed t
 
 - The server image pins every package (`deploy/requirements-serve.txt`), and `constraints.txt` pins everything else.
 - CI's dependency audit (`pip-audit`) reports known vulnerabilities in both, on every push, as warnings on the run (`python tools/repo.py ci-report` lists them). It does not block; read it before every release and deployment.
-- **State on 2026-11-22:** eight pinned packages have published advisories: anyio, certifi, cryptography, filelock, fsspec, pillow, pytest and setuptools. Upgrading them is OPS-7. The page exposes little of this: its uploads are audio files, which pillow never decodes.
+- **State on 2026-11-22:** none of the 57 pins has a known advisory (OSV). The same morning eight had: anyio, certifi, cryptography, filelock, fsspec, pillow, pytest and setuptools; all were upgraded to fixed versions (OPS-7). The page exposed little of it: its uploads are audio files, which pillow never decodes. The running server picks up pillow 13 when its image is rebuilt (`project/RELEASES.md`, Deployment).
 - A vulnerable package is upgraded like any other change: rewrite the lock, run the checks, log it, and redeploy.
 
 ## Data and privacy

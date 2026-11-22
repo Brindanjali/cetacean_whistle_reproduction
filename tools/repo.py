@@ -439,6 +439,12 @@ def audit_report(path: Path) -> bool:
     except (OSError, ValueError, KeyError) as e:
         print(f"::error title=pip-audit::no readable report ({e})" if gha else f"  [FAIL] audit: no readable report ({e})")
         return False
+    merged: dict[tuple, dict] = {}                       # a package pinned in both files is listed twice; so is an advisory
+    for d in deps:
+        m = merged.setdefault((d["name"].lower(), d.get("version")), {**d, "vulns": []})
+        seen = {v["id"] for v in m["vulns"]}
+        m["vulns"] += [v for v in d.get("vulns") or [] if v["id"] not in seen and not seen.add(v["id"])]
+    deps = list(merged.values())
     vulnerable = [d for d in deps if d.get("vulns")]
     skipped = [d for d in deps if d.get("skip_reason")]
     try:

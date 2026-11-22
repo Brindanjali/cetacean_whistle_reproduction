@@ -4,7 +4,7 @@
 numpy==2.4.4
 scipy==1.17.1
 soundfile==0.13.1          # its Linux wheel carries libsndfile
-pillow==12.3.0             # spectrogram pictures
+pillow==13.0.0             # spectrogram pictures (13.0.0: fixes the advisories against 12.3.0, OPS-7)
 matplotlib==3.10.8         # Try it's figures (src/whistlepipe/infer.py)
 fastapi==0.141.1
 uvicorn==0.54.0

@@ -8,7 +8,7 @@
 
 [project]
 name = "cetacean-whistle-reproduction"
-version = "0.9.0"                      # the release version; bump it only through project/RELEASES.md
+version = "0.10.0"                     # the release version; bump it only through project/RELEASES.md
 description = "Reproduction of VAE-GMM for cetacean whistles, and WhistleCode: text messages hidden in synthetic whistles"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -48,7 +48,9 @@ ignore = [
 [tool.pytest.ini_options]
 pythonpath = ["src"]
 testpaths = ["tests"]
-addopts = "-q --strict-markers"
+# -p no:asyncio: the project has no asyncio tests, and an old pytest-asyncio from another project in the shared Python
+# breaks collection under pytest 9 (2026-11-22). Blocking a plugin that is not installed (as in CI) is harmless.
+addopts = "-q --strict-markers -p no:asyncio"
 markers = [
     "gpu: needs a CUDA device (skipped without one)",
     "realdata: reads one real raw file, read-only (skipped without the raw audio)",

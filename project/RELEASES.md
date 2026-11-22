@@ -19,6 +19,7 @@ One version for the whole repository, in [`pyproject.toml`](../pyproject.toml) (
 | Version | When | What |
 |---|---|---|
 | 0.9.0 | 2026-11-21 | First versioned release: the reproduction, WhistleCode campaign v1 and R0-R2, the page, and the engineering systems |
+| 0.10.0 | 2026-11-22 | Apache 2.0 licence; CI fixes and `ci-report`; eight vulnerable packages upgraded (also in the server image) |
 | 1.0.0 | 2026-11-29 | Code freeze for the final review (milestone M8) |
 
 ## Release procedure

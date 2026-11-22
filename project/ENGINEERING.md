@@ -43,6 +43,7 @@ On the project laptop every test runs. In CI (and any fresh clone) 64 tests skip
 - **New behaviour gets a test.** A bug fix gets a test that fails before the fix.
 - **Known numbers are pinned.** Results the paper states exactly are tests, so a change that breaks them fails: for example, the decoder's 557,318,144 Table 6 FLOPs (`tests/test_vaegmm_model.py`), a known WhistleCode frame (`test_wc_framing.py::test_known_frame`) and the whistle counts per message that PLAN.md states (`test_wc_format2.py`).
 - **Tests never touch real data in place.** Raw folders are read-only; tests write only to pytest's temporary folders.
+- **Only this project's plugins run.** pytest is told not to load `pytest-asyncio` (`-p no:asyncio` in `pyproject.toml`), which another project installed in the shared Python and which breaks under pytest 9.
 - **A skip is not a pass.** CI's skip list (`-rs`) is read when a test is added, so a test that always skips in CI is noticed.
 
 ## CI
@@ -67,7 +68,7 @@ A red CI run on `main` is fixed before any other work. The README badge shows th
 | [`requirements.txt`](../requirements.txt) | reproduction packages, lower bounds | everyone |
 | [`whistlecode/requirements.txt`](../whistlecode/requirements.txt) | WhistleCode's extra packages (`reedsolo`, exact; `cryptography` for `serve --lan`) | everyone |
 | [`deploy/requirements-serve.txt`](../deploy/requirements-serve.txt) | the web server image, exact pins | `deploy/Dockerfile` |
-| [`constraints.txt`](../constraints.txt) | **the lock file:** exact versions of all 56 packages in use, including the ones they pull in | CI; a new machine |
+| [`constraints.txt`](../constraints.txt) | **the lock file:** exact versions of all 57 packages in use, including the ones they pull in | CI; a new machine |
 
 **Set up a machine** (CPU; for a GPU, install `torch` and `torchvision` from the PyTorch index for your CUDA version first):
 

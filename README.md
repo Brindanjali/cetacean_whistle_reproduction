@@ -9,7 +9,7 @@ From raw hydrophone recordings to a generative model of false killer whale whist
 [![Python](https://img.shields.io/badge/python-3.11%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![PyTorch](https://img.shields.io/badge/PyTorch-2.11%2B-EE4C2C?logo=pytorch&logoColor=white)](https://pytorch.org/)
 [![CI](https://github.com/anonymus-k-dot/cetacean_whistle_reproduction/actions/workflows/ci.yml/badge.svg)](https://github.com/anonymus-k-dot/cetacean_whistle_reproduction/actions/workflows/ci.yml)
-[![Release](https://img.shields.io/badge/release-0.9.0-555555)](CHANGELOG.md)
+[![Release](https://img.shields.io/badge/release-0.10.0-555555)](CHANGELOG.md)
 [![Licence](https://img.shields.io/badge/licence-Apache%202.0-blue)](LICENSE)
 [![Paper](https://img.shields.io/badge/IEEE%20Access-10.1109%2FACCESS.2026.3664765-00629B)](https://doi.org/10.1109/ACCESS.2026.3664765)
 [![Data](https://img.shields.io/badge/data-NOAA%20DCLDE%202022-1F4E79)](#dataset-record)

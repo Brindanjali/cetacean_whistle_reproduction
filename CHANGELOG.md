@@ -4,6 +4,12 @@ Notable changes to this project, release by release. The format follows [Keep a 
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-11-22
+
+### Security
+
+- Eight packages with published advisories upgraded to versions that fix them: anyio 4.16.0, certifi 2026.11.20, cryptography 50.0.2, filelock 4.2.12, fsspec 2026.9.0, pillow 13.0.0 (also in the server image), pytest 9.2.0, setuptools 84.2.1. All 57 pins now have no known advisories.
+
 ### Added
 
 - **Licence**: Apache License 2.0 (`LICENSE`), with a `NOTICE` listing the third-party material it does not cover.
@@ -12,6 +18,8 @@ Notable changes to this project, release by release. The format follows [Keep a 
 ### Changed
 
 - CI posts failing tests and lint findings as annotations; the dependency audit reports vulnerable packages as warnings instead of failing; `actions/checkout` v5 and `actions/setup-python` v6 (the old ones ran on a deprecated Node.js).
+- pytest no longer loads the `pytest-asyncio` plugin (`-p no:asyncio`): the project has no asyncio tests, and an old copy installed for another project broke collection under pytest 9.
+- `audit-report` merges a package listed in both pinned files, and repeated advisory IDs.
 
 ### Fixed
 
@@ -43,5 +51,6 @@ The first versioned release. It covers everything up to this date.
 
 - Unused imports and unused loop variables found by the new lint settings.
 
-[Unreleased]: https://github.com/anonymus-k-dot/cetacean_whistle_reproduction/compare/v0.9.0...HEAD
+[Unreleased]: https://github.com/anonymus-k-dot/cetacean_whistle_reproduction/compare/v0.10.0...HEAD
+[0.10.0]: https://github.com/anonymus-k-dot/cetacean_whistle_reproduction/compare/v0.9.0...v0.10.0
 [0.9.0]: https://github.com/anonymus-k-dot/cetacean_whistle_reproduction/releases/tag/v0.9.0
