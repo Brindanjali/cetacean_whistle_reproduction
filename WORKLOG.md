@@ -11,8 +11,8 @@ The single place for what is planned, what is waiting, and what has been done in
 | Whistle model (VAE-GMM) | Complete. Dataset built; model V1 trained to epoch 150; Gaussian mixtures for epochs 101 and 150; paper evaluation done on epoch 101 | Nothing required (epoch-150 evaluation is optional: REP-1) |
 | Message system (WhistleCode) | v1 built and tested (campaign v1). Second round: R0, R1 and R2 (drift correction, adopted) done | **WC-R3** shape covertness |
 | Detector paper | A draft exists (`docs/private/Mentor_Review_1.pdf`, never in git); its to-do file is older than the draft | DET-1, DET-2 |
-| Web page and deployment | Film, Try it (models Nyx and Delphi), Encode, Decode and Record; self-hosted with Docker and Tailscale; `/healthz` and a Docker healthcheck | WEB-1 static examples are out of date |
-| Engineering | 25 systems in place ([`project/README.md`](project/README.md)): tracker, Definition of Done, review, lint, tests, CI, lock file, releases, monitoring, registers, security. v0.9.0 tagged; code licensed under Apache 2.0; CI green; no pin has a known advisory. Release 0.10.0 prepared | YOU-10: commit, tag v0.10.0, rebuild the server image |
+| Web page and deployment | Film, Try it (models Nyx and Delphi), Encode, Decode and Record; self-hosted with Docker and Tailscale; `/healthz` and a Docker healthcheck. The 2026-11-23 audit found that the public page can be taken down by any visitor (BUG-2 to BUG-4) | **BUG-2 to BUG-5** before the page stays open to the internet; WEB-1 static examples are out of date |
+| Engineering | 25 systems in place ([`project/README.md`](project/README.md)): tracker, Definition of Done, review, lint, tests, CI, lock file, releases, monitoring, registers, security. v0.9.0 tagged; code licensed under Apache 2.0; CI green; no pin has a known advisory. Release 0.10.0 prepared. Whole-project audit 2026-11-23 ([`project/AUDIT_2026-11-23.md`](project/AUDIT_2026-11-23.md)): records and numbers sound; 11 bugs recorded | YOU-10: commit, tag v0.10.0 (on `9697663`), rebuild the server image |
 | Course | Week 7 of 8 | Final review at the end of Week 8 |
 
 ## Key dates
@@ -35,7 +35,7 @@ Only you can do these.
 - [x] **YOU-6** Choose a licence for the code (the README says none is chosen). Recommended: MIT; reasons and steps in `project/LICENSING.md`. Decided: Apache 2.0 (D-022).
 - [x] **YOU-7** After committing the engineering systems: tag and push release v0.9.0 (`python tools/repo.py release-check 0.9.0` prints the commands), then check the first CI run on GitHub (Actions tab).
 - [ ] **YOU-8** First backup of the three things that exist only on this laptop: `whistlecode/outputs/paper/`, `docs/private/` and the WhistleCode result summaries. Commands in `project/STORAGE.md`; then monthly.
-- [ ] **YOU-10** Commit, then release v0.10.0 and rebuild the server so the page runs pillow 13: `python tools/repo.py release-check 0.10.0` prints the tag commands; then `docker compose -f deploy/docker-compose.yml up -d --build` and the deployment checklist in `project/RELEASES.md`.
+- [ ] **YOU-10** Commit, then release v0.10.0 and rebuild the server so the page runs pillow 13: `python tools/repo.py release-check 0.10.0` prints the tag commands; then `docker compose -f deploy/docker-compose.yml up -d --build` and the deployment checklist in `project/RELEASES.md`. Note from the 2026-11-23 audit: the printed command tags HEAD, which now also holds the changes listed under [Unreleased]; tag the release commit instead: `git tag -a v0.10.0 9697663 -m "v0.10.0"`.
 - [ ] **YOU-11** Attach both `gmm.npz` files (about 100 MB each) and the WhistleCode codebook to a GitHub release, so a clone can generate whistles and run WhistleCode without the 68 GB of encounter-191 audio. Files: `models/vaegmm/V1_L64_b1e-4_critic_E191/gmm_K3000/gmm.npz`, `models/vaegmm/V1_L64_b1e-4_critic_E191_epoch150/gmm_K3000/gmm.npz`, `whistlecode/outputs/codebook/codebook.npz` and `codebook.json`. Then the README's "What runs from a clone" table gets a download line with their SHA-256 (OPS-9).
 - [ ] **YOU-12** Check that the college's own course material in `docs/course/` may be published in a public repository (for example `Acoustic Projects Review-I Guidelines.pdf`). Your own notes and slides there are yours to publish.
 - [ ] **YOU-13** Optional: add your name (or your institution) to `README.md` "About this project" and `CITATION.cff`. A named author is the strongest single sign that a repository is legitimate; it stays a handle until you decide (D-023).
@@ -47,6 +47,20 @@ Only you can do these.
 Format and severity levels: `project/WORKFLOW.md`, "Task tracker".
 
 - [x] **BUG-1** (high, CI) The WhistleCode suite fails on GitHub (first run, 2026-11-21, run 44936177193): `cryptography`, which `serve --lan` and its test import, is in no requirements file, so CI never installs it. Fix made 2026-11-22 (added to `whistlecode/requirements.txt` and `constraints.txt`); tick when the next run is green. Fixed: run 44937841060 (`81162fe`) is green.
+
+Found by the audit of 2026-11-23; details, places and fixes in `project/AUDIT_2026-11-23.md`. BUG-2 to BUG-5 matter because the page is open to the internet (`"AllowFunnel": true`); until they are fixed, `"AllowFunnel": false` in `deploy/tailscale/serve.json` keeps it to your own devices.
+
+- [ ] **BUG-2** (high, web) A small upload decodes to gigabytes: Decode and Try it read every channel of the whole file as float32, with no limit on sample rate or channels. A silent 8-channel FLAC at 655 kHz, 300 s long, is about 1.7 MB and decodes to 6.3 GB (measured ratio about 3,750 to 1). A few uploads exhaust the memory (`whistlecode/wcode/web.py` `read_audio`, `src/whistlepipe/audio.py` `read_upload`).
+- [ ] **BUG-3** (high, web) `POST /api/analyze-example` does not clamp `n_samples` (`/api/analyze` does): `{"example": ..., "n_samples": 100000}` makes the worker decode and save 100,000 images per whistle; a negative value crashes the job (`src/whistlepipe/server.py`, `infer.py` `Engine.analyze`).
+- [ ] **BUG-4** (high, web) No limit on waiting jobs or stored uploads: each request adds a queued job that is never pruned, and each upload (up to 200 MB) is written to disk first. Posting in a loop fills the disk and the queue (`wcode/web.py` and `server.py`, class `Jobs`).
+- [ ] **BUG-5** (medium, web) `POST /api/reload-model` is open to anyone: each call re-reads about 200 MB of model files and holds a server thread while the running job finishes; repeated calls stall the page (`src/whistlepipe/server.py`).
+- [ ] **BUG-6** (medium, web) Decoded message text is written to the decode job's `result.json` (kept for the newest 60 jobs, readable by anyone with the job ID), although `web.py` and `.github/SECURITY.md` say message text is never written to disk. Keys are not written.
+- [ ] **BUG-7** (medium, web) Tracebacks reach the browser, although `.github/SECURITY.md` says they do not: a failed job's `error.txt` is served by `/api/wc/files/<id>/error.txt`, `/api/results/<id>/error.txt` and the results zip, and the error message names it.
+- [ ] **BUG-8** (medium, monitoring) `python tools/repo.py health` crashes with a JSON error when the server answers with a non-JSON error page (as a proxy does when the app is down); confirmed against a plain 404 page. With `--every`, monitoring stops at the first outage.
+- [ ] **BUG-9** (medium, deploy) The server image pins only its direct packages: `deploy/Dockerfile` installs `requirements-serve.txt` without `constraints.txt`, so starlette, anyio, h11 and the rest float to the newest at build time, and CI audits the pins rather than the image. `.github/SECURITY.md` says the image pins every package.
+- [ ] **BUG-10** (low, web) The page polls a job for ever when the server no longer knows it (after a restart the job route answers 404): "Working…" never ends (`web/lab.js`, `web/message.js`).
+- [ ] **BUG-11** (low, tools) `python tools/repo.py ci-report` crashes with a traceback on an HTTP error from GitHub (a 504 happened on 2026-11-23).
+- [ ] **BUG-12** (low, web) `web/serve.py` (local only) fails with an unhandled error on the header `Range: bytes=-`.
 
 ### WhistleCode, second round
 
@@ -60,6 +74,7 @@ The plan, pass marks and rules are frozen in `whistlecode/PLAN.md` section 8.7.
   - re-check the novelty statement.
 - [x] **WC-R2** Doppler and clock-drift correction in the receiver. Develop on encounter 214 only.
 - [ ] **WC-R3** Shape covertness: find what gives the shapes away, try the epoch-150 voice (Delphi), tau and codebook choice. Shape AUC is 0.944 against a mark of 0.75. **Next.**
+- [ ] **WC-R3a** A lead from the 2026-11-23 audit: 2,796 of the 3,000 mixture components have fewer than 65 members (the latent size is 64), and the codebook accepts components with 32, so each symbol's samples vary in at most 31 directions, narrowed again by tau 0.5. Compare the spread of real whistles assigned to each codebook component with the spread of its samples (`project/AUDIT_2026-11-23.md`).
 - [ ] **WC-R4** Baselines and listeners: matched-filter modem, listening test (needs YOU-5), whistle-against-noise classifier, likelihood under the species model, ECSM3 if its definition can be found.
 - [ ] **WC-R5** In-air test between two laptops (20 messages at 2 m; also 1 m and 4 m).
 - [ ] **WC-R6** Freeze, then run campaign v2 once, overnight (seed 20261205; encounter 276; encounter 308 if YOU-4).
@@ -69,6 +84,10 @@ The plan, pass marks and rules are frozen in `whistlecode/PLAN.md` section 8.7.
   - page story Listen → Learn → Speak → Hide → Hear;
   - correct `TEST_PROTOCOL.md`'s outdated "epoch 150 was not completed";
   - reconcile the data-whistle share (one in four vs a third).
+- [ ] **WC-R7a** Claim wording from the 2026-11-23 audit (`project/AUDIT_2026-11-23.md`), each as a dated revision, not an edited row:
+  - C4 "never accepts a false message": state what was measured (0 in 7,900; 95 % bounds 0.08 % and 0.6 %) and the design's worst case, up to 384 CRC-16 checks per decode, about 0.6 % per decode of noise;
+  - `THREAT_MODEL.md` "What may be said today": the timing passes only on its own, not inside sea noise (C6 failed);
+  - README "a fresh sample ... no shape repeats exactly": the samples are tempered (tau 0.5), and a whistle that fails its self-check falls back to its type's mean shape.
 - [ ] **WC-R8** Write-up and review slides.
 
 ### Detector paper
@@ -87,6 +106,7 @@ The plan, pass marks and rules are frozen in `whistlecode/PLAN.md` section 8.7.
 - [ ] **WEB-1** Re-run `python whistle.py export-web`. The static examples in `web/data/` date from 24 Oct, before any model existed.
 - [ ] **WEB-2** Replace the film's hand-made research illustration (Listen → Learn → Imagine) with real model output. This is the page's Phase 4; it overlaps WC-R7.
 - [x] **WEB-3** Decide what to do with the untracked `cluster/` kit (running the demo on the college cluster): commit it, or ignore it. Decided: commit it (D-021).
+- [ ] **WEB-4** From the 2026-11-23 audit: hide Try it's `/api/docs` and `/api/openapi.json` on the public page, and list every route (with `/api/reload-model`) in `docs/ARCHITECTURE.md` and the exposure table of `.github/SECURITY.md`; point model 1 at `final.pt` instead of `last.pt` (byte-identical today) in `configs/inference.toml`, so a resume in that folder cannot change Nyx.
 
 ### Repository housekeeping
 
@@ -100,6 +120,10 @@ The plan, pass marks and rules are frozen in `whistlecode/PLAN.md` section 8.7.
 
 - [x] **OPS-8** README audit and fixes: the facts checked out, but the presentation read as a product launch by an anonymous account (no author or "unofficial" line, "covert" in the tagline, highlights that picked the best numbers, many brand names, decoration badges). Fix every README except `mod_detector_5_24/`.
 - [ ] **OPS-9** After YOU-11: add the release download (files and SHA-256) to the README's "What runs from a clone" table and to `project/MODELS.md`.
+- [ ] **OPS-10** Say in `project/MODELS.md` and `project/TRACEABILITY.md` which records were made from uncommitted code (`git_uncommitted_code_changes: true`): the epoch-101 mixture every WhistleCode result uses, both `component_features.json`, Table 6 and its warm supplement, the reg10x fit, 14 of 19 gate records. Optionally refit the epoch-101 mixture from a clean commit into a new folder and compare its SHA-256 with `d8087ed2…` (refits are bit-identical).
+- [ ] **OPS-11** Tests for the untested modules: `whistlecode/wcode/baseline.py` (behind claim C9), `src/whistlepipe/webexport.py`, `ratecheck.py`, `vaegmm/gates.py`.
+- [ ] **OPS-12** Small fixes from the audit: `CITATION.cff` keyword "covert communication"; `CHANGELOG.md` compare links (`[0.10.0]` before its tag exists, `[0.9.0]` missing); the byte-order mark at the start of `whistlecode/wcode/receiver.py`; the local Windows path in `docs/course/Notes-W-4.md`; format v2 values unchecked by `wcode/config.py validate()`; `release-check` cannot tag a given commit; ruff pinned at 0.3.5 (March 2024).
+- [ ] **OPS-13** WhistleCode's sender and receiver must draw the same slot positions and pitches from NumPy's `Generator` (`wcode/keys.py stream`, `layout.py`), whose output NumPy does not promise to keep across versions, and nothing checks the NumPy version. Record it with the codebook and refuse a mismatch, or derive the draws from SHA-256 as the scrambler does (a format change: after campaign v2).
 
 ## Decided not to do
 
@@ -116,6 +140,10 @@ Newest first. Older history is grouped by stage. Commit hashes are given where t
 
 ### 2026-11-23
 
+- **Repository (audit)**: review of the whole project at `d00bde5`, with no code changed. Report: new `project/AUDIT_2026-11-23.md`.
+  - **Checked:** `tools/repo.py check` (lint, configs, secrets, 311 links, 28 checksums, 202 + 269 tests) and CI run 45214754247, all green; the web servers, inference, the message format and receiver, tools, CI, hook and Docker files read in full; the rest searched for unsafe patterns; Tables 1, 3, 6, both mixture fits, dataset sums and the campaign statistics checked against their records (all match); every commit and file hash quoted in the documents verified.
+  - **Found:** BUG-2 to BUG-12 (three high: the public page can be made to run out of memory, compute or disk; two statements in `.github/SECURITY.md` are not true of the code); claim wording for WC-R7a; a lead for WC-R3 (WC-R3a); WEB-4; OPS-10 to OPS-13; a tagging note on YOU-10.
+  - Registers: this file (bugs, items, "At a glance"), `docs/INDEX.md` (the report).
 - **Docs (WC-R7, first part; D-024)**: the repository no longer presents itself as a reproduction of Park et al. The project is the message system, under the temporary name Falsetto.
   - `README.md`: leads with the message system (what it does, delivery and covertness results beside their pass marks, what is new with the incomplete-search caveat, limitations); the VAE-GMM is "the whistle model", checked against the paper. No numbers changed.
   - `CITATION.cff` (title, abstract; Park et al. moved from preferred-citation to references), `pyproject.toml` (name, description), `NOTICE`, `web/index.html` (title, description, footer), `web/CREDITS.md`, `docs/ARCHITECTURE.md`, `docs/TECHNICAL_REFERENCE.md`, `docs/INDEX.md`, CI step names (`.github/workflows/ci.yml`, `tools/repo.py`), `whistlecode/PLAN.md` (one term).

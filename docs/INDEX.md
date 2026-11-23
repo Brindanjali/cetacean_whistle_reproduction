@@ -67,6 +67,7 @@ Every document in the repository: what it is the authority on, and its state. Wh
 | [`project/STORAGE.md`](../project/STORAGE.md) | where files live, backups, restore |
 | [`project/LICENSING.md`](../project/LICENSING.md) | licences of the project and of everything third-party |
 | [`project/INCIDENTS.md`](../project/INCIDENTS.md) | failures and what now prevents them |
+| [`project/AUDIT_2026-11-23.md`](../project/AUDIT_2026-11-23.md) | the whole-project audit of 2026-11-23: findings, places and fixes (tracked as BUG-2 to BUG-12 and the items it names in `WORKLOG.md`) |
 | [`.github/SECURITY.md`](../.github/SECURITY.md) | secrets, the public page's exposure, reporting a problem |
 
 ## Course (`docs/course/`)
