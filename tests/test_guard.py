@@ -1,0 +1,103 @@
+"""Limits for a server open to the internet (src/whistlepipe/guard.py; project/AUDIT_2026-11-23.md, BUG-2 and BUG-4)."""
+import asyncio
+
+import numpy as np
+import pytest
+import soundfile as sf
+from fastapi import FastAPI, Request
+from fastapi.testclient import TestClient
+
+from whistlepipe.guard import RequestLimit, TooLong, read_channel
+
+
+# ---------------------------------------------------------------------------------------------- reading one channel
+def test_read_channel_keeps_one_channel_in_blocks(tmp_path):
+    x = np.stack([np.full(10_000, 0.1), np.full(10_000, 0.2), np.linspace(-0.5, 0.5, 10_000)], axis=1).astype(np.float32)
+    sf.write(str(tmp_path / "three.wav"), x, 48000, subtype="FLOAT")
+    y = read_channel(tmp_path / "three.wav", 2, 10_000, block_samples=3 * 777)       # many small blocks
+    assert y.dtype == np.float32 and y.shape == (10_000,) and np.array_equal(y, x[:, 2])
+    with pytest.raises(TooLong):                          # never reads past the limit, whatever the header says
+        read_channel(tmp_path / "three.wav", 0, 9_999)
+    with pytest.raises(ValueError, match="channel 3"):
+        read_channel(tmp_path / "three.wav", 3, 10_000)
+
+
+# ---------------------------------------------------------------------------------------------- request sizes
+def _app(seen: list):
+    app = FastAPI()
+
+    @app.post("/api/small")
+    async def small(request: Request):
+        body = await request.body()
+        seen.append(len(body))
+        return {"n": len(body)}
+
+    @app.post("/api/upload")
+    async def upload(request: Request):
+        body = await request.body()
+        seen.append(len(body))
+        return {"n": len(body)}
+
+    @app.post("/other")
+    async def other(request: Request):
+        return {"n": len(await request.body())}
+
+    app.add_middleware(RequestLimit, uploads={"/api/upload": 5000}, max_body=100, max_uploads=1, prefix="/api/")
+    return app
+
+
+def test_bodies_over_their_route_limit_are_refused_before_the_route_runs():
+    seen = []
+    c = TestClient(_app(seen))
+    assert c.post("/api/small", content=b"x" * 100).json() == {"n": 100}
+    r = c.post("/api/small", content=b"x" * 101)
+    assert r.status_code == 413 and "larger than" in r.json()["detail"]
+    assert c.post("/api/upload", content=b"x" * 5000).json() == {"n": 5000}
+    assert c.post("/api/upload", content=b"x" * 5001).status_code == 413
+    assert c.get("/api/small").status_code == 405                    # GET passes through untouched
+    assert c.post("/other", content=b"x" * 1000).json() == {"n": 1000}  # outside the prefix: not limited
+    assert seen == [100, 5000]                                       # the refused bodies never reached a route
+
+
+def _call(app, path: str, chunks: list[bytes], headers=()) -> tuple[int, bytes]:
+    """One request straight through the ASGI app, its body in chunks (as a client that sends no Content-Length)."""
+    msgs = [{"type": "http.request", "body": b, "more_body": i < len(chunks) - 1} for i, b in enumerate(chunks)]
+    out = []
+
+    async def receive():
+        return msgs.pop(0) if msgs else {"type": "http.disconnect"}
+
+    async def send(m):
+        out.append(m)
+
+    scope = {"type": "http", "asgi": {"version": "3.0"}, "http_version": "1.1", "method": "POST", "scheme": "http",
+             "path": path, "raw_path": path.encode(), "root_path": "", "query_string": b"", "headers": list(headers),
+             "client": ("1.2.3.4", 5), "server": ("test", 80)}
+    asyncio.run(app(scope, receive, send))
+    start = next(m for m in out if m["type"] == "http.response.start")
+    return start["status"], b"".join(m.get("body", b"") for m in out if m["type"] == "http.response.body")
+
+
+def test_a_body_without_its_length_is_cut_off_once_it_passes_the_limit():
+    seen = []
+    app = _app(seen)
+    status, body = _call(app, "/api/small", [b"x" * 40] * 2)
+    assert status == 200 and seen == [80]
+    status, body = _call(app, "/api/small", [b"x" * 40] * 50)        # 2 kB arrive, the limit is 100 bytes
+    assert status == 413 and b"larger than" in body and seen == [80]
+
+
+def test_uploads_at_once_are_limited():
+    seen = []
+    app = _app(seen)
+    TestClient(app).post("/api/upload", content=b"x")                # builds the middleware stack
+    guard = app.middleware_stack
+    while not isinstance(guard, RequestLimit):
+        guard = guard.app
+    guard.arriving = 1                                               # one upload still arriving
+    status, body = _call(app, "/api/upload", [b"x" * 10])
+    assert status == 503 and b"other uploads" in body
+    status, _ = _call(app, "/api/small", [b"x" * 10])                # ordinary requests are not held up
+    assert status == 200
+    guard.arriving = 0
+    assert _call(app, "/api/upload", [b"x" * 10])[0] == 200 and guard.arriving == 0

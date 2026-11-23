@@ -418,7 +418,8 @@ replaced; `id` is stable (the page and the API use it), `name` is what the page 
 name it, and an unknown id gives HTTP 400. Today: `model1` "Nyx" (epoch 101) and `model2` "Delphi" (epoch 150).
 
 The trained files are read from where the training commands write them; nothing else needs to change after training
-(`serve` also offers `POST /api/reload-model`):
+(`serve` also offers `POST /api/reload-model` when `[server] allow_reload = true`; it is off by default, so restart the
+server instead):
 
 | File (per model's run folder) | Written by | Enables |
 |---|---|---|

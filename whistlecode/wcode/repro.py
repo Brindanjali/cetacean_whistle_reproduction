@@ -17,5 +17,6 @@ from whistlepipe.audio import AudioSignal  # noqa: E402,F401
 from whistlepipe.config import load_pipeline_config  # noqa: E402,F401
 from whistlepipe.detector import RidgeDetector  # noqa: E402,F401
 from whistlepipe.detector.ridgenet import resolve_device  # noqa: E402,F401
+from whistlepipe.guard import RequestLimit, TooLong, read_channel  # noqa: E402,F401
 from whistlepipe.representation import s7_vectors  # noqa: E402,F401
 from whistlepipe.tracking import run_s6  # noqa: E402,F401

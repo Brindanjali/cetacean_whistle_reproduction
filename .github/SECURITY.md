@@ -31,11 +31,13 @@ WhistleCode is a research prototype. Its message encryption is **not** claimed t
 | Exposure | Control |
 |---|---|
 | Anyone with the address can use the page | `"AllowFunnel": false` in `deploy/tailscale/serve.json` limits it to the owner's own devices |
-| Uploads (Try it, Decode) | size limit (200 MB), allowed formats only, one job at a time, files written only to the job's own folder |
+| Uploads (Try it, Decode) | size limit (200 MB), enforced while the upload arrives, before anything is stored; at most two uploads arriving at once; allowed formats only; sample rate and channel count capped, and only one channel read, never past the length limit (so a small compressed file cannot decode to gigabytes); files written only to the job's own folder and deleted when the job ends |
+| Requests and jobs | any other request body is refused above 64 kB; one job runs at a time and at most six wait, beyond which the server answers "busy" (503); Try it's new whistles per whistle are capped at twice the default |
+| Model reloading | `POST /api/reload-model` is off (`configs/inference.toml` `[server] allow_reload = false`); restart the server instead |
 | Job files | job IDs and file names must match fixed patterns; a decode job can read only its own input; input files are never served back |
-| Text and keys | length limits; keys and message text are never written to disk |
+| Text and keys | length limits; keys are never written to disk. Not yet true for decoded text, which a decode job's `result.json` holds (BUG-6) |
 | Server process | runs as a non-root user; the repository is mounted read-only, except `whistlecode/outputs/` and `runs/` |
-| Errors | input errors return a short message; no stack trace reaches the browser |
+| Errors | input errors return a short message. Not yet true: a failed job's `error.txt` traceback can be downloaded (BUG-7) |
 | No login | intended for a demonstration; share the address only with the people who need it |
 
 ## Dependencies

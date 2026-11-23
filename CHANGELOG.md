@@ -9,6 +9,15 @@ Notable changes to this project, release by release. The format follows [Keep a 
 - **The project is presented as what it now is** (D-024): a biomimetic messaging system that hides short text messages in synthetic false killer whale whistles, under the temporary name Falsetto, and no longer as a reproduction of Park et al. The README leads with the message system and its results beside their pass marks; the VAE-GMM generator is "the whistle model", which follows Park et al.'s method and is checked against their paper. `CITATION.cff` cites the project and lists the paper under references. `pyproject.toml`, `NOTICE`, the page's title and footer and the CI step names follow. No numbers changed.
 - **README files rewritten for credibility** (no numbers changed): the main README now says the work is an independent, unofficial course project, written with an AI assistant; states the gaps to the paper beside the matches; uses the paper's term "biomimetic" instead of "covert"; names checkpoints by epoch; shows the DCLDE 2011 score beside Li et al.'s; gives full references; and has a "What runs from a clone" table with download sizes. `CITATION.cff` gains an abstract. `project/README.md`, `web/README.md`, `deploy/README.md` and `cluster/node/README_CLUSTER.md` are written for an outside reader.
 
+### Security
+
+Fixes for the public page, from the whole-project audit (`project/AUDIT_2026-11-23.md`, BUG-2 to BUG-5):
+
+- **Uploads can no longer decode to gigabytes.** Try it and Decode read only the channel they use, in blocks and never past the length limit, and refuse sample rates above 768 kHz (Try it) or 192 kHz (Decode) and more than 8 channels. A 1.7 MB FLAC used to decode to 6.3 GB.
+- **New whistles per whistle are capped** at twice the default on `/api/analyze-example` too, as they already were on `/api/analyze`; negative values count as none.
+- **Request sizes, uploads and the queue are limited.** A body over its route's limit (the upload size for `/api/analyze` and `/api/wc/decode`, 64 kB for every other request) is refused with 413 while it arrives, before anything is stored; at most two uploads may arrive at once and six jobs wait, beyond which the server answers "busy" (503); an upload is deleted when its job ends. New module `src/whistlepipe/guard.py`.
+- **`POST /api/reload-model` is off** unless `[server] allow_reload = true` in `configs/inference.toml` (403 otherwise): anyone who could open the page could make the server re-read every model file.
+
 ## [0.10.0] - 2026-11-22
 
 ### Security

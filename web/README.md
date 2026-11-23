@@ -76,7 +76,8 @@ Nothing in `web/` changes after training. The server reads the files from where 
 says so while it is a mid-training checkpoint) and
 `.../gmm_K3000/gmm.npz` (`fit-gmm --experiment V1`), optionally `.../gmm_K3000/component_features.npy`
 (`vae-eval components`) for the Table 3 conditions. `python whistle.py model-status` checks them; a running server
-picks them up on restart or `POST /api/reload-model`. Re-run `python whistle.py export-web` afterwards so the
+picks them up on restart (or `POST /api/reload-model`, once `[server] allow_reload = true` in `configs/inference.toml`;
+it is off because anyone who can open the page could call it). Re-run `python whistle.py export-web` afterwards so the
 pre-rendered examples include the model's output too.
 
 ### Choosing the model

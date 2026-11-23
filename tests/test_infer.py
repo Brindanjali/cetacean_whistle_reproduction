@@ -112,11 +112,15 @@ def test_read_upload_any_rate_and_channel(tmp_path):
 
 
 @pytest.mark.parametrize("case,msg", [("rate", "below"), ("channel", "channel"), ("long", "long"), ("type", "unsupported"),
-                                      ("junk", "readable")])
+                                      ("junk", "readable"), ("fast", "above"), ("channels", "up to 2")])
 def test_read_upload_rejects(tmp_path, case, msg):
-    icfg = load_inference_config()
+    icfg = load_inference_config(overrides=["input.max_sample_rate_hz=96000", "input.max_channels=2"])
     if case == "rate":
         p = synthetic_recording(tmp_path / "a.wav", fs=22050, dur=1.0)
+    elif case == "fast":                     # BUG-2: rates and channel counts are capped, so memory is too
+        p = synthetic_recording(tmp_path / "a.wav", fs=192000, dur=1.0)
+    elif case == "channels":
+        p = synthetic_recording(tmp_path / "a.wav", fs=48000, dur=1.0, channels=3)
     elif case == "channel":
         p = synthetic_recording(tmp_path / "a.wav", fs=48000, dur=1.0)
     elif case == "long":

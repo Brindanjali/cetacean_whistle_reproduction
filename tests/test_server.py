@@ -97,8 +97,36 @@ def test_reload_picks_up_dropped_in_files(tmp_path, web):
     from test_infer import write_random_model
 
     write_random_model(tmp_path / "runs", gmm=False)
+    r = c.post("/api/reload-model")                                    # off by default: anyone on the page could call it
+    assert r.status_code == 403 and "allow_reload" in r.json()["detail"]
+    c.app.state.engine.icfg["server"]["allow_reload"] = True
     st = c.post("/api/reload-model").json()
     assert st["ready"]["recreate"] is True and st["run_id"] == RUN
+
+
+def test_limits_for_a_public_page(tmp_path, web):
+    """BUG-3: n_samples is clamped on every route; BUG-4: request sizes, the queue, and uploads deleted after their job."""
+    eng = make_engine(tmp_path, gmm=True)
+    eng.icfg["output"]["out_dir"] = str(tmp_path / "jobs")
+    eng.icfg["output"]["n_samples"] = 1                                # so the cap is 2
+    c = TestClient(create_app(eng, web_dir=web, keep_jobs=5))
+    for asked, got in ((1000, 2), (-5, 0)):
+        j = wait(c, c.post("/api/analyze-example", json={"example": "one", "n_samples": asked}).json()["job"])
+        res = c.get(j["result"]).json()
+        assert res["n_samples"] == got and all(len(w.get("samples", [])) == got for w in res["whistles"])
+    p = synthetic_recording(tmp_path / "up.wav", fs=48000, dur=1.0)
+    with open(p, "rb") as f:
+        jid = c.post("/api/analyze", files={"file": ("up.wav", f)}, data={"n_samples": "99"}).json()["job"]
+    assert wait(c, jid)["state"] == "done" and c.get(f"/api/results/{jid}/result.json").json()["n_samples"] == 2
+    assert not list((tmp_path / "jobs" / jid).glob("input.*"))         # the upload is gone once its job has ended
+    r = c.post("/api/generate", json={"n": 2, "pad": "x" * 70_000})     # over max_request_kb
+    assert r.status_code == 413 and "larger than" in r.json()["detail"]
+    n_jobs = len(list((tmp_path / "jobs").iterdir()))
+    c.app.state.jobs.max_queued = 0                                    # as if the queue were full
+    for r in (c.post("/api/generate", json={"n": 2}), c.post("/api/analyze-example", json={"example": "one"}),
+              c.post("/api/analyze", files={"file": ("up.wav", p.read_bytes())})):
+        assert r.status_code == 503 and "busy" in r.json()["detail"]
+    assert len(list((tmp_path / "jobs").iterdir())) == n_jobs           # nothing stored for a refused request
 
 
 def test_old_job_folders_are_pruned(tmp_path, web):

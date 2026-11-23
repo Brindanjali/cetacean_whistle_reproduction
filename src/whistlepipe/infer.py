@@ -484,7 +484,7 @@ class Engine:
         images = pre["images"][order] if len(order) else pre["images"]
         hop_s, win_s = pre["s4"].hop_s, pre["s4"].win_len / pre["s4"].fs
         say("model")
-        n_s = int(o["n_samples"] if n_samples is None else n_samples)
+        n_s = max(0, int(o["n_samples"] if n_samples is None else n_samples))   # the server also caps it (server.py)
         mo = run_model(mdl, images, n_s, seed, self.device)
         say("sound")
         whistles = []

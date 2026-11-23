@@ -103,7 +103,8 @@ time, set `LOCAL_PORT=8001` in `deploy/.env`.
 ## Who can open it
 
 With `"AllowFunnel": true` in `tailscale/serve.json`, **anyone who has the address can use the page**. The server has no
-login, takes uploads up to 200 MB and runs one job at a time, so share the address only with the people you want. To
+login, takes uploads up to 200 MB and runs one job at a time (it refuses oversized requests and new jobs when six are
+waiting; limits in `.github/SECURITY.md`), so share the address only with the people you want. To
 keep the page to your own devices (those signed in to your tailnet), set `"AllowFunnel"` to `false`. The container
 applies the change by itself; if not, run `docker compose -f deploy/docker-compose.yml restart tailscale`.
 

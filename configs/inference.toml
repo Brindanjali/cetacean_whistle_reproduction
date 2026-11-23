@@ -42,6 +42,8 @@ checkpoint = "final.pt"
 [input]
 formats            = [".wav", ".flac", ".ogg", ".mp3"]   # whatever libsndfile reads
 min_sample_rate_hz = 32000      # [DECISION] below this the detector band (2-24 kHz) is mostly empty
+max_sample_rate_hz = 768000     # [DECISION] above the raw recordings' 500 kHz; with max_duration_s it bounds the memory one upload needs
+max_channels       = 8          # [DECISION] the raw recordings have 6; only the chosen channel is kept (guard.read_channel)
 full_band_rate_hz  = 48000      # [DECISION] at or above this the whole detector band is present; below it a warning is given
 min_duration_s     = 0.25       # [DECISION]
 max_duration_s     = 120.0      # [DECISION] keeps one job under about a minute
@@ -67,6 +69,12 @@ fallback_fc_hz   = 9000.0          # [DECISION] only when the training images.cs
 [server]
 host = "127.0.0.1"
 port = 8000
+# Limits for a page that may be open to the internet (project/AUDIT_2026-11-23.md, BUG-3 to BUG-5)
+max_queued          = 6        # [DECISION] jobs waiting behind the running one; more are refused ("busy", 503) instead of queued
+max_uploads_at_once = 2        # [DECISION] uploads arriving at the same time (each is stored in a temporary file meanwhile)
+max_request_kb      = 64       # [DECISION] largest request other than an upload; the page's JSON requests are under 1 kB
+allow_reload        = false    # [DECISION] POST /api/reload-model re-reads every model file; anyone who can open the page could
+                               # call it, so it is off. Restart the server after dropping in new files, or set true for local use
 
 [examples]
 encounters = [191, 279, 331]   # [DECISION] one short excerpt from each, for visitors without recordings

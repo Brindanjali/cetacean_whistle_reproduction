@@ -29,6 +29,11 @@ What keeps the demonstration honest:
 - Comparing a reading with the sender's record is a separate step (/check), run after decoding.
 
 Jobs run one at a time on one worker thread and write whistlecode/outputs/web/<id>/; the newest web.keep_jobs folders are kept.
+
+Limits, because the page may be open to the internet (config.toml [web]; project/AUDIT_2026-11-23.md): a request body is
+refused (413) as it arrives once it passes max_upload_mb (/decode) or max_request_kb (every other route); at most
+max_uploads_at_once uploads arrive at a time and max_queued jobs wait (503 beyond either); only a recording's first channel is
+read, in blocks, within max_rate_hz, max_channels and max_seconds; a decode job's input file is deleted when the job ends.
 """
 from __future__ import annotations
 
@@ -53,7 +58,7 @@ from fastapi import APIRouter, FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel
 
-from . import bank, channel, codebook, format2, layout, receiver, schedule, sender
+from . import bank, channel, codebook, format2, layout, receiver, repro, schedule, sender
 from .config import PROJECT_ROOT, default_config, project_version
 from .framing import FramingError
 
@@ -119,21 +124,30 @@ def play_copy(x: np.ndarray, fs: float, path: Path, cfg: dict) -> str:
 
 
 def read_audio(path: Path, cfg: dict) -> tuple[np.ndarray, int]:
-    """A recording as mono float32 (its first channel), checked against the page's limits."""
+    """A recording as mono float32 (its first channel), checked against the page's limits. Only that channel is read, in blocks
+    and never past max_seconds, so a small compressed file cannot decode to gigabytes (whistlepipe/guard.py)."""
     w = cfg["web"]
     try:
         info = sf.info(str(path))
     except RuntimeError as e:
         raise InputError("this file could not be read as audio (use WAV, FLAC or OGG)") from e
-    if info.samplerate < int(w["min_rate_hz"]):
-        raise InputError(f"the recording is sampled at {info.samplerate} Hz; at least {int(w['min_rate_hz'])} Hz is needed, "
+    fs = int(info.samplerate)
+    if fs < int(w["min_rate_hz"]):
+        raise InputError(f"the recording is sampled at {fs} Hz; at least {int(w['min_rate_hz'])} Hz is needed, "
                          "because the whistles reach 14.5 kHz")
+    if fs > int(w["max_rate_hz"]):
+        raise InputError(f"the recording is sampled at {fs} Hz; the decoder takes up to {int(w['max_rate_hz'])} Hz")
+    if info.channels > int(w["max_channels"]):
+        raise InputError(f"the recording has {info.channels} channels; the decoder takes up to {int(w['max_channels'])}")
     if info.duration > float(w["max_seconds"]):
         raise InputError(f"the recording is {info.duration:.0f} s long; the decoder takes up to {float(w['max_seconds']):.0f} s")
-    x, fs = sf.read(str(path), dtype="float32", always_2d=True)
+    try:
+        x = repro.read_channel(path, 0, int(float(w["max_seconds"]) * fs))
+    except repro.TooLong as e:
+        raise InputError(f"the recording is longer than the {float(w['max_seconds']):.0f} s the decoder takes") from e
     if not len(x):
         raise InputError("the recording is empty")
-    return x[:, 0], int(fs)
+    return x, fs
 
 
 # ---------------------------------------------------------------------------------------------- the engine
@@ -415,12 +429,17 @@ def new_job_id() -> str:
 
 
 class Jobs:
-    def __init__(self, root: Path, keep: int):
-        self.root, self.keep = root, keep
+    def __init__(self, root: Path, keep: int, max_queued: int = 6):
+        self.root, self.keep, self.max_queued = root, keep, max_queued
         self.root.mkdir(parents=True, exist_ok=True)
         self.jobs: dict[str, dict] = {}
         self.q: queue.Queue = queue.Queue()
         threading.Thread(target=self._work, daemon=True, name="whistlecode-worker").start()
+
+    def room(self) -> None:
+        """Refuse a new job (503) while max_queued jobs are already waiting; call it before storing anything."""
+        if self.q.qsize() >= self.max_queued:
+            raise HTTPException(503, f"the server is busy: {self.q.qsize()} jobs are waiting; try again in a minute")
 
     def new(self) -> tuple[str, Path]:
         jid = new_job_id()
@@ -455,6 +474,9 @@ class Jobs:
             except Exception as e:  # noqa: BLE001  (shown as an internal error; the traceback goes to the job folder)
                 (d / "error.txt").write_text(traceback.format_exc(), encoding="utf-8")
                 job.update(state="error", error=f"internal error ({type(e).__name__}); see whistlecode/outputs/web/{jid}/error.txt")
+            finally:
+                for p in d.glob("input.*"):                  # the upload is never served back: free its space now
+                    p.unlink(missing_ok=True)
 
     def _prune(self):
         dirs = sorted(p for p in self.root.iterdir() if p.is_dir() and JOB_ID.match(p.name))     # names start with the time
@@ -500,7 +522,7 @@ def create_app(engine: Engine | None = None, page=None, warm: bool = True):
     """The WhistleCode routes; `page` (an ASGI app, normally the reproduction's own) is mounted behind them at /."""
     engine = engine or Engine()
     w = engine.cfg["web"]
-    jobs = Jobs(PROJECT_ROOT / w["out_dir"], int(w["keep_jobs"]))
+    jobs = Jobs(PROJECT_ROOT / w["out_dir"], int(w["keep_jobs"]), int(w["max_queued"]))
 
     def folder(jid: str) -> Path:
         try:
@@ -538,6 +560,7 @@ def create_app(engine: Engine | None = None, page=None, warm: bool = True):
         engine.check_text(req.text)
         engine.check_key(req.key)
         text, key, nonce = req.text, req.key, nonce_ok(req.nonce)
+        jobs.room()
         jid, d = jobs.new()
         return jobs.submit(jid, "send", lambda progress: engine.run_send(text, key, nonce, d, progress))
 
@@ -550,6 +573,7 @@ def create_app(engine: Engine | None = None, page=None, warm: bool = True):
         if req.encounter not in [int(v) for v in w["noise_choices"]]:
             raise InputError(f"choose the noise of encounter {' or '.join(str(v) for v in w['noise_choices'])}")
         src, src_id = folder(req.job), req.job
+        jobs.room()
         jid, d = jobs.new()
         seed = int(req.seed) & 0x7FFFFFFF
         return jobs.submit(jid, "sea", lambda progress: engine.run_sea(src, src_id, req.snr_db, req.encounter, seed, d, progress))
@@ -562,6 +586,7 @@ def create_app(engine: Engine | None = None, page=None, warm: bool = True):
         ext = Path(name).suffix.lower()
         if ext not in w["formats"]:
             raise InputError(f"{name}: use a {', '.join(w['formats'])} file")
+        jobs.room()
         limit = int(w["max_upload_mb"]) * 1024 * 1024
         jid, d = jobs.new()
         dst, size = d / f"input{ext}", 0
@@ -583,6 +608,7 @@ def create_app(engine: Engine | None = None, page=None, warm: bool = True):
         if kind is None:
             raise InputError("file must be 'sent' or 'heard'")
         result_of(req.job, kind)
+        jobs.room()
         jid, d = jobs.new()
         dst = d / "input.wav"
         shutil.copyfile(folder(req.job) / name, dst)        # the decoder works on its own copy, and nothing else of that job
@@ -609,6 +635,9 @@ def create_app(engine: Engine | None = None, page=None, warm: bool = True):
 
     app = FastAPI(title="WhistleCode", docs_url=None, redoc_url=None, openapi_url=None)
     started, version = time.monotonic(), project_version()
+    # Request sizes and uploads at once (whistlepipe/guard.py); Try it's routes, mounted below, have their own
+    app.add_middleware(repro.RequestLimit, uploads={"/api/wc/decode": int(w["max_upload_mb"]) * 1024 * 1024 + 64 * 1024},
+                       max_body=int(w["max_request_kb"]) * 1024, max_uploads=int(w["max_uploads_at_once"]), prefix="/api/wc/")
 
     @app.exception_handler(InputError)
     async def input_error(_, e: InputError):

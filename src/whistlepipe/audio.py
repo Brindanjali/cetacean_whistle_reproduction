@@ -168,8 +168,9 @@ class InputError(ValueError):
 
 
 def read_upload(path: Path, channel: int, icfg: Cfg, name: str | None = None) -> AudioSignal:
-    """Inference input (configs/inference.toml [input]): any libsndfile format and rate >= min_sample_rate_hz, one
-    channel, float32 in [-1, 1) (the same scale as S1). The dataset path (s1_select_channel) accepts only the paper's
+    """Inference input (configs/inference.toml [input]): any libsndfile format, a rate from min_sample_rate_hz to
+    max_sample_rate_hz and up to max_channels channels; one channel is read (in blocks, never past max_duration_s), as
+    float32 in [-1, 1) (the same scale as S1). The dataset path (s1_select_channel) accepts only the paper's
     500 kHz / 6-channel files; uploads join the pipeline at S2, which resamples any rate to 192 kHz."""
     c = icfg["input"]
     path = Path(path)
@@ -184,17 +185,26 @@ def read_upload(path: Path, channel: int, icfg: Cfg, name: str | None = None) ->
     dur = info.frames / fs if fs else 0.0
     if fs < int(c["min_sample_rate_hz"]):
         raise InputError(f"{name}: sample rate {fs} Hz is below {int(c['min_sample_rate_hz'])} Hz; whistles would be lost")
+    if fs > int(c["max_sample_rate_hz"]):
+        raise InputError(f"{name}: sample rate {fs} Hz is above the {int(c['max_sample_rate_hz'])} Hz the demo takes")
+    if n_ch > int(c["max_channels"]):
+        raise InputError(f"{name}: {n_ch} channels; the demo takes files with up to {int(c['max_channels'])}")
     if not float(c["min_duration_s"]) <= dur <= float(c["max_duration_s"]):
         raise InputError(f"{name}: {dur:.2f} s long; the demo takes {c['min_duration_s']}-{c['max_duration_s']:.0f} s")
     if not 0 <= channel < n_ch:
         raise InputError(f"{name}: channel {channel} requested, the file has {n_ch} (0-{n_ch - 1})")
-    x, _ = sf.read(str(path), dtype="float32", always_2d=True)
+    from .guard import TooLong, read_channel
+
+    try:                    # only the chosen channel, and never more than the longest allowed file, whatever the header says
+        x = read_channel(path, channel, int(float(c["max_duration_s"]) * fs))
+    except TooLong as e:
+        raise InputError(f"{name}: longer than the {c['max_duration_s']:.0f} s the demo takes") from e
     warnings = []
     if fs < int(c["full_band_rate_hz"]):
         warnings.append(f"Recorded at {fs / 1000:g} kHz: content above {fs / 2000:g} kHz is missing (the detector looks up to 24 kHz).")
     meta = {"source_name": name, "fs_in_hz": fs, "n_channels": n_ch, "channel_index": channel, "duration_s": round(dur, 4),
             "format": info.format, "subtype": info.subtype, "warnings": warnings}
-    return AudioSignal(samples=np.ascontiguousarray(x[:, channel]), fs=float(fs), name=name, meta=meta)
+    return AudioSignal(samples=np.ascontiguousarray(x), fs=float(fs), name=name, meta=meta)
 
 
 def select_validation_files(files: list[Path], k: int) -> list[Path]:

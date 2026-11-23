@@ -71,7 +71,23 @@ def test_read_audio_refuses_what_the_decoder_cannot_use(cfg, tmp_path):
         web.read_audio(tmp_path / "text.wav", cfg)
     sf.write(str(tmp_path / "st.wav"), np.stack([np.full(48000, 0.5), np.zeros(48000)], axis=1).astype(np.float32), 48000)
     x, fs = web.read_audio(tmp_path / "st.wav", cfg)
-    assert fs == 48000 and x.ndim == 1 and x.min() == 0.5               # the first channel
+    assert fs == 48000 and x.ndim == 1 and x.min() == 0.5 and x.dtype == np.float32      # the first channel
+    # BUG-2: a small compressed file must not decode to gigabytes, so rates and channel counts are capped
+    with pytest.raises(web.InputError, match="2 channels; the decoder takes up to 1"):
+        web.read_audio(tmp_path / "st.wav", {**cfg, "web": {**cfg["web"], "max_channels": 1}})
+    sf.write(str(tmp_path / "fast.flac"), np.zeros((4000, 8), dtype=np.int16), 384000)
+    with pytest.raises(web.InputError, match="up to 192000 Hz"):
+        web.read_audio(tmp_path / "fast.flac", cfg)
+
+
+def test_a_full_queue_refuses_new_jobs(tmp_path):
+    from fastapi import HTTPException
+
+    jobs = web.Jobs(tmp_path / "jobs", keep=5, max_queued=0)
+    with pytest.raises(HTTPException) as e:
+        jobs.room()
+    assert e.value.status_code == 503 and "busy" in e.value.detail
+    web.Jobs(tmp_path / "jobs2", keep=5, max_queued=1).room()             # room left: no error
 
 
 # ---------------------------------------------------------------------------------------------- digital silence
@@ -147,6 +163,20 @@ def test_healthz_reports_whether_messages_can_be_served(cfg, tmp_path, kw, code,
     assert r.status_code == code and body["status"] == state and body["queue"] == 0
     assert body["version"] == project_version() != "unknown"
     assert ("problem" in body) == (code == 503)
+
+
+def test_oversized_requests_are_refused_before_any_route(cfg, tmp_path):
+    """BUG-4: bodies over max_request_kb (JSON) or max_upload_mb (/decode) never reach a route or the disk."""
+    from fastapi.testclient import TestClient
+
+    cfg["web"]["out_dir"] = str(tmp_path / "web")
+    cfg["web"]["max_upload_mb"] = 1
+    with TestClient(web.create_app(_StubEngine(cfg), warm=False)) as c:
+        r = c.post("/api/wc/frame", json={"text": "x" * 70_000, "key": "k", "nonce": 1})
+        assert r.status_code == 413 and "larger than 64 kB" in r.json()["detail"]
+        r = c.post("/api/wc/decode", data={"key": "k"}, files={"file": ("big.wav", bytes(2 << 20), "audio/wav")})
+        assert r.status_code == 413 and "larger than 1 MB" in r.json()["detail"]
+    assert not any((tmp_path / "web").iterdir())                          # no job folder was made
 
 
 # ---------------------------------------------------------------------------------------------- the routes, on the real model
@@ -247,6 +277,7 @@ def test_files_and_jobs_are_guarded(client):
     dec = finish(client, client.post("/api/wc/decode-job", json={"job": sent["id"], "file": "sent", "key": KEY}))
     assert dec["ok"] and dec["text"] == "HI"
     assert client.get(f"/api/wc/files/{dec['id']}/input.wav").status_code == 404     # the upload itself is not served back
+    assert not (client.app.state.jobs.root / dec["id"] / "input.wav").exists()      # ... and is deleted once its job has ended
     for name in ("recording.png", "recording_play.wav", "result.json"):
         assert client.get(f"/api/wc/files/{dec['id']}/{name}").status_code == 200
     assert json.loads((client.app.state.jobs.root / dec["id"] / "result.json").read_text(encoding="utf-8"))["source"] == "sent.wav"

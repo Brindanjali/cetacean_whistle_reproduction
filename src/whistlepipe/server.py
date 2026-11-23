@@ -1,7 +1,8 @@
 """Web demo server: the page (web/) plus the inference API.     python whistle.py serve  ->  http://127.0.0.1:8000
 
     GET  /api/status                    model files present/loaded (models: every model on offer), limits, Table 3 conditions
-    POST /api/reload-model              re-read the trained files (after dropping them into place)
+    POST /api/reload-model              re-read the trained files (after dropping them into place); off unless
+                                        configs/inference.toml [server] allow_reload = true (403 otherwise)
     POST /api/analyze                   multipart upload (file, channel, n_samples, seed, model) -> {"job": id}
     POST /api/analyze-example           {"example": id, "seed": 0, "model": null}  (web/data/examples.json) -> {"job": id}
     POST /api/generate                  {"n": 8, "seed": 0, "condition": null, "fc_hz": null, "model": null} -> {"job": id}
@@ -13,6 +14,11 @@
 ``model`` is an id from configs/inference.toml [[models]] (null or absent: the first, the default); an unknown id is a 400.
 Jobs run one at a time on a single worker thread (the GPU holds the models). Each job writes runs/infer/<id>/;
 the newest ``keep_jobs`` job folders are kept. Binds to 127.0.0.1 by default (configs/inference.toml [server]).
+
+Limits, because the page may be open to the internet ([server], [input]; project/AUDIT_2026-11-23.md): a request body is
+refused (413) as it arrives once it passes the upload size (/api/analyze) or max_request_kb (every other route); at most
+max_uploads_at_once uploads arrive at a time and max_queued jobs wait (503 beyond either); n_samples is clamped to
+0-2 x output.n_samples; an upload's input file is deleted when its job ends (it is never served back).
 """
 from __future__ import annotations
 
@@ -33,6 +39,7 @@ from pydantic import BaseModel
 
 from .audio import InputError
 from .config import PROJECT_ROOT
+from .guard import RequestLimit
 from .infer import Engine, new_job_id, resolve
 
 JOB_ID = re.compile(r"^(gen_)?\d{8}T\d{6}Z_[0-9a-f]{6}$")
@@ -56,11 +63,16 @@ class ExampleRequest(BaseModel):
 
 
 class Jobs:
-    def __init__(self, engine: Engine, out_root: Path, keep_jobs: int = 200):
-        self.engine, self.out_root, self.keep = engine, out_root, keep_jobs
+    def __init__(self, engine: Engine, out_root: Path, keep_jobs: int = 200, max_queued: int = 6):
+        self.engine, self.out_root, self.keep, self.max_queued = engine, out_root, keep_jobs, max_queued
         self.jobs: dict[str, dict] = {}
         self.q: queue.Queue = queue.Queue()
         threading.Thread(target=self._work, daemon=True, name="inference-worker").start()
+
+    def room(self) -> None:
+        """Refuse a new job (503) while max_queued jobs are already waiting; call it before storing anything."""
+        if self.q.qsize() >= self.max_queued:
+            raise HTTPException(503, f"the server is busy: {self.q.qsize()} jobs are waiting; try again in a minute")
 
     def folder(self, kind: str) -> tuple[str, Path]:
         jid = ("gen_" if kind == "generate" else "") + new_job_id()
@@ -92,6 +104,9 @@ class Jobs:
             except Exception as e:  # noqa: BLE001  (shown as an internal error; the traceback goes to the job folder)
                 (self.out_root / jid / "error.txt").write_text(traceback.format_exc(), encoding="utf-8")
                 job.update(state="error", error=f"internal error ({type(e).__name__}); see runs/infer/{jid}/error.txt")
+            finally:
+                for p in (self.out_root / jid).glob("input.*"):     # the upload is never served back: free its space now
+                    p.unlink(missing_ok=True)
 
     def _prune(self):
         # oldest first: folders from earlier server runs (by name: a timestamp), then this run's jobs in submission
@@ -108,11 +123,20 @@ class Jobs:
 def create_app(engine: Engine | None = None, web_dir: Path = WEB_DIR, keep_jobs: int = 200) -> FastAPI:
     engine = engine or Engine()
     icfg = engine.icfg
+    srv = icfg["server"]
     out_root = resolve(icfg["output"]["out_dir"])
     out_root.mkdir(parents=True, exist_ok=True)
-    jobs = Jobs(engine, out_root, keep_jobs)
+    jobs = Jobs(engine, out_root, keep_jobs, int(srv.get("max_queued", 6)))
     app = FastAPI(title="Whistle VAE-GMM", docs_url="/api/docs", openapi_url="/api/openapi.json")
     app.state.engine, app.state.jobs = engine, jobs
+    upload_limit = int(icfg["input"]["max_upload_mb"]) * 1024 * 1024
+    app.add_middleware(RequestLimit, uploads={"/api/analyze": upload_limit + 64 * 1024},     # + the multipart envelope
+                       max_body=int(srv.get("max_request_kb", 64)) * 1024, max_uploads=int(srv.get("max_uploads_at_once", 2)),
+                       prefix="/api/")
+
+    def n_samples_ok(n: int | None) -> int | None:
+        """New whistles per detected whistle: 0 to twice the default (BUG-3), or None for the default."""
+        return None if n is None else max(0, min(int(icfg["output"]["n_samples"]) * 2, int(n)))
 
     @app.middleware("http")
     async def revalidate_page_code(request, call_next):
@@ -135,6 +159,9 @@ def create_app(engine: Engine | None = None, web_dir: Path = WEB_DIR, keep_jobs:
 
     @app.post("/api/reload-model")
     def reload_model():
+        if not bool(icfg["server"].get("allow_reload", False)):
+            raise HTTPException(403, "reloading is switched off on this server (configs/inference.toml [server] allow_reload); "
+                                     "restart it to pick up new model files")
         return engine.reload_model()
 
     @app.post("/api/analyze")
@@ -145,6 +172,7 @@ def create_app(engine: Engine | None = None, web_dir: Path = WEB_DIR, keep_jobs:
         ext = Path(name).suffix.lower()
         if ext not in icfg["input"]["formats"]:
             raise HTTPException(400, f"{name}: unsupported file type (use {', '.join(icfg['input']['formats'])})")
+        jobs.room()
         limit = int(icfg["input"]["max_upload_mb"]) * 1024 * 1024
         jid, d = jobs.folder("analyze")
         dst, size = d / f"input{ext}", 0
@@ -156,7 +184,7 @@ def create_app(engine: Engine | None = None, web_dir: Path = WEB_DIR, keep_jobs:
                     shutil.rmtree(d, ignore_errors=True)
                     raise HTTPException(413, f"{name}: larger than {icfg['input']['max_upload_mb']} MB")
                 f.write(chunk)
-        ns = None if n_samples is None else max(0, min(int(icfg["output"]["n_samples"]) * 2, n_samples))
+        ns = n_samples_ok(n_samples)
         return jobs.submit(jid, "analyze", lambda progress: engine.analyze(dst, d, channel, ns, seed, name, progress, model))
 
     @app.post("/api/analyze-example")
@@ -165,9 +193,10 @@ def create_app(engine: Engine | None = None, web_dir: Path = WEB_DIR, keep_jobs:
         if ex is None:
             raise HTTPException(404, f"no example {req.example!r}")
         engine.get_model(req.model)
-        src = web_dir / ex["audio"]
+        jobs.room()
+        src, ns = web_dir / ex["audio"], n_samples_ok(req.n_samples)
         jid, d = jobs.folder("analyze")
-        return jobs.submit(jid, "analyze", lambda progress: engine.analyze(src, d, None, req.n_samples, req.seed,
+        return jobs.submit(jid, "analyze", lambda progress: engine.analyze(src, d, None, ns, req.seed,
                                                                            Path(ex["audio"]).name, progress, req.model))
 
     @app.post("/api/generate")
@@ -175,6 +204,7 @@ def create_app(engine: Engine | None = None, web_dir: Path = WEB_DIR, keep_jobs:
         st = engine.get_model(req.model).status
         if not st["ready"]["generate"]:
             raise HTTPException(409, st["message"])
+        jobs.room()
         jid, d = jobs.folder("generate")
         return jobs.submit(jid, "generate", lambda progress: engine.generate(d, req.n, req.seed, req.condition, req.fc_hz, progress,
                                                                              req.model))
