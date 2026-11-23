@@ -6,7 +6,7 @@ Two directions of one chain: **requirement → test or experiment → record →
 
 ## Requirements
 
-### Reproduction (the paper's method)
+### Whistle model (Park et al.'s method)
 
 Sources: [`resources/PREPROCESSING_SPECIFICATION.md`](../resources/PREPROCESSING_SPECIFICATION.md), [`resources/TRAINING_SPECIFICATION.md`](../resources/TRAINING_SPECIFICATION.md).
 
@@ -41,6 +41,7 @@ Source: [`whistlecode/THREAT_MODEL.md`](../whistlecode/THREAT_MODEL.md) section 
 | C11 | Passes human listeners | — | Not tested (WC-R4, needs YOU-5) |
 | C12 | Throughput | 1.08-1.38 bit/s median (`t6_throughput.csv`) | Measured |
 | C13 | Message confidentiality | — | Not claimed |
+| C14 | New: no published messaging system read so far draws its symbols from the components of a density model of whistles, each whistle a fresh sample (README, "What is new") | `whistlecode/RELATED_WORK.md` sections 4, 5 and 7 | Draft; the literature search is incomplete (WC-R1a) |
 
 ### WhistleCode pass marks v2
 
@@ -63,7 +64,7 @@ Source: [`whistlecode/PLAN.md`](../whistlecode/PLAN.md) section 8.7, frozen 2026
 
 Every number the README, the review slides or a paper reports, and the record that holds it. Records in **bold** are in git; the others exist only on the project laptop (see the note below).
 
-### Reproduction
+### Whistle model
 
 | Number | Record | Made by |
 |---|---|---|

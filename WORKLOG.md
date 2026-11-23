@@ -1,6 +1,6 @@
 # Work log
 
-The single place for what is planned, what is waiting, and what has been done in this project: the reproduction, WhistleCode, the detector paper, the web page and the repository itself. Every change to the project adds a line here ([how](#how-this-log-works)).
+The single place for what is planned, what is waiting, and what has been done in this project: the message system (WhistleCode), the whistle model (VAE-GMM), the detector paper, the web page and the repository itself. Every change to the project adds a line here ([how](#how-this-log-works)).
 
 **Updated:** 2026-11-23
 
@@ -8,8 +8,8 @@ The single place for what is planned, what is waiting, and what has been done in
 
 | Area | Where it stands | Next |
 |---|---|---|
-| Reproduction (VAE-GMM) | Complete. Dataset built; model V1 trained to epoch 150; Gaussian mixtures for epochs 101 and 150; paper evaluation done on epoch 101 | Nothing required (epoch-150 evaluation is optional: REP-1) |
-| WhistleCode | v1 built and tested (campaign v1). Second round: R0, R1 and R2 (drift correction, adopted) done | **WC-R3** shape covertness |
+| Whistle model (VAE-GMM) | Complete. Dataset built; model V1 trained to epoch 150; Gaussian mixtures for epochs 101 and 150; paper evaluation done on epoch 101 | Nothing required (epoch-150 evaluation is optional: REP-1) |
+| Message system (WhistleCode) | v1 built and tested (campaign v1). Second round: R0, R1 and R2 (drift correction, adopted) done | **WC-R3** shape covertness |
 | Detector paper | A draft exists (`docs/private/Mentor_Review_1.pdf`, never in git); its to-do file is older than the draft | DET-1, DET-2 |
 | Web page and deployment | Film, Try it (models Nyx and Delphi), Encode, Decode and Record; self-hosted with Docker and Tailscale; `/healthz` and a Docker healthcheck | WEB-1 static examples are out of date |
 | Engineering | 25 systems in place ([`project/README.md`](project/README.md)): tracker, Definition of Done, review, lint, tests, CI, lock file, releases, monitoring, registers, security. v0.9.0 tagged; code licensed under Apache 2.0; CI green; no pin has a known advisory. Release 0.10.0 prepared | YOU-10: commit, tag v0.10.0, rebuild the server image |
@@ -39,6 +39,7 @@ Only you can do these.
 - [ ] **YOU-11** Attach both `gmm.npz` files (about 100 MB each) and the WhistleCode codebook to a GitHub release, so a clone can generate whistles and run WhistleCode without the 68 GB of encounter-191 audio. Files: `models/vaegmm/V1_L64_b1e-4_critic_E191/gmm_K3000/gmm.npz`, `models/vaegmm/V1_L64_b1e-4_critic_E191_epoch150/gmm_K3000/gmm.npz`, `whistlecode/outputs/codebook/codebook.npz` and `codebook.json`. Then the README's "What runs from a clone" table gets a download line with their SHA-256 (OPS-9).
 - [ ] **YOU-12** Check that the college's own course material in `docs/course/` may be published in a public repository (for example `Acoustic Projects Review-I Guidelines.pdf`). Your own notes and slides there are yours to publish.
 - [ ] **YOU-13** Optional: add your name (or your institution) to `README.md` "About this project" and `CITATION.cff`. A named author is the strongest single sign that a repository is legitimate; it stays a handle until you decide (D-023).
+- [ ] **YOU-14** Choose the project's final name (Falsetto is temporary, D-024). Then rename the GitHub repository, whose name still says "reproduction": Settings → General → Repository name, or `gh repo rename <name>` (GitHub forwards the old address). Then `git remote set-url origin https://github.com/anonymus-k-dot/<name>.git`, and ask Claude to update the links and the places D-024 lists.
 - [x] **YOU-9** Delete the three local branches already merged into `main`: `git branch -d preprocessing-v2c-multi-encounter vaegmm-colab-training vaegmm-training`. Optionally the two merged remote ones: `git push origin --delete preprocessing-v2c-multi-encounter vaegmm-training`.
 
 ### Bugs
@@ -63,8 +64,8 @@ The plan, pass marks and rules are frozen in `whistlecode/PLAN.md` section 8.7.
 - [ ] **WC-R5** In-air test between two laptops (20 messages at 2 m; also 1 m and 4 m).
 - [ ] **WC-R6** Freeze, then run campaign v2 once, overnight (seed 20261205; encounter 276; encounter 308 if YOU-4).
 - [ ] **WC-R7** Reframe the documents and the page:
-  - new title;
-  - README leads with WhistleCode;
+  - new title; done 2026-11-23 (temporary name Falsetto, D-024);
+  - README leads with WhistleCode; done 2026-11-23;
   - page story Listen → Learn → Speak → Hide → Hear;
   - correct `TEST_PROTOCOL.md`'s outdated "epoch 150 was not completed";
   - reconcile the data-whistle share (one in four vs a third).
@@ -77,7 +78,7 @@ The plan, pass marks and rules are frozen in `whistlecode/PLAN.md` section 8.7.
 - [ ] **DET-3** Real-data test of the 2-24 kHz detector on hand-labelled 2017 recordings (from `TODO.md`; needs a labeller and a tool).
 - [ ] **DET-4** Act on the mentor's review of the draft, when it arrives.
 
-### Reproduction
+### Whistle model
 
 - [ ] **REP-1** Optional: paper evaluation (Tables 1, 3, 6; Figs. 7-10, 12) for the epoch-150 model, in its own folder so model 1 is untouched.
 
@@ -115,6 +116,10 @@ Newest first. Older history is grouped by stage. Commit hashes are given where t
 
 ### 2026-11-23
 
+- **Docs (WC-R7, first part; D-024)**: the repository no longer presents itself as a reproduction of Park et al. The project is the message system, under the temporary name Falsetto.
+  - `README.md`: leads with the message system (what it does, delivery and covertness results beside their pass marks, what is new with the incomplete-search caveat, limitations); the VAE-GMM is "the whistle model", checked against the paper. No numbers changed.
+  - `CITATION.cff` (title, abstract; Park et al. moved from preferred-citation to references), `pyproject.toml` (name, description), `NOTICE`, `web/index.html` (title, description, footer), `web/CREDITS.md`, `docs/ARCHITECTURE.md`, `docs/TECHNICAL_REFERENCE.md`, `docs/INDEX.md`, CI step names (`.github/workflows/ci.yml`, `tools/repo.py`), `whistlecode/PLAN.md` (one term).
+  - Registers: `project/DECISIONS.md` (D-013 decided, D-024), `project/TRACEABILITY.md` (C14), `project/ENGINEERING.md`, `project/EXPERIMENTS.md`, `project/LICENSING.md`, `project/WORKFLOW.md`, `CHANGELOG.md`; area headings here renamed. New owner item YOU-14 (final name, repository rename). Code, `whistlecode/` documents and frozen records keep their old terms.
 - **Docs (OPS-8)**: README audit, then fixes in every README except `mod_detector_5_24/README.md`. Every number in the main README was checked against its record first (citation against the paper PDF, dataset sums, `paper_comparison.csv`, `RESULTS.md`, test counts 202 + 269, CI green); none was wrong.
   - `README.md`: new title (the repository's name) and an "independent, unofficial; not affiliated with or endorsed by the authors" line; "covert" replaced by the paper's own term, biomimetic underwater communication; "Highlights" replaced by "At a glance", which states the gaps (PSNR, KL, Table 3 precision) beside the matches; only the CI and licence badges remain; checkpoints called epoch 101 and epoch 150 (the page's names Nyx and Delphi mentioned once); status as of 23 Nov, web demo "runs locally" instead of "deployed"; MSE footnote (spec §3.7); the 7,900 false-message tries broken down; DCLDE 2011 score shown beside Li et al. 2023's best, as context; full references for Li et al. 2020 (the paper's ref. [30]) and 2023 and for refs. [31]-[33]; new "What runs from a clone" table with download sizes (68 GB for encounter 191, about 270 GB for all eight); "Not peer reviewed" limitation; new "About this project" section (course project, one maintainer, written with Claude Code at the maintainer's direction); hard-coded test counts removed.
   - `CITATION.cff`: abstract added (unofficial, course project); keyword "covert underwater communication" is now "biomimetic underwater communication".

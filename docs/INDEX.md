@@ -12,13 +12,13 @@ Every document in the repository: what it is the authority on, and its state. Wh
 | [`project/HANDOVER.md`](../project/HANDOVER.md) | how to pick the work up cold |
 | [`CLAUDE.md`](../CLAUDE.md) | the rules Claude follows in this repository |
 
-## The method and its record
+## The whistle model and its record
 
 | Document | Authority on | State |
 |---|---|---|
 | [`resources/PREPROCESSING_SPECIFICATION.md`](../resources/PREPROCESSING_SPECIFICATION.md) | paper evidence for every preprocessing stage; parameter table | current |
 | [`resources/TRAINING_SPECIFICATION.md`](../resources/TRAINING_SPECIFICATION.md) | training specification, discrepancies, deviations, gates | current (updated for epoch 150) |
-| `resources/VAE-GMM Cetacean Whistles.pdf` | the base paper (CC BY-NC-ND 4.0) | — |
+| `resources/VAE-GMM Cetacean Whistles.pdf` | Park et al.'s paper, whose method the whistle model follows (CC BY-NC-ND 4.0) | — |
 | [`docs/TECHNICAL_REFERENCE.md`](TECHNICAL_REFERENCE.md) | dataset layout, lineage, detector experiments, training record, inference, every command | current |
 | [`docs/ARCHITECTURE.md`](ARCHITECTURE.md) | how the components, modules, server and deployment fit together | current |
 | `docs/figures/` | figures used in the course documents | — |

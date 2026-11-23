@@ -19,7 +19,7 @@ Two suites, run with pytest. Settings and markers: `[tool.pytest.ini_options]` i
 
 | Suite | Folder | Tests | Run in CI (the rest skip there) | Command |
 |---|---|---|---|---|
-| Reproduction | `tests/` | 202 | 199 | `python -m pytest` |
+| Whistle model | `tests/` | 202 | 199 | `python -m pytest` |
 | WhistleCode | `whistlecode/tests/` | 269 | 208 | `python -m pytest whistlecode/tests` |
 
 On the project laptop every test runs. In CI (and any fresh clone) 64 tests skip because git does not hold the files they read; they are tier 2 below.
@@ -65,7 +65,7 @@ A red CI run on `main` is fixed before any other work. The README badge shows th
 | File | Holds | Used by |
 |---|---|---|
 | [`.python-version`](../.python-version) | Python 3.11 | CI, pyenv, uv |
-| [`requirements.txt`](../requirements.txt) | reproduction packages, lower bounds | everyone |
+| [`requirements.txt`](../requirements.txt) | whistle-model packages, lower bounds | everyone |
 | [`whistlecode/requirements.txt`](../whistlecode/requirements.txt) | WhistleCode's extra packages (`reedsolo`, exact; `cryptography` for `serve --lan`) | everyone |
 | [`deploy/requirements-serve.txt`](../deploy/requirements-serve.txt) | the web server image, exact pins | `deploy/Dockerfile` |
 | [`constraints.txt`](../constraints.txt) | **the lock file:** exact versions of all 57 packages in use, including the ones they pull in | CI; a new machine |

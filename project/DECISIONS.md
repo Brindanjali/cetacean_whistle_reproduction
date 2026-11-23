@@ -25,7 +25,7 @@ Project-level choices: what was decided, why, what else was considered, and what
 | [D-010](#d-010) | 2026-11-20 | Pass marks are frozen before the runs; failures are reported as measured | in force |
 | [D-011](#d-011) | 2026-11-19 | VAE shapes are WhistleCode's final voice | in force |
 | [D-012](#d-012) | 2026-11-21 | Doppler and clock-drift correction adopted | in force |
-| [D-013](#d-013) | 2026-11-21 | Present the project as covert biomimetic communication | waiting on the mentor (YOU-1) |
+| [D-013](#d-013) | 2026-11-21 | Present the project as covert biomimetic communication | in force (owner, 2026-11-23); mentor still to be told (YOU-1) |
 | [D-014](#d-014) | 2026-11-20 | Self-host the page with Docker and Tailscale Funnel | in force |
 | [D-015](#d-015) | 2026-10-23 | The page is desktop-only | in force |
 | [D-016](#d-016) | 2026-11-21 | Lint with ruff; no auto-formatter | in force |
@@ -35,9 +35,10 @@ Project-level choices: what was decided, why, what else was considered, and what
 | [D-020](#d-020) | 2026-11-21 | What from `docs/` goes into git | in force |
 | [D-021](#d-021) | 2026-11-21 | The cluster kit goes into git | in force |
 | [D-022](#d-022) | 2026-11-22 | The code is licensed under Apache 2.0 | in force |
-| [D-023](#d-023) | 2026-11-23 | How the public README presents the project: unofficial, a course project, written with an AI assistant | in force |
+| [D-023](#d-023) | 2026-11-23 | How the public README presents the project: unofficial, a course project, written with an AI assistant | in force; the reproduction framing replaced by D-024 |
+| [D-024](#d-024) | 2026-11-23 | The project is the message system, under the temporary name Falsetto | in force |
 
-## Reproduction
+## Whistle model
 
 ### D-001
 
@@ -91,7 +92,7 @@ Project-level choices: what was decided, why, what else was considered, and what
 
 ### D-013
 
-**Present the project as covert biomimetic communication**, with the reproduction as its foundation. *Why:* WhistleCode is the project's own contribution. *Status:* needs the mentor's and team's agreement (YOU-1); the documents are reframed in WC-R7.
+**Present the project as covert biomimetic communication**, with the reproduction as its foundation. *Why:* WhistleCode is the project's own contribution. *Status:* needs the mentor's and team's agreement (YOU-1); the documents are reframed in WC-R7. *Update 2026-11-23:* decided by the owner ([D-024](#d-024)); the documents are reframed, the page's story is still to do (WC-R7).
 
 ## Page and deployment
 
@@ -136,6 +137,10 @@ Project-level choices: what was decided, why, what else was considered, and what
 ### D-023
 
 **How the public README presents the project** (OPS-8). *Decided by:* the owner, 2026-11-23 ("fix all" after the README audit). *What:* the README says near the top that the work is an independent, unofficial reproduction, not affiliated with or endorsed by the paper's authors; an "About this project" section says it is a student course project with one maintainer and that much of the code and documentation was written with Claude Code at the maintainer's direction; the author stays the GitHub handle until the owner chooses to add a name (YOU-13); the headline states the gaps to the paper beside the matches; checkpoints are named by epoch, not by the page's names; only badges that update themselves (CI) or state a fact (licence) are shown. *Why:* the audit found every number correct, but an anonymous, unofficial-looking repository that leads with its best number reads as untrustworthy. *Alternative:* keep the launch-style README and rely on the detail further down. *Consequence:* the tagline uses the paper's own term, biomimetic underwater communication. This does not decide D-013: if the covert framing is agreed, WC-R7 should attribute the covert aim to the paper and put the measured covertness results (E7, E9) beside it.
+
+### D-024
+
+**The project is the message system, under the temporary name Falsetto** (WC-R7, first part). *Decided by:* the owner, 2026-11-23 ("this is a whole new project"; "give it a better temporary name"). *What:* the public documents present the project as a biomimetic underwater messaging system that hides short text messages in synthetic false killer whale whistles. The VAE-GMM generator, with its preprocessing and detector, is "the whistle model": one part of the project, which follows Park et al.'s method and is checked against their paper. The repository no longer calls itself a reproduction. The name Falsetto (false killer whale; a voice that imitates another) is temporary and was chosen by Claude Code. *Where the name appears*, for the final rename: `README.md`, `CITATION.cff` (title), `pyproject.toml` (`name`), `NOTICE`, `project/LICENSING.md`, `web/index.html` (`<title>`). *Not renamed:* the code and its comments (code files are hashed into run records), `whistlecode/` and its documents, which keep the working name WhistleCode and the term "the reproduction" (the README says so once), the frozen campaign records, old log entries, and the GitHub repository and local folder names (YOU-14). *Why:* the message system is the project's own contribution, and the reimplementation of the paper is now one part of it. *Alternative:* keep "reproduction" in the title, with WhistleCode as an extension. *Consequence:* D-013 is decided. D-023 still holds for the unofficial line, the author handle and the AI-assistant note; as it asked, the README puts the covert aim beside the measured covertness results (E7, E9).
 
 ## Inline decision tags
 

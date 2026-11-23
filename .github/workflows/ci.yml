@@ -66,9 +66,9 @@ jobs:
           pip install pytest-github-actions-annotate-failures==0.2.0   # each failing test becomes an annotation
       - name: Configs (every loader accepts its file)
         run: python tools/repo.py check config
-      - name: Reproduction suite
+      - name: Whistle-model suite
         run: python -m pytest -rs
-      - name: WhistleCode suite
+      - name: Message-system suite
         run: python -m pytest whistlecode/tests -rs
 
   audit:

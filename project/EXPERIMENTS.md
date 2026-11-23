@@ -9,7 +9,7 @@ Every training run, fit, gate, benchmark and test campaign: the question it answ
 - **The record is the evidence.** The "Record" column points at the files that hold the numbers; reported numbers are traced in [TRACEABILITY.md](TRACEABILITY.md#results).
 - **Commit** is the commit that recorded the result (the run's own `train_info.json` or frozen record names the code commit it ran on).
 
-## Reproduction
+## Whistle model
 
 | ID | Date | Question | How | Record | Verdict | Commit |
 |---|---|---|---|---|---|---|

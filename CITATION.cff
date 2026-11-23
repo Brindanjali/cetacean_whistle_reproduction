@@ -1,13 +1,15 @@
-# GitHub shows "Cite this repository" from this file. Anyone using this work should cite the base paper first.
+# GitHub shows "Cite this repository" from this file. Whoever uses the whistle model should also cite Park et al. (references).
 cff-version: 1.2.0
-message: "If you use this software, please cite the original paper (preferred-citation) and this repository."
-title: "Cetacean whistle reproduction: VAE-GMM for false killer whale whistles, and WhistleCode"
+message: "If you use this software, please cite it as below. If you use its whistle model, please also cite Park et al. (2026), listed under references."
+title: "Falsetto: short text messages hidden in synthetic false killer whale whistles"
 type: software
 abstract: >-
-  An independent, unofficial reproduction of Park et al. (IEEE Access, 2026), built as a student course project and
-  not affiliated with the paper's authors. It covers preprocessing of NOAA DCLDE 2022 false killer whale recordings
-  with a newly designed detector, VAE-GMM training and evaluation against the paper, a web demo, and WhistleCode, a
-  simulated biomimetic message channel built on the trained model.
+  A biomimetic underwater messaging system, built as an independent student course project. A sender turns text into
+  whistles meant to pass for false killer whales: each whistle carries 6 bits as one of 16 shapes from a generative
+  model at one of 4 key-chosen pitches, placed at real whistle times among cover whistles. A receiver holding the key
+  recovers the exact text. The whistle model follows the VAE-GMM method of Park et al. (IEEE Access, 2026), trained on
+  NOAA DCLDE 2022 recordings with a newly designed whistle detector; the project is not affiliated with that paper's
+  authors. Tested in simulation with real ocean noise only.
 authors:
   - name: "anonymus-k-dot"
 license: Apache-2.0
@@ -15,28 +17,29 @@ version: 0.10.0
 date-released: 2026-11-22
 repository-code: "https://github.com/anonymus-k-dot/cetacean_whistle_reproduction"
 keywords:
+  - biomimetic underwater communication
+  - covert communication
   - bioacoustics
   - cetacean whistles
   - variational autoencoder
   - gaussian mixture model
-  - biomimetic underwater communication
-preferred-citation:
-  type: article
-  title: "A Generative Model for Cetacean Whistles Using Variational Autoencoder and Mixture of Gaussians"
-  authors:
-    - family-names: Park
-      given-names: Geun-Ho
-    - family-names: Ahn
-      given-names: Jongmin
-    - family-names: Kim
-      given-names: Wanjin
-    - family-names: Kim
-      given-names: Insoo
-    - family-names: Lee
-      given-names: Dong-Hun
-  journal: "IEEE Access"
-  volume: 14
-  start: 27877
-  end: 27894
-  year: 2026
-  doi: "10.1109/ACCESS.2026.3664765"
+references:
+  - type: article
+    title: "A Generative Model for Cetacean Whistles Using Variational Autoencoder and Mixture of Gaussians"
+    authors:
+      - family-names: Park
+        given-names: Geun-Ho
+      - family-names: Ahn
+        given-names: Jongmin
+      - family-names: Kim
+        given-names: Wanjin
+      - family-names: Kim
+        given-names: Insoo
+      - family-names: Lee
+        given-names: Dong-Hun
+    journal: "IEEE Access"
+    volume: 14
+    start: 27877
+    end: 27894
+    year: 2026
+    doi: "10.1109/ACCESS.2026.3664765"

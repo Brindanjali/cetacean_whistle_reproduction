@@ -339,7 +339,7 @@ def config() -> bool:
 
 def tests() -> bool:
     ok = True
-    for label, args in (("reproduction suite", []), ("WhistleCode suite", ["whistlecode/tests"])):
+    for label, args in (("whistle-model suite", []), ("message-system suite", ["whistlecode/tests"])):
         r = subprocess.run([sys.executable, "-m", "pytest", "-p", "no:cacheprovider", *args], cwd=ROOT)
         say(r.returncode == 0, f"tests: {label}")
         ok = ok and r.returncode == 0

@@ -10,7 +10,7 @@ What licence covers each part of the repository, and every third-party work it u
 - **Patents:** every contributor grants a patent licence for their contributions, and loses it if they sue over patents in the work. This matters for a new communication scheme such as WhistleCode.
 - **Compatibility:** every dependency below is permissive (BSD, MIT, Apache-2.0, PSF, public domain), so there is no conflict.
 - **Scope:** the code and documents written here. `NOTICE` lists the third-party material it does not cover (below).
-- **Copyright line:** "The cetacean_whistle_reproduction contributors" in `NOTICE`, which covers the teammates who contributed. The owner may put their own name there instead.
+- **Copyright line:** "The Falsetto contributors" (temporary name, D-024) in `NOTICE`, which covers the teammates who contributed. The owner may put their own name there instead.
 
 ## Third-party material in the repository
 

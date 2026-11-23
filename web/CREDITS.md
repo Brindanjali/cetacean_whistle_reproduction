@@ -37,7 +37,7 @@ all under the SIL Open Font License 1.1. Latin subsets, variable weights.
 
 The model is trained on false killer whale (*Pseudorca crassidens*) whistles
 from NOAA's DCLDE 2022 release of the 2017 HICEAS survey (R/V Lasker, file
-prefix `1705`). The page reproduces Park et al., "A Generative Model for
+prefix `1705`). The whistle model follows Park et al., "A Generative Model for
 Cetacean Whistles Using Variational Autoencoder and Mixture of Gaussians",
 *IEEE Access* 14 (2026), pp. 27877–27894. Both are named in the page's
 footer. The footage shows a humpback whale and dolphins; it is atmosphere,

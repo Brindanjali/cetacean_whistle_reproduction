@@ -9,7 +9,7 @@ How to read this document:
 - `[DECISION]` marks a choice made here because nothing fixes it. It is the same tag the reproduction's configs use. Every one is listed again in section 13 with its default.
 - Thresholds in sections 8.6 and 8.7 are frozen before the test runs they govern, so a result cannot move its own goalpost.
 - The threat model and the claims that may be made today are in [`THREAT_MODEL.md`](THREAT_MODEL.md).
-- "The reproduction" means `src/whistlepipe`, `configs/`, `models/`, `preprocessed/` and the encounter audio folders. WhistleCode only imports from them and never edits them.
+- "The reproduction" (since 2026-11-23 called "the whistle model" in the public documents, D-024) means `src/whistlepipe`, `configs/`, `models/`, `preprocessed/` and the encounter audio folders. WhistleCode only imports from them and never edits them.
 - "Message encoder" is the transmitter and "message decoder" is the receiver. The VAE has its own encoder and decoder, which appear inside them: the VAE decoder makes the whistles, and the VAE encoder is one way to read them back.
 
 ## Final idea (2026-11-18)

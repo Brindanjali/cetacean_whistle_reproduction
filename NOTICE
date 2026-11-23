@@ -1,16 +1,16 @@
-cetacean_whistle_reproduction
-Copyright 2026 The cetacean_whistle_reproduction contributors
+Falsetto
+Copyright 2026 The Falsetto contributors
 
 This product is licensed under the Apache License, Version 2.0 (the LICENSE file).
 
 The licence covers the code and the documents written for this project. It does not cover the third-party material
 in this repository, which keeps its own terms:
 
-  - resources/VAE-GMM Cetacean Whistles.pdf: the base paper, Park et al., IEEE Access 14 (2026), CC BY-NC-ND 4.0;
+  - resources/VAE-GMM Cetacean Whistles.pdf: Park et al., IEEE Access 14 (2026), whose method the whistle model follows, CC BY-NC-ND 4.0;
   - metadata/DCLDE2020_DetectionData.xlsx and metadata/Dataset_DCLDE_Oahu.pdf: NOAA material;
   - the page footage, posters and fonts credited in web/CREDITS.md.
 
 The recordings this work is built on are NOAA's DCLDE 2022 release (HICEAS 2017, R/V Lasker). They are not
-redistributed here and should be credited to NOAA when used. Please also cite the base paper (CITATION.cff).
+redistributed here and should be credited to NOAA when used. Whoever uses the whistle model should also cite Park et al. (CITATION.cff).
 
 Licences of all third-party material and dependencies: project/LICENSING.md.

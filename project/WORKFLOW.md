@@ -10,7 +10,7 @@ To do item (ID) -> work -> python tools/repo.py check -> review -> Definition of
 
 The tracker is the **To do** section of [`WORKLOG.md`](../WORKLOG.md). There is one list for the whole project.
 
-- **Every piece of planned work gets an ID before it starts:** YOU (only the owner can do it), WC (WhistleCode), DET (detector paper), REP (reproduction), WEB (page and deployment), OPS (repository and engineering). IDs are never reused or renumbered.
+- **Every piece of planned work gets an ID before it starts:** YOU (only the owner can do it), WC (WhistleCode), DET (detector paper), REP (the whistle model; the prefix is kept), WEB (page and deployment), OPS (repository and engineering). IDs are never reused or renumbered.
 - **Bugs** go under "Bugs" as `BUG-n`, with: what happens, how to make it happen, how bad it is (high: wrong results or a broken page; medium: a feature fails with a workaround; low: cosmetic), and the area. A fixed bug is ticked and logged under Done like any task.
 - **One item is "Next."** The "At a glance" table names it.
 - **Waiting on the owner:** anything that needs the owner (an approval, a download, a decision, volunteers, a commit) goes under "Waiting on you", with what exactly to do.

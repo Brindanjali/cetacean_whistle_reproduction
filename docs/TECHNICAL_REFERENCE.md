@@ -77,8 +77,8 @@ preprocessing_checks/<run_id>/   small check runs with full debug detail (never 
 From the project root.
 
 ```bash
-python -m pytest                                   # all automated tests of the reproduction
-python -m pytest whistlecode/tests                 # WhistleCode's tests
+python -m pytest                                   # the whistle model's tests
+python -m pytest whistlecode/tests                 # the message system's tests (WhistleCode)
 python whistle.py list-sets                        # validation sets (val1/val5/val10 from encounter 191, per_encounter) + files per encounter
 python whistle.py build-backgrounds                # real-background banks for synthetic training (S1-S3 on 56 non-validation files)
 python whistle.py build-ridge-masks                # label-free masks of real faint whistles in the training backgrounds; needed

@@ -25,7 +25,7 @@ Every arrow that produces a file also writes its lineage: the configuration and 
 
 ## 2. Code modules
 
-### `src/whistlepipe/`: the reproduction (entry point `whistle.py`)
+### `src/whistlepipe/`: the whistle model (entry point `whistle.py`)
 
 | Module | Job |
 |---|---|
@@ -48,13 +48,13 @@ Every arrow that produces a file also writes its lineage: the configuration and 
 | Module | Job |
 |---|---|
 | `config.py` | loads and checks `whistlecode/config.toml`; the release version for `/healthz` |
-| `repro.py`, `model.py` | imports the reproduction read-only; checks the checkpoint → latents → GMM chain |
+| `repro.py`, `model.py` | imports the whistle model read-only; checks the checkpoint → latents → GMM chain |
 | `keys.py`, `framing.py`, `format2.py`, `fec.py` | key and nonce streams; text to symbols (format v2); Reed-Solomon with erasures |
 | `codebook.py`, `contour.py`, `synth.py` | the 16-symbol alphabet from GMM components; contours; contour to whistle audio |
 | `bank.py`, `layout.py`, `schedule.py`, `realism.py` | real rhythms; where a message sits in them; slot times and pitches; real voices and clicks |
 | `sender.py`, `transmitter.py` | message to WAV |
 | `channel.py`, `sea.py` | real ocean noise at a set SNR; echoes, absorption, Doppler |
-| `detect.py`, `classify.py`, `receiver.py` | audio to tracks (the reproduction's detector), tracks to symbols, symbols to text, with drift correction |
+| `detect.py`, `classify.py`, `receiver.py` | audio to tracks (the whistle model's detector), tracks to symbols, symbols to text, with drift correction |
 | `baseline.py` | the chirp-alphabet baseline modem |
 | `web.py` | Encode and Decode routes, jobs, `/healthz`, `serve` and `serve --lan` |
 
@@ -62,7 +62,7 @@ Every arrow that produces a file also writes its lineage: the configuration and 
 
 ## 3. The web server
 
-`python whistlecode/whistlecode.py serve` runs one FastAPI app on one port. The WhistleCode routes sit in front; the reproduction's own app (page and Try it) is mounted unchanged behind them.
+`python whistlecode/whistlecode.py serve` runs one FastAPI app on one port. The WhistleCode routes sit in front; the whistle model's own app (page and Try it) is mounted unchanged behind them.
 
 ```mermaid
 flowchart LR
