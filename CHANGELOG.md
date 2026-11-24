@@ -11,12 +11,14 @@ Notable changes to this project, release by release. The format follows [Keep a 
 
 ### Security
 
-Fixes for the public page, from the whole-project audit (`project/AUDIT_2026-11-23.md`, BUG-2 to BUG-5):
+Fixes for the public page, from the whole-project audit (`project/AUDIT_2026-11-23.md`, BUG-2 to BUG-7):
 
 - **Uploads can no longer decode to gigabytes.** Try it and Decode read only the channel they use, in blocks and never past the length limit, and refuse sample rates above 768 kHz (Try it) or 192 kHz (Decode) and more than 8 channels. A 1.7 MB FLAC used to decode to 6.3 GB.
 - **New whistles per whistle are capped** at twice the default on `/api/analyze-example` too, as they already were on `/api/analyze`; negative values count as none.
 - **Request sizes, uploads and the queue are limited.** A body over its route's limit (the upload size for `/api/analyze` and `/api/wc/decode`, 64 kB for every other request) is refused with 413 while it arrives, before anything is stored; at most two uploads may arrive at once and six jobs wait, beyond which the server answers "busy" (503); an upload is deleted when its job ends. New module `src/whistlepipe/guard.py`.
 - **`POST /api/reload-model` is off** unless `[server] allow_reload = true` in `configs/inference.toml` (403 otherwise): anyone who could open the page could make the server re-read every model file.
+- **A decoded message is no longer written to disk** (BUG-6). Decode kept it in the job's `result.json`, readable by anyone with the job ID; it is now kept in memory with its job and added to `result.json` only as that is served. The page shows "No longer held by the server" if the server restarted in between.
+- **Tracebacks are no longer served** (BUG-7). A job that fails inside the code still saves `error.txt` in its folder for whoever runs the server, but no file route or results zip serves it, and the error message no longer names it.
 
 ## [0.10.0] - 2026-11-22
 

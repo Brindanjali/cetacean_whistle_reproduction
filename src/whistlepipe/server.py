@@ -8,12 +8,13 @@
     POST /api/generate                  {"n": 8, "seed": 0, "condition": null, "fc_hz": null, "model": null} -> {"job": id}
     GET  /api/jobs/{id}                 state, stage, progress, error, result URL
     GET  /api/results/{id}/{file}       result.json, PNG, WAV of a finished job
-    GET  /api/results/{id}.zip          everything of a job in one file
+    GET  /api/results/{id}.zip          everything of a job in one file (neither route serves its input or error.txt)
     GET  /                              the page itself (web/, with HTTP Range for the videos)
 
 ``model`` is an id from configs/inference.toml [[models]] (null or absent: the first, the default); an unknown id is a 400.
 Jobs run one at a time on a single worker thread (the GPU holds the models). Each job writes runs/infer/<id>/;
-the newest ``keep_jobs`` job folders are kept. Binds to 127.0.0.1 by default (configs/inference.toml [server]).
+the newest ``keep_jobs`` job folders are kept. A job that fails inside the code saves its traceback as error.txt in its
+folder, for whoever runs the server; it is never served. Binds to 127.0.0.1 by default (configs/inference.toml [server]).
 
 Limits, because the page may be open to the internet ([server], [input]; project/AUDIT_2026-11-23.md): a request body is
 refused (413) as it arrives once it passes the upload size (/api/analyze) or max_request_kb (every other route); at most
@@ -45,6 +46,11 @@ from .infer import Engine, new_job_id, resolve
 JOB_ID = re.compile(r"^(gen_)?\d{8}T\d{6}Z_[0-9a-f]{6}$")
 FILE_NAME = re.compile(r"^[A-Za-z0-9_.-]{1,80}$")
 WEB_DIR = PROJECT_ROOT / "web"
+
+
+def private(name: str) -> bool:
+    """A job's files that are never served: the upload (deleted when its job ends) and the traceback (BUG-7)."""
+    return name.startswith("input.") or name == "error.txt"
 
 
 class GenerateRequest(BaseModel):
@@ -103,7 +109,7 @@ class Jobs:
                 job.update(state="error", error=str(e))
             except Exception as e:  # noqa: BLE001  (shown as an internal error; the traceback goes to the job folder)
                 (self.out_root / jid / "error.txt").write_text(traceback.format_exc(), encoding="utf-8")
-                job.update(state="error", error=f"internal error ({type(e).__name__}); see runs/infer/{jid}/error.txt")
+                job.update(state="error", error=f"internal error ({type(e).__name__}); the details are saved on the server")
             finally:
                 for p in (self.out_root / jid).glob("input.*"):     # the upload is never served back: free its space now
                     p.unlink(missing_ok=True)
@@ -228,7 +234,7 @@ def create_app(engine: Engine | None = None, web_dir: Path = WEB_DIR, keep_jobs:
         buf = io.BytesIO()
         with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
             for p in sorted(d.iterdir()):
-                if p.is_file() and not p.name.startswith("input"):
+                if p.is_file() and not private(p.name):
                     z.write(p, f"{jid}/{p.name}")
         return Response(buf.getvalue(), media_type="application/zip",
                         headers={"Content-Disposition": f'attachment; filename="{jid}.zip"'})
@@ -236,7 +242,7 @@ def create_app(engine: Engine | None = None, web_dir: Path = WEB_DIR, keep_jobs:
     @app.get("/api/results/{jid}/{name}")
     def result_file(jid: str, name: str):
         d = job_dir(jid)
-        if not FILE_NAME.match(name) or not (d / name).is_file():
+        if not FILE_NAME.match(name) or private(name) or not (d / name).is_file():
             raise HTTPException(404, "no such file")
         return FileResponse(d / name)
 

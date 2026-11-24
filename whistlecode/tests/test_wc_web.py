@@ -179,6 +179,47 @@ def test_oversized_requests_are_refused_before_any_route(cfg, tmp_path):
     assert not any((tmp_path / "web").iterdir())                          # no job folder was made
 
 
+def test_decoded_text_stays_off_disk_and_tracebacks_stay_on_the_server(cfg, tmp_path):
+    """BUG-6: a decode job's message is kept in memory, never in result.json; BUG-7: no route serves error.txt."""
+    from fastapi.testclient import TestClient
+
+    out = tmp_path / "web"
+    cfg["web"]["out_dir"], cfg["web"]["keep_jobs"] = str(out), 2
+    with TestClient(web.create_app(_StubEngine(cfg), warm=False)) as c:
+        jobs = c.app.state.jobs
+
+        def run(fn) -> str:
+            jid, _ = jobs.new()
+            jobs.submit(jid, "decode", fn)
+            t0 = time.time()
+            while jobs.jobs[jid]["state"] not in ("done", "error"):
+                assert time.time() - t0 < 10
+                time.sleep(0.02)
+            return jid
+
+        ok = run(lambda progress: {"kind": "decode", "ok": True, "text": "MEET AT DAWN", "hex": None})
+        on_disk = (out / ok / "result.json").read_text(encoding="utf-8")
+        assert "MEET" not in on_disk and json.loads(on_disk)["text"] is None
+        r = c.get(f"/api/wc/files/{ok}/result.json")
+        assert r.json()["text"] == "MEET AT DAWN" and r.headers["cache-control"] == "no-store"
+        assert "MEET" not in c.get(f"/api/wc/jobs/{ok}").text
+        raw = run(lambda progress: {"kind": "decode", "ok": True, "text": None, "hex": "c3a9ff"})
+        assert "c3a9ff" not in (out / raw / "result.json").read_text(encoding="utf-8")
+        assert c.get(f"/api/wc/files/{raw}/result.json").json()["hex"] == "c3a9ff"
+
+        def broken(progress):
+            raise RuntimeError("a detail for the owner")
+
+        bad = run(broken)
+        j = c.get(f"/api/wc/jobs/{bad}").json()
+        assert j["state"] == "error" and "RuntimeError" in j["error"] and "error.txt" not in j["error"]
+        assert "a detail for the owner" in (out / bad / "error.txt").read_text(encoding="utf-8")
+        assert c.get(f"/api/wc/files/{bad}/error.txt").status_code == 404
+        # keep_jobs = 2: one of the first two jobs has gone, and its message with it
+        left = {d.name for d in out.iterdir()}
+        assert len(left) == 2 and bad in left and set(jobs.held) == left - {bad}
+
+
 # ---------------------------------------------------------------------------------------------- the routes, on the real model
 @pytest.fixture(scope="module")
 def client(tmp_path_factory):
@@ -255,6 +296,8 @@ def test_send_sea_decode_check(client):
     assert got["header"]["n"] == 7 and got["payload"]["n"] == sent["n_data"] - 10
     assert {s["state"] for s in got["slots"][:3]} == {"start"} and len(got["slots"]) == sent["n_data"]
     assert got["repair"]["spare"] == {"header": 4, "payload": 8}
+    raw = (client.app.state.jobs.root / got["id"] / "result.json").read_text(encoding="utf-8")
+    assert KEY not in raw and "MEET" not in raw                                  # the decoded text is held in memory only
 
     c = client.post("/api/wc/check", json={"send": sent["id"], "decode": got["id"]}).json()
     assert c["comparable"] and sum(c["counts"].values()) == sent["n_data"] - 3 and c["counts"]["right"] >= 20

@@ -18,7 +18,7 @@ routes sit in front of it:
     POST /api/wc/decode-job  {job, file, key}    a WAV this server made ("sent" or "heard"), copied into the decode job first
     POST /api/wc/check       {send, decode}      the decoder's reading of each whistle against the sender's record
     GET  /api/wc/jobs/{id}                       state, stage, error, result URL
-    GET  /api/wc/files/{id}/{name}               result.json, PNG and WAV files of a job
+    GET  /api/wc/files/{id}/{name}               result.json, PNG and WAV files of a job (not its input or error.txt)
     GET  /healthz                                for monitoring: 200 while messages can be served ("ok", or "starting"
                                                  while the models load), 503 when they cannot ("down"); with the version
 
@@ -26,9 +26,11 @@ What keeps the demonstration honest:
 
 - A decode job reads only its own input file and the key it is given. It never opens another job's folder.
 - The key and the message text are never written to disk. The sender's record holds the whistle symbols, which the key scrambles.
+  A decode job's message (MEMORY_ONLY) is kept in memory with its job and added to its result.json only as that is served.
 - Comparing a reading with the sender's record is a separate step (/check), run after decoding.
 
 Jobs run one at a time on one worker thread and write whistlecode/outputs/web/<id>/; the newest web.keep_jobs folders are kept.
+A job that fails inside the code saves its traceback as error.txt in its folder, for whoever runs the server; it is never served.
 
 Limits, because the page may be open to the internet (config.toml [web]; project/AUDIT_2026-11-23.md): a request body is
 refused (413) as it arrives once it passes max_upload_mb (/decode) or max_request_kb (every other route); at most
@@ -64,8 +66,14 @@ from .framing import FramingError
 
 JOB_ID = re.compile(r"^wc_\d{8}T\d{6}Z_[0-9a-f]{6}$")
 FILE_NAME = re.compile(r"^[A-Za-z0-9_.-]{1,80}$")
+MEMORY_ONLY = ("text", "hex")       # a decoded message: kept in memory with its job, never written to disk (BUG-6)
 PARTS = {layout.PREAMBLE: "start", layout.HEADER: "header", layout.PAYLOAD: "message"}
 SHAPE_POINTS = 24
+
+
+def private(name: str) -> bool:
+    """A job's files that are never served: the upload (deleted when its job ends) and the traceback (BUG-7)."""
+    return name.startswith("input.") or name == "error.txt"
 
 
 class InputError(ValueError):
@@ -433,6 +441,7 @@ class Jobs:
         self.root, self.keep, self.max_queued = root, keep, max_queued
         self.root.mkdir(parents=True, exist_ok=True)
         self.jobs: dict[str, dict] = {}
+        self.held: dict[str, dict] = {}     # job id -> its MEMORY_ONLY fields, dropped with the job
         self.q: queue.Queue = queue.Queue()
         threading.Thread(target=self._work, daemon=True, name="whistlecode-worker").start()
 
@@ -467,13 +476,17 @@ class Jobs:
             d = self.root / jid
             try:
                 result = fn(progress)
-                (d / "result.json").write_text(json.dumps(result, indent=1), encoding="utf-8")
+                held = {k: result[k] for k in MEMORY_ONLY if result.get(k) is not None}
+                on_disk = {**result, **dict.fromkeys(held)}           # the same fields, as null
+                (d / "result.json").write_text(json.dumps(on_disk, indent=1), encoding="utf-8")
+                if held:
+                    self.held[jid] = held
                 job.update(state="done", result=f"/api/wc/files/{jid}/result.json")
             except (InputError, FramingError) as e:
                 job.update(state="error", error=str(e))
             except Exception as e:  # noqa: BLE001  (shown as an internal error; the traceback goes to the job folder)
                 (d / "error.txt").write_text(traceback.format_exc(), encoding="utf-8")
-                job.update(state="error", error=f"internal error ({type(e).__name__}); see whistlecode/outputs/web/{jid}/error.txt")
+                job.update(state="error", error=f"internal error ({type(e).__name__}); the details are saved on the server")
             finally:
                 for p in d.glob("input.*"):                  # the upload is never served back: free its space now
                     p.unlink(missing_ok=True)
@@ -484,6 +497,7 @@ class Jobs:
             if self.jobs.get(p.name, {}).get("state") not in ("queued", "running"):
                 shutil.rmtree(p, ignore_errors=True)
                 self.jobs.pop(p.name, None)
+                self.held.pop(p.name, None)
 
     def folder(self, jid: str) -> Path:
         d = self.root / jid
@@ -629,8 +643,11 @@ def create_app(engine: Engine | None = None, page=None, warm: bool = True):
     @api.get("/files/{jid}/{name}")
     def file_route(jid: str, name: str):
         d = folder(jid)
-        if not FILE_NAME.match(name) or name.startswith("input.") or not (d / name).is_file():
+        if not FILE_NAME.match(name) or private(name) or not (d / name).is_file():
             raise HTTPException(404, "no such file")
+        if name == "result.json" and jid in jobs.held:       # the decoded message, from memory; browsers are told not to store it
+            r = json.loads((d / name).read_text(encoding="utf-8"))
+            return JSONResponse({**r, **jobs.held[jid]}, headers={"Cache-Control": "no-store"})
         return FileResponse(d / name)
 
     app = FastAPI(title="WhistleCode", docs_url=None, redoc_url=None, openapi_url=None)

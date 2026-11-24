@@ -503,7 +503,8 @@
     txt.classList.toggle('none', !r.ok);
     badge.className = 'wc-badge';
     if (r.ok) {
-      const shown = r.text != null ? r.text : `binary: ${r.hex}`;
+      // the server holds a decoded message in memory only (never on disk), so a restart forgets it
+      const shown = r.text != null ? r.text : r.hex != null ? `binary: ${r.hex}` : 'No longer held by the server';
       txt.replaceChildren(...[...shown].map(c => h('span', {}, c)));
       res.hidden = false;
       [...txt.children].forEach((sp, i) => reduced ? sp.classList.add('in') : setTimeout(() => sp.classList.add('in'), 40 * i));

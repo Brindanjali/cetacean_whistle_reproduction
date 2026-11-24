@@ -2,7 +2,7 @@
 
 The single place for what is planned, what is waiting, and what has been done in this project: the message system (WhistleCode), the whistle model (VAE-GMM), the detector paper, the web page and the repository itself. Every change to the project adds a line here ([how](#how-this-log-works)).
 
-**Updated:** 2026-11-23
+**Updated:** 2026-11-24
 
 ## At a glance
 
@@ -11,7 +11,7 @@ The single place for what is planned, what is waiting, and what has been done in
 | Whistle model (VAE-GMM) | Complete. Dataset built; model V1 trained to epoch 150; Gaussian mixtures for epochs 101 and 150; paper evaluation done on epoch 101 | Nothing required (epoch-150 evaluation is optional: REP-1) |
 | Message system (WhistleCode) | v1 built and tested (campaign v1). Second round: R0, R1 and R2 (drift correction, adopted) done | **WC-R3** shape covertness |
 | Detector paper | A draft exists (`docs/private/Mentor_Review_1.pdf`, never in git); its to-do file is older than the draft | DET-1, DET-2 |
-| Web page and deployment | Film, Try it (models Nyx and Delphi), Encode, Decode and Record; self-hosted with Docker and Tailscale; `/healthz` and a Docker healthcheck. The 2026-11-23 audit's public-page bugs BUG-2 to BUG-5 are fixed in the code; the running server gets them on its next restart (YOU-10) | BUG-6, BUG-7 (claims in `.github/SECURITY.md`); WEB-1 static examples are out of date |
+| Web page and deployment | Film, Try it (models Nyx and Delphi), Encode, Decode and Record; self-hosted with Docker and Tailscale; `/healthz` and a Docker healthcheck. The 2026-11-23 audit's public-page bugs BUG-2 to BUG-7 are fixed in the code; the running server gets them on its next restart (YOU-10) | BUG-13 (job folders pruned out of order); WEB-1 static examples are out of date |
 | Engineering | 25 systems in place ([`project/README.md`](project/README.md)): tracker, Definition of Done, review, lint, tests, CI, lock file, releases, monitoring, registers, security. v0.9.0 tagged; code licensed under Apache 2.0; CI green; no pin has a known advisory. Release 0.10.0 prepared. Whole-project audit 2026-11-23 ([`project/AUDIT_2026-11-23.md`](project/AUDIT_2026-11-23.md)): records and numbers sound; 11 bugs recorded | YOU-10: commit, tag v0.10.0 (on `9697663`), rebuild the server image |
 | Course | Week 7 of 8 | Final review at the end of Week 8 |
 
@@ -54,13 +54,14 @@ Found by the audit of 2026-11-23; details, places and fixes in `project/AUDIT_20
 - [x] **BUG-3** (high, web) `POST /api/analyze-example` does not clamp `n_samples` (`/api/analyze` does): `{"example": ..., "n_samples": 100000}` makes the worker decode and save 100,000 images per whistle; a negative value crashes the job (`src/whistlepipe/server.py`, `infer.py` `Engine.analyze`). Fixed 2026-11-23: clamped to 0-8 on both routes.
 - [x] **BUG-4** (high, web) No limit on waiting jobs or stored uploads: each request adds a queued job that is never pruned, and each upload (up to 200 MB) is written to disk first. Posting in a loop fills the disk and the queue (`wcode/web.py` and `server.py`, class `Jobs`). Fixed 2026-11-23: request sizes enforced as the body arrives, two uploads at once, six waiting jobs, uploads deleted after their job.
 - [x] **BUG-5** (medium, web) `POST /api/reload-model` is open to anyone: each call re-reads about 200 MB of model files and holds a server thread while the running job finishes; repeated calls stall the page (`src/whistlepipe/server.py`). Fixed 2026-11-23: off unless `[server] allow_reload = true`.
-- [ ] **BUG-6** (medium, web) Decoded message text is written to the decode job's `result.json` (kept for the newest 60 jobs, readable by anyone with the job ID), although `web.py` and `.github/SECURITY.md` say message text is never written to disk. Keys are not written.
-- [ ] **BUG-7** (medium, web) Tracebacks reach the browser, although `.github/SECURITY.md` says they do not: a failed job's `error.txt` is served by `/api/wc/files/<id>/error.txt`, `/api/results/<id>/error.txt` and the results zip, and the error message names it.
+- [x] **BUG-6** (medium, web) Decoded message text is written to the decode job's `result.json` (kept for the newest 60 jobs, readable by anyone with the job ID), although `web.py` and `.github/SECURITY.md` say message text is never written to disk. Keys are not written. Fixed 2026-11-24: the message is kept in memory with its job and added to `result.json` only as it is served.
+- [x] **BUG-7** (medium, web) Tracebacks reach the browser, although `.github/SECURITY.md` says they do not: a failed job's `error.txt` is served by `/api/wc/files/<id>/error.txt`, `/api/results/<id>/error.txt` and the results zip, and the error message names it. Fixed 2026-11-24: no route or zip serves `error.txt`; the message gives only the error's type.
 - [ ] **BUG-8** (medium, monitoring) `python tools/repo.py health` crashes with a JSON error when the server answers with a non-JSON error page (as a proxy does when the app is down); confirmed against a plain 404 page. With `--every`, monitoring stops at the first outage.
 - [ ] **BUG-9** (medium, deploy) The server image pins only its direct packages: `deploy/Dockerfile` installs `requirements-serve.txt` without `constraints.txt`, so starlette, anyio, h11 and the rest float to the newest at build time, and CI audits the pins rather than the image. `.github/SECURITY.md` says the image pins every package.
 - [ ] **BUG-10** (low, web) The page polls a job for ever when the server no longer knows it (after a restart the job route answers 404): "Working…" never ends (`web/lab.js`, `web/message.js`).
 - [ ] **BUG-11** (low, tools) `python tools/repo.py ci-report` crashes with a traceback on an HTTP error from GitHub (a 504 happened on 2026-11-23).
 - [ ] **BUG-12** (low, web) `web/serve.py` (local only) fails with an unhandled error on the header `Range: bytes=-`.
+- [ ] **BUG-13** (low, web) Job folders can be pruned out of order, once `keep_jobs` folders exist. WhistleCode (`wcode/web.py` `Jobs._prune`) sorts folders by name, and two jobs made in the same second differ only in their random suffix, so the newer one can go first (found 2026-11-24 by a new test). Try it (`server.py` `Jobs._prune`) sorts a folder whose upload is still being copied, not yet a job, as the oldest, so a job submitted meanwhile can delete it, and the upload's job then fails.
 
 ### WhistleCode, second round
 
@@ -137,6 +138,15 @@ The plan, pass marks and rules are frozen in `whistlecode/PLAN.md` section 8.7.
 ## Done
 
 Newest first. Older history is grouped by stage. Commit hashes are given where the work was committed; an entry's own commit is the one that adds it.
+
+### 2026-11-24
+
+- **Web (BUG-6, BUG-7)**: the last two public-page bugs from the audit. Tests run on the project laptop.
+  - BUG-6: `whistlecode/wcode/web.py` `Jobs` writes a decode job's message fields (`MEMORY_ONLY`: `text`, `hex`) to `result.json` as null and keeps them in memory with the job (`Jobs.held`, dropped when the job is pruned); `/api/wc/files/<id>/result.json` adds them back as it serves the file, with `Cache-Control: no-store`. `web/message.js` shows "No longer held by the server" if the server restarted in between.
+  - BUG-7: `whistlecode/wcode/web.py` and `src/whistlepipe/server.py` never serve `error.txt` (new `private()`, used by the file routes and the results zip); an internal error's message gives the error's type and no longer names the file.
+  - Tests: `whistlecode/tests/test_wc_web.py` (message off disk, served from memory and dropped with its job; `error.txt` refused; the real-model decode leaves no text on disk), `tests/test_server.py` (`error.txt` refused by the file route and the zip).
+  - New BUG-13 (job folders pruned out of order), found by the new WhistleCode test.
+  - Docs: `.github/SECURITY.md` (Text and keys, Errors rows now true), `deploy/README.md`, `CHANGELOG.md` (Unreleased, Security).
 
 ### 2026-11-23
 

@@ -108,4 +108,5 @@ waiting; limits in `.github/SECURITY.md`), so share the address only with the pe
 keep the page to your own devices (those signed in to your tailnet), set `"AllowFunnel"` to `false`. The container
 applies the change by itself; if not, run `docker compose -f deploy/docker-compose.yml restart tailscale`.
 
-The key typed into Encode and Decode travels over https and is never written to disk (see `whistlecode/wcode/web.py`).
+The key and the message typed into Encode and Decode travel over https and are never written to disk; a decoded message is
+kept in memory until its job is pruned or the server restarts (see `whistlecode/wcode/web.py`).

@@ -35,9 +35,9 @@ WhistleCode is a research prototype. Its message encryption is **not** claimed t
 | Requests and jobs | any other request body is refused above 64 kB; one job runs at a time and at most six wait, beyond which the server answers "busy" (503); Try it's new whistles per whistle are capped at twice the default |
 | Model reloading | `POST /api/reload-model` is off (`configs/inference.toml` `[server] allow_reload = false`); restart the server instead |
 | Job files | job IDs and file names must match fixed patterns; a decode job can read only its own input; input files are never served back |
-| Text and keys | length limits; keys are never written to disk. Not yet true for decoded text, which a decode job's `result.json` holds (BUG-6) |
+| Text and keys | length limits; neither the key nor the message text is written to disk. A decode job keeps the message it read in memory, adds it to its `result.json` only as that is served (with `Cache-Control: no-store`), and forgets it when the job's folder is pruned or the server restarts |
 | Server process | runs as a non-root user; the repository is mounted read-only, except `whistlecode/outputs/` and `runs/` |
-| Errors | input errors return a short message. Not yet true: a failed job's `error.txt` traceback can be downloaded (BUG-7) |
+| Errors | input errors return a short message; a failure inside the code returns only the error's type, and its traceback stays in the job's folder (`error.txt`), which no route or zip serves |
 | No login | intended for a demonstration; share the address only with the people who need it |
 
 ## Dependencies

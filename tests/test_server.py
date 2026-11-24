@@ -1,6 +1,8 @@
 """The web API: upload -> job -> result files, generation, examples, file serving (incl. HTTP Range for the videos)."""
+import io
 import json
 import time
+import zipfile
 
 import pytest
 from fastapi.testclient import TestClient
@@ -127,6 +129,25 @@ def test_limits_for_a_public_page(tmp_path, web):
               c.post("/api/analyze", files={"file": ("up.wav", p.read_bytes())})):
         assert r.status_code == 503 and "busy" in r.json()["detail"]
     assert len(list((tmp_path / "jobs").iterdir())) == n_jobs           # nothing stored for a refused request
+
+
+def test_tracebacks_are_kept_on_the_server(tmp_path, web):
+    """BUG-7: a job that fails inside the code saves error.txt for whoever runs the server; no route serves it."""
+    c = client_for(tmp_path, web)
+    jobs = c.app.state.jobs
+    jid, d = jobs.folder("analyze")
+    (d / "overview.png").write_bytes(b"png")
+
+    def broken(progress):
+        raise RuntimeError("a detail for the owner")
+
+    jobs.submit(jid, "analyze", broken)
+    j = wait(c, jid)
+    assert j["state"] == "error" and "RuntimeError" in j["error"] and "error.txt" not in j["error"]
+    assert "a detail for the owner" in (d / "error.txt").read_text(encoding="utf-8")
+    assert c.get(f"/api/results/{jid}/error.txt").status_code == 404
+    names = zipfile.ZipFile(io.BytesIO(c.get(f"/api/results/{jid}.zip").content)).namelist()
+    assert names == [f"{jid}/overview.png"]
 
 
 def test_old_job_folders_are_pruned(tmp_path, web):
