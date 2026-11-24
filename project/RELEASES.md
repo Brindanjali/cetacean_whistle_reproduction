@@ -58,7 +58,7 @@ The page runs in Docker on the project laptop and reaches the internet through T
 | Field | Value |
 |---|---|
 | Address | `https://whistle.<tailnet>.ts.net` (Tailscale Funnel, project laptop) and http://localhost:8000 |
-| Version | Whatever is checked out: the container mounts the working tree read-only. First deployed 2026-11-20 (`ea18d03`), before versioning. Deploy tagged releases from now on |
+| Version | Whatever is checked out: the container mounts the working tree read-only. Since 2026-11-24: `1613c18`, which is v0.10.0 plus the [Unreleased] security fixes (BUG-2 to BUG-7, BUG-13), on an image rebuilt the same day (Pillow 13.0.0; its other packages are not all pinned, BUG-9). First deployed 2026-11-20 (`ea18d03`), before versioning. Deploy tagged releases from now on |
 | Models | Try it: Nyx (epoch 101) and Delphi (epoch 150). Encode/Decode: Nyx, codebook `cd322a02` |
 | Access | Anyone with the address ("AllowFunnel": true) |
 | Uptime | Only while the laptop is on, awake and running Docker Desktop |
