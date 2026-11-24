@@ -16,7 +16,9 @@ automatically).
 | `tailscale` | `tailscale/tailscale:v1.104.4` | joins your tailnet as the machine `whistle`, gets its https certificate, forwards port 443 to the app, and with Funnel opens it to the internet |
 | `app` | `whistle-app:cpu` (or `:gpu`), built from `Dockerfile` | `python whistlecode/whistlecode.py serve` on port 8000, inside the `tailscale` container's network |
 
-The image holds only Python and the packages in `requirements-serve.txt`. The repository is mounted read-only at
+The image holds only Python and the packages in `requirements-serve.txt`, each of them and everything they pull in at its
+version in the lock file, `constraints.txt` (the build reads only these two files of the repository:
+`Dockerfile.dockerignore`). The repository is mounted read-only at
 `/app`, so the container uses exactly the code, models (`models/`), page (`web/`) and sea recordings
 (`encounter_214_audio/`, `encounter_276_audio/` and the noise cache) that are on disk. It writes only to
 `whistlecode/outputs/` (WhistleCode jobs and new noise-cache files) and `runs/` (Try it jobs), as the local server does.
@@ -94,7 +96,7 @@ Use the same two `-f` options for the other commands while you run the GPU versi
 | stop (the address stops working) | `docker compose -f deploy/docker-compose.yml down` |
 | start again | `docker compose -f deploy/docker-compose.yml up -d` |
 | new model files or code (restart the app only) | `docker compose -f deploy/docker-compose.yml restart app` |
-| a changed `requirements-serve.txt` or `Dockerfile` | `docker compose -f deploy/docker-compose.yml up -d --build` |
+| a changed `requirements-serve.txt`, `constraints.txt` or `Dockerfile` | `docker compose -f deploy/docker-compose.yml up -d --build` |
 | sign the machine out of Tailscale for good | `docker compose -f deploy/docker-compose.yml down -v` (deletes the saved sign-in) |
 
 Port 8000 on your computer is taken while the containers run. To run `python whistlecode/whistlecode.py serve` at the same

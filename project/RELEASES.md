@@ -45,7 +45,7 @@ The page runs in Docker on the project laptop and reaches the internet through T
 2. The models in place match the registry: `python tools/repo.py checksums verify` (Try it needs both GMMs, Encode and Decode need the codebook and rhythm bank).
 3. Restart or rebuild:
    - code or model files only: `docker compose -f deploy/docker-compose.yml restart app`;
-   - `Dockerfile` or `requirements-serve.txt` changed: `docker compose -f deploy/docker-compose.yml up -d --build`.
+   - `Dockerfile`, `requirements-serve.txt` or `constraints.txt` changed: `docker compose -f deploy/docker-compose.yml up -d --build`.
 4. Wait until `docker compose -f deploy/docker-compose.yml ps` shows the app as `healthy` (up to 3 minutes while the models load).
 5. `python tools/repo.py health https://whistle.<tailnet>.ts.net` returns UP with the expected version.
 6. Open the page: the film plays, Try it analyses an example, Encode sends "HI" and Decode reads it back.
@@ -58,7 +58,7 @@ The page runs in Docker on the project laptop and reaches the internet through T
 | Field | Value |
 |---|---|
 | Address | `https://whistle.<tailnet>.ts.net` (Tailscale Funnel, project laptop) and http://localhost:8000 |
-| Version | Whatever is checked out: the container mounts the working tree read-only. Since 2026-11-24: `1613c18`, which is v0.10.0 plus the [Unreleased] security fixes (BUG-2 to BUG-7, BUG-13), on an image rebuilt the same day (Pillow 13.0.0; its other packages are not all pinned, BUG-9). First deployed 2026-11-20 (`ea18d03`), before versioning. Deploy tagged releases from now on |
+| Version | Whatever is checked out: the container mounts the working tree read-only. Since 2026-11-24: `1613c18`, which is v0.10.0 plus the [Unreleased] security fixes (BUG-2 to BUG-7, BUG-13), on an image rebuilt the same day with every package at its locked version (Pillow 13.0.0; BUG-9 fixed). First deployed 2026-11-20 (`ea18d03`), before versioning. Deploy tagged releases from now on |
 | Models | Try it: Nyx (epoch 101) and Delphi (epoch 150). Encode/Decode: Nyx, codebook `cd322a02` |
 | Access | Anyone with the address ("AllowFunnel": true) |
 | Uptime | Only while the laptop is on, awake and running Docker Desktop |

@@ -25,7 +25,8 @@ services:
 
   app:
     build:
-      context: .
+      context: ..                           # the repository: deploy/Dockerfile.dockerignore lets in only the two files it needs
+      dockerfile: deploy/Dockerfile
     image: whistle-app:cpu
     network_mode: service:tailscale         # Tailscale reaches the app at 127.0.0.1:8000
     depends_on:

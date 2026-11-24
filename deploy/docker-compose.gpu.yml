@@ -5,7 +5,8 @@
 services:
   app:
     build:
-      context: .
+      context: ..
+      dockerfile: deploy/Dockerfile
       args:
         TORCH_INDEX: https://download.pytorch.org/whl/cu130
     image: whistle-app:gpu

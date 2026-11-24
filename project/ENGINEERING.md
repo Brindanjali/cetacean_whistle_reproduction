@@ -67,8 +67,8 @@ A red CI run on `main` is fixed before any other work. The README badge shows th
 | [`.python-version`](../.python-version) | Python 3.11 | CI, pyenv, uv |
 | [`requirements.txt`](../requirements.txt) | whistle-model packages, lower bounds | everyone |
 | [`whistlecode/requirements.txt`](../whistlecode/requirements.txt) | WhistleCode's extra packages (`reedsolo`, exact; `cryptography` for `serve --lan`) | everyone |
-| [`deploy/requirements-serve.txt`](../deploy/requirements-serve.txt) | the web server image, exact pins | `deploy/Dockerfile` |
-| [`constraints.txt`](../constraints.txt) | **the lock file:** exact versions of all 57 packages in use, including the ones they pull in | CI; a new machine |
+| [`deploy/requirements-serve.txt`](../deploy/requirements-serve.txt) | the web server image's packages, exact pins (installed with `-c constraints.txt`, so what they pull in is locked too; `tests/test_deploy.py` keeps the two in step) | `deploy/Dockerfile` |
+| [`constraints.txt`](../constraints.txt) | **the lock file:** exact versions of all 57 packages in use, including the ones they pull in | CI; a new machine; `deploy/Dockerfile` |
 
 **Set up a machine** (CPU; for a GPU, install `torch` and `torchvision` from the PyTorch index for your CUDA version first):
 

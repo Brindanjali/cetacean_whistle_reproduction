@@ -1,0 +1,5 @@
+# The image's build context is the whole repository (docker-compose.yml: context ..), and it needs only these two files.
+# Everything else, gigabytes of recordings and models among it, stays out of the build.
+*
+!constraints.txt
+!deploy/requirements-serve.txt

@@ -42,10 +42,10 @@ WhistleCode is a research prototype. Its message encryption is **not** claimed t
 
 ## Dependencies
 
-- The server image pins every package (`deploy/requirements-serve.txt`), and `constraints.txt` pins everything else.
+- The server image installs every package at its version in `constraints.txt`, the lock file that pins everything else too: its own list (`deploy/requirements-serve.txt`) and all they pull in, PyTorch's dependencies and setuptools included. `pip check` runs at build time and `tests/test_deploy.py` keeps the pins in step. pip itself is pinned in `deploy/Dockerfile`.
 - CI's dependency audit (`pip-audit`) reports known vulnerabilities in both, on every push, as warnings on the run (`python tools/repo.py ci-report` lists them). It does not block; read it before every release and deployment.
 - **State on 2026-11-22:** none of the 57 pins has a known advisory (OSV). The same morning eight had: anyio, certifi, cryptography, filelock, fsspec, pillow, pytest and setuptools; all were upgraded to fixed versions (OPS-7). The page exposed little of it: its uploads are audio files, which pillow never decodes. The running server picks up pillow 13 when its image is rebuilt (`project/RELEASES.md`, Deployment).
-- **2026-11-24:** the image was rebuilt and runs pillow 13.0.0. It does not hold every pin yet (BUG-9): 14 of its 38 packages differ from `constraints.txt`, among them filelock 4.2.4 from the PyTorch index (the lock has 4.2.12).
+- **2026-11-24:** the image was rebuilt and runs pillow 13.0.0. The first rebuild showed it did not hold every pin (BUG-9): 14 of its 38 packages differed from `constraints.txt`, among them filelock 4.2.4 from the PyTorch index, setuptools 79.0.1 and pip 24.0 from the base image (the lock has filelock 4.2.12 and setuptools 84.2.1; pip 24.0 has 12 advisories). Rebuilt the same day with the fix: all 39 locked packages match, pip is 26.2.2 (no advisory) and wheel 0.46.3 (none).
 - A vulnerable package is upgraded like any other change: rewrite the lock, run the checks, log it, and redeploy.
 
 ## Data and privacy
