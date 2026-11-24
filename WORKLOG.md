@@ -11,7 +11,7 @@ The single place for what is planned, what is waiting, and what has been done in
 | Whistle model (VAE-GMM) | Complete. Dataset built; model V1 trained to epoch 150; Gaussian mixtures for epochs 101 and 150; paper evaluation done on epoch 101 | Nothing required (epoch-150 evaluation is optional: REP-1) |
 | Message system (WhistleCode) | v1 built and tested (campaign v1). Second round: R0, R1 and R2 (drift correction, adopted) done | **WC-R3** shape covertness |
 | Detector paper | A draft exists (`docs/private/Mentor_Review_1.pdf`, never in git); its to-do file is older than the draft | DET-1, DET-2 |
-| Web page and deployment | Film, Try it (models Nyx and Delphi), Encode, Decode and Record; self-hosted with Docker and Tailscale; `/healthz` and a Docker healthcheck. The 2026-11-23 audit's public-page bugs BUG-2 to BUG-7 are fixed in the code; the running server gets them on its next restart (YOU-10) | BUG-13 (job folders pruned out of order); WEB-1 static examples are out of date |
+| Web page and deployment | Film, Try it (models Nyx and Delphi), Encode, Decode and Record; self-hosted with Docker and Tailscale; `/healthz` and a Docker healthcheck. The 2026-11-23 audit's public-page bugs BUG-2 to BUG-7 are fixed in the code; the running server gets them on its next restart (YOU-10) | WEB-1 static examples are out of date |
 | Engineering | 25 systems in place ([`project/README.md`](project/README.md)): tracker, Definition of Done, review, lint, tests, CI, lock file, releases, monitoring, registers, security. v0.9.0 tagged; code licensed under Apache 2.0; CI green; no pin has a known advisory. Release 0.10.0 prepared. Whole-project audit 2026-11-23 ([`project/AUDIT_2026-11-23.md`](project/AUDIT_2026-11-23.md)): records and numbers sound; 11 bugs recorded | YOU-10: commit, tag v0.10.0 (on `9697663`), rebuild the server image |
 | Course | Week 7 of 8 | Final review at the end of Week 8 |
 
@@ -61,7 +61,7 @@ Found by the audit of 2026-11-23; details, places and fixes in `project/AUDIT_20
 - [ ] **BUG-10** (low, web) The page polls a job for ever when the server no longer knows it (after a restart the job route answers 404): "Working…" never ends (`web/lab.js`, `web/message.js`).
 - [ ] **BUG-11** (low, tools) `python tools/repo.py ci-report` crashes with a traceback on an HTTP error from GitHub (a 504 happened on 2026-11-23).
 - [ ] **BUG-12** (low, web) `web/serve.py` (local only) fails with an unhandled error on the header `Range: bytes=-`.
-- [ ] **BUG-13** (low, web) Job folders can be pruned out of order, once `keep_jobs` folders exist. WhistleCode (`wcode/web.py` `Jobs._prune`) sorts folders by name, and two jobs made in the same second differ only in their random suffix, so the newer one can go first (found 2026-11-24 by a new test). Try it (`server.py` `Jobs._prune`) sorts a folder whose upload is still being copied, not yet a job, as the oldest, so a job submitted meanwhile can delete it, and the upload's job then fails.
+- [x] **BUG-13** (low, web) Job folders can be pruned out of order, once `keep_jobs` folders exist. WhistleCode (`wcode/web.py` `Jobs._prune`) sorts folders by name, and two jobs made in the same second differ only in their random suffix, so the newer one can go first (found 2026-11-24 by a new test). Try it (`server.py` `Jobs._prune`) sorts a folder whose upload is still being copied, not yet a job, as the oldest, so a job submitted meanwhile can delete it, and the upload's job then fails. Fixed 2026-11-24: both servers prune through `guard.JobFolders`, in the order the folders were made, and keep a folder that is not a job yet for 10 minutes.
 
 ### WhistleCode, second round
 
@@ -141,6 +141,10 @@ Newest first. Older history is grouped by stage. Commit hashes are given where t
 
 ### 2026-11-24
 
+- **Web (BUG-13)**: job folders are pruned in the order they were made, and never while their upload is still arriving. Tests run on the project laptop.
+  - New `JobFolders` in `src/whistlepipe/guard.py`: makes job folders, noting the order; prunes the oldest beyond `keep_jobs` (earlier runs' folders first, by the time in their names, then this run's in the order made); keeps queued and running jobs, and a folder that is not a job yet for `grace_s` (600 s) [DECISION], after which a failed request's leftover folder goes like any other. Both `Jobs` classes (`whistlecode/wcode/web.py`, `src/whistlepipe/server.py`) use it; `whistlecode/wcode/repro.py` re-exports it.
+  - Tests: `tests/test_guard.py` (2 new: same-second order, folders still needed), `tests/test_server.py` (an arriving upload's folder survives five jobs), `whistlecode/tests/test_wc_web.py` (the oldest of three same-second jobs goes first).
+  - Docs: `docs/ARCHITECTURE.md` (guard.py row), `CHANGELOG.md` (Unreleased, Fixed).
 - **Web (BUG-6, BUG-7)**: the last two public-page bugs from the audit. Tests run on the project laptop.
   - BUG-6: `whistlecode/wcode/web.py` `Jobs` writes a decode job's message fields (`MEMORY_ONLY`: `text`, `hex`) to `result.json` as null and keeps them in memory with the job (`Jobs.held`, dropped when the job is pruned); `/api/wc/files/<id>/result.json` adds them back as it serves the file, with `Cache-Control: no-store`. `web/message.js` shows "No longer held by the server" if the server restarted in between.
   - BUG-7: `whistlecode/wcode/web.py` and `src/whistlepipe/server.py` never serve `error.txt` (new `private()`, used by the file routes and the results zip); an internal error's message gives the error's type and no longer names the file.

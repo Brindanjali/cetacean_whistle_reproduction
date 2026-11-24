@@ -1,5 +1,6 @@
-"""Limits for a server open to the internet (src/whistlepipe/guard.py; project/AUDIT_2026-11-23.md, BUG-2 and BUG-4)."""
+"""Limits for a server open to the internet (src/whistlepipe/guard.py; project/AUDIT_2026-11-23.md, BUG-2, BUG-4, BUG-13)."""
 import asyncio
+import re
 
 import numpy as np
 import pytest
@@ -7,7 +8,7 @@ import soundfile as sf
 from fastapi import FastAPI, Request
 from fastapi.testclient import TestClient
 
-from whistlepipe.guard import RequestLimit, TooLong, read_channel
+from whistlepipe.guard import JobFolders, RequestLimit, TooLong, read_channel
 
 
 # ---------------------------------------------------------------------------------------------- reading one channel
@@ -101,3 +102,44 @@ def test_uploads_at_once_are_limited():
     assert status == 200
     guard.arriving = 0
     assert _call(app, "/api/upload", [b"x" * 10])[0] == 200 and guard.arriving == 0
+
+
+# ---------------------------------------------------------------------------------------------- job folders (BUG-13)
+ID = re.compile(r"^(gen_)?\d{8}T\d{6}Z_[0-9a-f]{6}$")
+
+
+def _left(f: JobFolders) -> list[str]:
+    return sorted(p.name for p in f.root.iterdir())
+
+
+def test_job_folders_go_in_the_order_they_were_made(tmp_path):
+    """Two ids from the same second differ only in their random suffix: the one made first goes first, whatever its name."""
+    f = JobFolders(tmp_path, keep=2, pattern=ID)
+    older = tmp_path / "20260101T000000Z_aaaaaa"            # left by an earlier run of the server: goes before this run's
+    older.mkdir()
+    ids = ["20260102T000000Z_ffffff", "20260102T000000Z_000000", "gen_20260102T000000Z_777777"]
+    for jid in ids:
+        f.make(jid)
+    assert f.prune(lambda j: "done") == [older.name, ids[0]] and _left(f) == sorted(ids[1:])
+    assert f.prune(lambda j: "done") == []                  # nothing beyond keep
+    (tmp_path / "notes").mkdir()                            # not a job folder: never touched
+    assert f.prune(lambda j: "done") == [] and (tmp_path / "notes").is_dir()
+
+
+def test_job_folders_still_needed_are_kept(tmp_path):
+    f = JobFolders(tmp_path, keep=1, pattern=ID)
+    arriving, queued, done, newest = (f"20260102T00000{k}Z_abcdef" for k in range(4))
+    for jid in (arriving, queued, done, newest):
+        f.make(jid)
+    state = {queued: "queued", done: "done", newest: "done"}          # `arriving` is not a job yet: its upload is copying
+    assert f.prune(state.get) == [done] and _left(f) == [arriving, queued, newest]
+    state[queued] = "error"
+    f.grace_s = 0                                           # a failed request's leftover folder goes once grace_s has passed
+    assert f.prune(state.get) == [arriving, queued] and _left(f) == [newest]
+    gone = f.make("20260102T000004Z_abcdef")
+    gone.rmdir()                                            # removed by its own request (a refused upload)
+    f.prune(state.get)
+    assert gone.name not in f.made
+    with pytest.raises(FileExistsError):
+        f.make(newest)
+

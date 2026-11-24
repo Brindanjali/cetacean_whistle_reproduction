@@ -40,7 +40,7 @@ from pydantic import BaseModel
 
 from .audio import InputError
 from .config import PROJECT_ROOT
-from .guard import RequestLimit
+from .guard import JobFolders, RequestLimit
 from .infer import Engine, new_job_id, resolve
 
 JOB_ID = re.compile(r"^(gen_)?\d{8}T\d{6}Z_[0-9a-f]{6}$")
@@ -70,7 +70,8 @@ class ExampleRequest(BaseModel):
 
 class Jobs:
     def __init__(self, engine: Engine, out_root: Path, keep_jobs: int = 200, max_queued: int = 6):
-        self.engine, self.out_root, self.keep, self.max_queued = engine, out_root, keep_jobs, max_queued
+        self.engine, self.out_root, self.max_queued = engine, out_root, max_queued
+        self.folders = JobFolders(out_root, keep_jobs, JOB_ID)     # pruned oldest first (BUG-13)
         self.jobs: dict[str, dict] = {}
         self.q: queue.Queue = queue.Queue()
         threading.Thread(target=self._work, daemon=True, name="inference-worker").start()
@@ -82,9 +83,7 @@ class Jobs:
 
     def folder(self, kind: str) -> tuple[str, Path]:
         jid = ("gen_" if kind == "generate" else "") + new_job_id()
-        d = self.out_root / jid
-        d.mkdir(parents=True)
-        return jid, d
+        return jid, self.folders.make(jid)
 
     def submit(self, jid: str, kind: str, fn) -> dict:
         self.jobs[jid] = {"id": jid, "kind": kind, "state": "queued", "stage": None, "frac": None, "error": None}
@@ -115,15 +114,8 @@ class Jobs:
                     p.unlink(missing_ok=True)
 
     def _prune(self):
-        # oldest first: folders from earlier server runs (by name: a timestamp), then this run's jobs in submission
-        # order (ids within one second differ only by their random suffix, so names alone do not order them)
-        order = {jid: k for k, jid in enumerate(self.jobs)}
-        dirs = sorted((p for p in self.out_root.iterdir() if p.is_dir() and JOB_ID.match(p.name)),
-                      key=lambda p: (p.name in order, order.get(p.name, 0), p.name.removeprefix("gen_")))
-        for p in dirs[:-self.keep] if len(dirs) > self.keep else []:
-            if self.jobs.get(p.name, {}).get("state") not in ("queued", "running"):
-                shutil.rmtree(p, ignore_errors=True)
-                self.jobs.pop(p.name, None)
+        for jid in self.folders.prune(lambda j: self.jobs.get(j, {}).get("state")):
+            self.jobs.pop(jid, None)
 
 
 def create_app(engine: Engine | None = None, web_dir: Path = WEB_DIR, keep_jobs: int = 200) -> FastAPI:

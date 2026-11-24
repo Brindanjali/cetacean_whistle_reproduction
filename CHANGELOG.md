@@ -9,6 +9,10 @@ Notable changes to this project, release by release. The format follows [Keep a 
 - **The project is presented as what it now is** (D-024): a biomimetic messaging system that hides short text messages in synthetic false killer whale whistles, under the temporary name Falsetto, and no longer as a reproduction of Park et al. The README leads with the message system and its results beside their pass marks; the VAE-GMM generator is "the whistle model", which follows Park et al.'s method and is checked against their paper. `CITATION.cff` cites the project and lists the paper under references. `pyproject.toml`, `NOTICE`, the page's title and footer and the CI step names follow. No numbers changed.
 - **README files rewritten for credibility** (no numbers changed): the main README now says the work is an independent, unofficial course project, written with an AI assistant; states the gaps to the paper beside the matches; uses the paper's term "biomimetic" instead of "covert"; names checkpoints by epoch; shows the DCLDE 2011 score beside Li et al.'s; gives full references; and has a "What runs from a clone" table with download sizes. `CITATION.cff` gains an abstract. `project/README.md`, `web/README.md`, `deploy/README.md` and `cluster/node/README_CLUSTER.md` are written for an outside reader.
 
+### Fixed
+
+- **Job folders are pruned in the order they were made** (BUG-13). Two jobs made in the same second were ordered by their random suffix, so a newer one could be deleted first, and Try it could delete the folder of an upload still being copied, failing its job. Both servers now prune through `JobFolders` in `src/whistlepipe/guard.py`.
+
 ### Security
 
 Fixes for the public page, from the whole-project audit (`project/AUDIT_2026-11-23.md`, BUG-2 to BUG-7):

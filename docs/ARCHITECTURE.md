@@ -41,7 +41,7 @@ Every arrow that produces a file also writes its lineage: the configuration and 
 | `vaegmm/` | VAE and critic (`models.py`), losses, training, GMM (EM), features, metrics, conditional generation, gates G1-G6, evaluation |
 | `infer.py`, `sonify.py` | Try it: a recording to its whistles, the model's images and sound; image to sound |
 | `server.py` | the page and the Try it API (`/api/...`) |
-| `guard.py` | limits for a public server, used by both servers: request sizes enforced while the body arrives, uploads at once, one-channel block reading of uploads |
+| `guard.py` | limits for a public server, used by both servers: request sizes enforced while the body arrives, uploads at once, one-channel block reading of uploads, job folders pruned oldest first |
 | `webexport.py`, `ratecheck.py`, `plotting.py` | page examples, sample-rate check, diagnostic figures |
 
 ### `whistlecode/wcode/`: WhistleCode (entry point `whistlecode/whistlecode.py`)

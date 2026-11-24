@@ -215,9 +215,9 @@ def test_decoded_text_stays_off_disk_and_tracebacks_stay_on_the_server(cfg, tmp_
         assert j["state"] == "error" and "RuntimeError" in j["error"] and "error.txt" not in j["error"]
         assert "a detail for the owner" in (out / bad / "error.txt").read_text(encoding="utf-8")
         assert c.get(f"/api/wc/files/{bad}/error.txt").status_code == 404
-        # keep_jobs = 2: one of the first two jobs has gone, and its message with it
-        left = {d.name for d in out.iterdir()}
-        assert len(left) == 2 and bad in left and set(jobs.held) == left - {bad}
+        # keep_jobs = 2: the oldest job has gone, and its message with it (all three ids may share one second: BUG-13)
+        assert {d.name for d in out.iterdir()} == {raw, bad} and set(jobs.held) == {raw}
+        assert c.get(f"/api/wc/files/{ok}/result.json").status_code == 404
 
 
 # ---------------------------------------------------------------------------------------------- the routes, on the real model

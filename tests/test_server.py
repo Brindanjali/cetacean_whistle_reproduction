@@ -151,7 +151,8 @@ def test_tracebacks_are_kept_on_the_server(tmp_path, web):
 
 
 def test_old_job_folders_are_pruned(tmp_path, web):
-    c = client_for(tmp_path, web)
+    c = client_for(tmp_path, web)                                      # keep_jobs = 3
+    arriving, _ = c.app.state.jobs.folder("analyze")                   # an upload still being copied: not a job yet
     p = synthetic_recording(tmp_path / "s.wav", fs=48000, dur=1.0)
     ids = []
     for _ in range(5):
@@ -159,7 +160,7 @@ def test_old_job_folders_are_pruned(tmp_path, web):
             ids.append(c.post("/api/analyze", files={"file": ("s.wav", f)}).json()["job"])
         wait(c, ids[-1])
     left = sorted(d.name for d in (tmp_path / "jobs").iterdir())
-    assert len(left) <= 4 and ids[-1] in left and ids[0] not in left
+    assert left == sorted([arriving, *ids[-3:]])                       # BUG-13: the arriving upload's folder is kept
 
 
 def test_requests_choose_the_model(tmp_path, web):

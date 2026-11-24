@@ -438,8 +438,8 @@ def new_job_id() -> str:
 
 class Jobs:
     def __init__(self, root: Path, keep: int, max_queued: int = 6):
-        self.root, self.keep, self.max_queued = root, keep, max_queued
-        self.root.mkdir(parents=True, exist_ok=True)
+        self.root, self.max_queued = root, max_queued
+        self.folders = repro.JobFolders(root, keep, JOB_ID)     # pruned oldest first (BUG-13)
         self.jobs: dict[str, dict] = {}
         self.held: dict[str, dict] = {}     # job id -> its MEMORY_ONLY fields, dropped with the job
         self.q: queue.Queue = queue.Queue()
@@ -454,9 +454,7 @@ class Jobs:
         jid = new_job_id()
         while (self.root / jid).exists():
             jid = new_job_id()
-        d = self.root / jid
-        d.mkdir(parents=True)
-        return jid, d
+        return jid, self.folders.make(jid)
 
     def submit(self, jid: str, kind: str, fn) -> dict:
         self.jobs[jid] = {"id": jid, "kind": kind, "state": "queued", "stage": None, "error": None, "result": None}
@@ -492,12 +490,9 @@ class Jobs:
                     p.unlink(missing_ok=True)
 
     def _prune(self):
-        dirs = sorted(p for p in self.root.iterdir() if p.is_dir() and JOB_ID.match(p.name))     # names start with the time
-        for p in dirs[:-self.keep] if len(dirs) > self.keep else []:
-            if self.jobs.get(p.name, {}).get("state") not in ("queued", "running"):
-                shutil.rmtree(p, ignore_errors=True)
-                self.jobs.pop(p.name, None)
-                self.held.pop(p.name, None)
+        for jid in self.folders.prune(lambda j: self.jobs.get(j, {}).get("state")):
+            self.jobs.pop(jid, None)
+            self.held.pop(jid, None)
 
     def folder(self, jid: str) -> Path:
         d = self.root / jid
