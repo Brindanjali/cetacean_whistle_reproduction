@@ -1,0 +1,16 @@
+==== 2026-11-05 10:50:04  MATLAB 24.2.0.2806996 (R2024b) Update 3  MACA64  Java heap 2048 MB
+Silbido 3.0 (NOAA silbido-3.0.zip, MD5 daa1504e634a8e71411e6a0e540bab50)
+parameters: {"advance_ms":2,"length_ms":8,"maxgap_Hz":1000,"low_cutoff_Hz":5000,"high_cutoff_Hz":50000,"peak_method":"Energy","confidence_thresh":0.5,"energy_thresh":10,"minlen_ms":150,"maxgap_ms":50,"activeset_s":0.05,"blocklen_s":3,"click_dB":10,"broadband":0.01,"predict_lookback_s":0.025,"disambiguate_s":0.3}
+run silbido-graph: dtTonalsTracking(wav, 0, Inf, 'ParameterSet', <parameters>, 'PeakMethod', 'Energy', 'Noise', 'median')
+  bottlenose    Qx-Tt-SCI0608-N1-060814-121518: 125 tonals in 16 s
+  bottlenose    palmyra092007FS192-070924-205305: 166 tonals in 8 s
+  bottlenose    palmyra092007FS192-070924-205730: 138 tonals in 5 s
+  common        Qx-Dc-CC0411-TAT11-CH2-041114-154040-s: 389 tonals in 9 s
+  common        QX-Dc-FLIP0610-VLA-061015-165000: 289 tonals in 9 s
+  common        Qx-Dc-SC03-TAT09-060516-171606: 21 tonals in 5 s
+  melon-headed  palmyra092007FS192-071004-032342: 235 tonals in 6 s
+  melon-headed  palmyra102006-061020-204327_4: 175 tonals in 3 s
+  melon-headed  palmyra092007FS192-070925-023000: 114 tonals in 11 s
+  spinner       palmyra092007FS192-070927-224737: 476 tonals in 7 s
+  spinner       palmyra102006-061103-213127_4: 260 tonals in 6 s
+  spinner       palmyra092007FS192-071011-232000: 158 tonals in 5 s

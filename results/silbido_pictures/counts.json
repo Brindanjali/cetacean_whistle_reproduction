@@ -1,0 +1,197 @@
+{
+  "categories": {
+    "W": "real whistle (unlogged whistler)",
+    "H": "harmonic, piece or echo",
+    "T": "tonal noise",
+    "C": "clicks or burst pulses",
+    "N": "other noise",
+    "?": "can't tell"
+  },
+  "by_method": {
+    "ridgenet-5-24 (repeat)": {
+      "n": 7,
+      "counts": {
+        "W": 1,
+        "H": 0,
+        "T": 0,
+        "C": 0,
+        "N": 6,
+        "?": 0
+      },
+      "n_sure": 7
+    },
+    "ridgenet-v2c (repeat)": {
+      "n": 3,
+      "counts": {
+        "W": 0,
+        "H": 0,
+        "T": 0,
+        "C": 0,
+        "N": 3,
+        "?": 0
+      },
+      "n_sure": 3
+    },
+    "silbido-graph": {
+      "n": 20,
+      "counts": {
+        "W": 0,
+        "H": 0,
+        "T": 0,
+        "C": 5,
+        "N": 15,
+        "?": 0
+      },
+      "n_sure": 19
+    }
+  },
+  "by_method_and_recording": {
+    "ridgenet-5-24 (repeat): beaked whale": {
+      "n": 3,
+      "counts": {
+        "W": 1,
+        "H": 0,
+        "T": 0,
+        "C": 0,
+        "N": 2,
+        "?": 0
+      },
+      "n_sure": 3
+    },
+    "ridgenet-5-24 (repeat): sperm whale": {
+      "n": 4,
+      "counts": {
+        "W": 0,
+        "H": 0,
+        "T": 0,
+        "C": 0,
+        "N": 4,
+        "?": 0
+      },
+      "n_sure": 4
+    },
+    "ridgenet-v2c (repeat): beaked whale": {
+      "n": 3,
+      "counts": {
+        "W": 0,
+        "H": 0,
+        "T": 0,
+        "C": 0,
+        "N": 3,
+        "?": 0
+      },
+      "n_sure": 3
+    },
+    "silbido-graph: beaked whale": {
+      "n": 10,
+      "counts": {
+        "W": 0,
+        "H": 0,
+        "T": 0,
+        "C": 0,
+        "N": 10,
+        "?": 0
+      },
+      "n_sure": 10
+    },
+    "silbido-graph: sperm whale": {
+      "n": 10,
+      "counts": {
+        "W": 0,
+        "H": 0,
+        "T": 0,
+        "C": 5,
+        "N": 5,
+        "?": 0
+      },
+      "n_sure": 9
+    }
+  },
+  "consistency": {
+    "same_category": 7,
+    "same_whistle_or_not": 10,
+    "n": 10,
+    "pairs": [
+      {
+        "id": "SB002",
+        "repeat_of": "NW026",
+        "earlier": "C",
+        "earlier_sure": "n",
+        "now": "N",
+        "now_sure": "y"
+      },
+      {
+        "id": "SB009",
+        "repeat_of": "NW033",
+        "earlier": "C",
+        "earlier_sure": "y",
+        "now": "N",
+        "now_sure": "y"
+      },
+      {
+        "id": "SB013",
+        "repeat_of": "NW001",
+        "earlier": "N",
+        "earlier_sure": "y",
+        "now": "N",
+        "now_sure": "y"
+      },
+      {
+        "id": "SB014",
+        "repeat_of": "NW008",
+        "earlier": "C",
+        "earlier_sure": "n",
+        "now": "N",
+        "now_sure": "y"
+      },
+      {
+        "id": "SB016",
+        "repeat_of": "NW004",
+        "earlier": "N",
+        "earlier_sure": "y",
+        "now": "N",
+        "now_sure": "y"
+      },
+      {
+        "id": "SB017",
+        "repeat_of": "NW005",
+        "earlier": "N",
+        "earlier_sure": "y",
+        "now": "N",
+        "now_sure": "y"
+      },
+      {
+        "id": "SB019",
+        "repeat_of": "NW029",
+        "earlier": "N",
+        "earlier_sure": "y",
+        "now": "N",
+        "now_sure": "y"
+      },
+      {
+        "id": "SB025",
+        "repeat_of": "NW018",
+        "earlier": "W",
+        "earlier_sure": "n",
+        "now": "W",
+        "now_sure": "y"
+      },
+      {
+        "id": "SB027",
+        "repeat_of": "NW016",
+        "earlier": "N",
+        "earlier_sure": "y",
+        "now": "N",
+        "now_sure": "y"
+      },
+      {
+        "id": "SB030",
+        "repeat_of": "NW011",
+        "earlier": "N",
+        "earlier_sure": "y",
+        "now": "N",
+        "now_sure": "y"
+      }
+    ]
+  }
+}

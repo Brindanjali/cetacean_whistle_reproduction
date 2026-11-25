@@ -1,0 +1,218 @@
+{
+  "tag": "ridgenet-5-24_keep-harmonics",
+  "checkpoint": "mod_detector_5_24/models/detector/ridgenet-5-24/checkpoint.pt",
+  "checkpoint_sha256": "6636c9f6728d7ecaec418f27edceb230d9adedb7e366deb35bcb265ae98021dd",
+  "overrides": [
+    "decisions.s6.suppress_harmonics=false"
+  ],
+  "pipeline_config_hash": "938b8695fe12e2da5300fdbf4a1e5efc4115617180ed4d7f7dc1f45453cf0457",
+  "band_hz": [
+    5000.0,
+    24000.0
+  ],
+  "peak_threshold": 0.4,
+  "torch": "2.11.0+cpu",
+  "files": {
+    "Qx-Tt-SCI0608-N1-060814-121518": {
+      "duration_s": 253.227,
+      "fs": 192000,
+      "n_tracks": 471,
+      "s6_stats": {
+        "n_peaks": 16648,
+        "n_broadband_frames": 13,
+        "n_raw_tracks": 749,
+        "n_single_peak_tracks_dropped": 45,
+        "rejected_by_reason": {
+          "too_short": 254,
+          "low_observed_fraction": 21,
+          "low_confidence": 1,
+          "synchronous_comb": 2
+        }
+      },
+      "seconds": 19.2
+    },
+    "palmyra092007FS192-070924-205305": {
+      "duration_s": 249.536,
+      "fs": 192000,
+      "n_tracks": 577,
+      "s6_stats": {
+        "n_peaks": 24495,
+        "n_broadband_frames": 0,
+        "n_raw_tracks": 808,
+        "n_single_peak_tracks_dropped": 41,
+        "rejected_by_reason": {
+          "too_short": 217,
+          "low_observed_fraction": 13,
+          "duplicate": 1
+        }
+      },
+      "seconds": 21.6
+    },
+    "palmyra092007FS192-070924-205730": {
+      "duration_s": 149.44,
+      "fs": 192000,
+      "n_tracks": 381,
+      "s6_stats": {
+        "n_peaks": 18803,
+        "n_broadband_frames": 0,
+        "n_raw_tracks": 560,
+        "n_single_peak_tracks_dropped": 24,
+        "rejected_by_reason": {
+          "too_short": 173,
+          "low_observed_fraction": 6
+        }
+      },
+      "seconds": 11.7
+    },
+    "Qx-Dc-CC0411-TAT11-CH2-041114-154040-s": {
+      "duration_s": 300.0,
+      "fs": 192000,
+      "n_tracks": 2172,
+      "s6_stats": {
+        "n_peaks": 72783,
+        "n_broadband_frames": 1,
+        "n_raw_tracks": 3594,
+        "n_single_peak_tracks_dropped": 205,
+        "rejected_by_reason": {
+          "too_short": 1175,
+          "low_observed_fraction": 243,
+          "low_confidence": 1,
+          "duplicate": 2,
+          "synchronous_comb": 1
+        }
+      },
+      "seconds": 29.0
+    },
+    "QX-Dc-FLIP0610-VLA-061015-165000": {
+      "duration_s": 300.0,
+      "fs": 192000,
+      "n_tracks": 960,
+      "s6_stats": {
+        "n_peaks": 42894,
+        "n_broadband_frames": 0,
+        "n_raw_tracks": 1379,
+        "n_single_peak_tracks_dropped": 52,
+        "rejected_by_reason": {
+          "too_short": 377,
+          "low_observed_fraction": 42
+        }
+      },
+      "seconds": 25.3
+    },
+    "Qx-Dc-SC03-TAT09-060516-171606": {
+      "duration_s": 233.947,
+      "fs": 192000,
+      "n_tracks": 162,
+      "s6_stats": {
+        "n_peaks": 7356,
+        "n_broadband_frames": 0,
+        "n_raw_tracks": 220,
+        "n_single_peak_tracks_dropped": 11,
+        "rejected_by_reason": {
+          "too_short": 54,
+          "low_observed_fraction": 4
+        }
+      },
+      "seconds": 17.3
+    },
+    "palmyra092007FS192-071004-032342": {
+      "duration_s": 198.336,
+      "fs": 192000,
+      "n_tracks": 237,
+      "s6_stats": {
+        "n_peaks": 10097,
+        "n_broadband_frames": 0,
+        "n_raw_tracks": 435,
+        "n_single_peak_tracks_dropped": 39,
+        "rejected_by_reason": {
+          "too_short": 175,
+          "low_observed_fraction": 23
+        }
+      },
+      "seconds": 14.6
+    },
+    "palmyra102006-061020-204327_4": {
+      "duration_s": 65.195,
+      "fs": 192000,
+      "n_tracks": 597,
+      "s6_stats": {
+        "n_peaks": 26147,
+        "n_broadband_frames": 69,
+        "n_raw_tracks": 905,
+        "n_single_peak_tracks_dropped": 49,
+        "rejected_by_reason": {
+          "too_short": 261,
+          "low_observed_fraction": 31,
+          "synchronous_comb": 16
+        }
+      },
+      "seconds": 7.6
+    },
+    "palmyra092007FS192-070925-023000": {
+      "duration_s": 417.19,
+      "fs": 192000,
+      "n_tracks": 2177,
+      "s6_stats": {
+        "n_peaks": 76066,
+        "n_broadband_frames": 0,
+        "n_raw_tracks": 3146,
+        "n_single_peak_tracks_dropped": 126,
+        "rejected_by_reason": {
+          "too_short": 924,
+          "low_observed_fraction": 42,
+          "low_confidence": 2,
+          "synchronous_comb": 1
+        }
+      },
+      "seconds": 39.8
+    },
+    "palmyra092007FS192-070927-224737": {
+      "duration_s": 142.694,
+      "fs": 192000,
+      "n_tracks": 849,
+      "s6_stats": {
+        "n_peaks": 52430,
+        "n_broadband_frames": 0,
+        "n_raw_tracks": 1288,
+        "n_single_peak_tracks_dropped": 71,
+        "rejected_by_reason": {
+          "too_short": 385,
+          "low_observed_fraction": 54
+        }
+      },
+      "seconds": 14.4
+    },
+    "palmyra102006-061103-213127_4": {
+      "duration_s": 157.611,
+      "fs": 192000,
+      "n_tracks": 512,
+      "s6_stats": {
+        "n_peaks": 18532,
+        "n_broadband_frames": 0,
+        "n_raw_tracks": 764,
+        "n_single_peak_tracks_dropped": 48,
+        "rejected_by_reason": {
+          "too_short": 228,
+          "low_observed_fraction": 24
+        }
+      },
+      "seconds": 12.6
+    },
+    "palmyra092007FS192-071011-232000": {
+      "duration_s": 125.562,
+      "fs": 192000,
+      "n_tracks": 420,
+      "s6_stats": {
+        "n_peaks": 19102,
+        "n_broadband_frames": 0,
+        "n_raw_tracks": 641,
+        "n_single_peak_tracks_dropped": 30,
+        "rejected_by_reason": {
+          "too_short": 203,
+          "low_observed_fraction": 18
+        }
+      },
+      "seconds": 10.2
+    }
+  }
+}

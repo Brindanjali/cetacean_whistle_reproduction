@@ -1,0 +1,134 @@
+{
+  "categories": {
+    "W": "unmarked real whistle",
+    "H": "harmonic, piece or echo",
+    "T": "tonal noise",
+    "C": "clicks or burst pulses",
+    "N": "other noise",
+    "?": "can't tell"
+  },
+  "by_method": {
+    "ours": {
+      "n": 80,
+      "counts": {
+        "W": 19,
+        "H": 17,
+        "T": 2,
+        "C": 8,
+        "N": 27,
+        "?": 7
+      },
+      "n_sure": 40
+    },
+    "silbido": {
+      "n": 67,
+      "counts": {
+        "W": 4,
+        "H": 11,
+        "T": 0,
+        "C": 13,
+        "N": 35,
+        "?": 4
+      },
+      "n_sure": 44
+    }
+  },
+  "by_method_and_recording": {
+    "ours: Qx-Dc-CC0411-TAT11-CH2-0": {
+      "n": 20,
+      "counts": {
+        "W": 5,
+        "H": 8,
+        "T": 0,
+        "C": 0,
+        "N": 7,
+        "?": 0
+      },
+      "n_sure": 11
+    },
+    "ours: Qx-Tt-SCI0608-N1-060814-": {
+      "n": 20,
+      "counts": {
+        "W": 4,
+        "H": 1,
+        "T": 0,
+        "C": 1,
+        "N": 11,
+        "?": 3
+      },
+      "n_sure": 10
+    },
+    "ours: palmyra092007FS192-07092": {
+      "n": 20,
+      "counts": {
+        "W": 7,
+        "H": 8,
+        "T": 2,
+        "C": 0,
+        "N": 0,
+        "?": 3
+      },
+      "n_sure": 7
+    },
+    "ours: palmyra092007FS192-07100": {
+      "n": 20,
+      "counts": {
+        "W": 3,
+        "H": 0,
+        "T": 0,
+        "C": 7,
+        "N": 9,
+        "?": 1
+      },
+      "n_sure": 12
+    },
+    "silbido: Qx-Dc-CC0411-TAT11-CH2-0": {
+      "n": 20,
+      "counts": {
+        "W": 0,
+        "H": 2,
+        "T": 0,
+        "C": 1,
+        "N": 16,
+        "?": 1
+      },
+      "n_sure": 13
+    },
+    "silbido: Qx-Tt-SCI0608-N1-060814-": {
+      "n": 20,
+      "counts": {
+        "W": 1,
+        "H": 6,
+        "T": 0,
+        "C": 11,
+        "N": 2,
+        "?": 0
+      },
+      "n_sure": 15
+    },
+    "silbido: palmyra092007FS192-07092": {
+      "n": 7,
+      "counts": {
+        "W": 3,
+        "H": 3,
+        "T": 0,
+        "C": 0,
+        "N": 0,
+        "?": 1
+      },
+      "n_sure": 4
+    },
+    "silbido: palmyra092007FS192-07100": {
+      "n": 20,
+      "counts": {
+        "W": 0,
+        "H": 0,
+        "T": 0,
+        "C": 1,
+        "N": 17,
+        "?": 2
+      },
+      "n_sure": 12
+    }
+  }
+}
