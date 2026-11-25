@@ -1,0 +1,22 @@
+encounter_id,species_code,species,group,utc_start,utc_end,duration_min
+52,61,Cuvier's beaked whale,beaked whale,2017-08-27 21:01:05,2017-08-27 21:06:20,5.2
+54,61,Cuvier's beaked whale,beaked whale,2017-08-28 01:20:33,2017-08-28 01:26:16,5.7
+73,59,Blainville's beaked whale,beaked whale,2017-08-31 22:19:08,2017-08-31 22:22:02,2.9
+78,59,Blainville's beaked whale,beaked whale,2017-09-01 16:31:33,2017-09-01 16:35:39,4.1
+173,59,Blainville's beaked whale,beaked whale,2017-09-27 01:04:28,2017-09-27 01:05:16,0.8
+181,46,Sperm whale,sperm whale,2017-09-28 04:13:39,2017-09-28 04:52:23,38.7
+194,61,Cuvier's beaked whale,beaked whale,2017-10-01 19:45:55,2017-10-01 19:52:07,6.2
+196,46,Sperm whale,sperm whale,2017-10-02 03:09:20,2017-10-02 03:42:47,33.5
+235,46,Sperm whale,sperm whale,2017-10-22 17:17:06,2017-10-22 17:56:59,39.9
+236,46,Sperm whale,sperm whale,2017-10-22 18:37:59,2017-10-22 18:52:42,14.7
+243,61,Cuvier's beaked whale,beaked whale,2017-10-23 03:40:41,2017-10-23 03:42:05,1.4
+268,61,Cuvier's beaked whale,beaked whale,2017-10-28 23:05:49,2017-10-28 23:13:48,8.0
+269,46,Sperm whale,sperm whale,2017-10-29 02:11:22,2017-10-29 02:20:29,9.1
+278,59,Blainville's beaked whale,beaked whale,2017-11-02 22:37:06,2017-11-02 22:37:24,0.3
+303,61,Cuvier's beaked whale,beaked whale,2017-11-06 19:49:42,2017-11-06 19:55:35,5.9
+304,46,Sperm whale,sperm whale,2017-11-06 22:24:49,2017-11-06 23:15:32,50.7
+318,59,Blainville's beaked whale,beaked whale,2017-11-08 17:20:43,2017-11-08 17:23:34,2.9
+337,46,Sperm whale,sperm whale,2017-11-18 03:41:28,2017-11-18 03:43:56,2.5
+351,59,Blainville's beaked whale,beaked whale,2017-11-21 00:03:13,2017-11-21 00:12:41,9.5
+352,46,Sperm whale,sperm whale,2017-11-21 02:00:08,2017-11-21 03:00:34,60.4
+375,61,Cuvier's beaked whale,beaked whale,2017-11-23 23:11:22,2017-11-23 23:18:35,7.2

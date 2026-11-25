@@ -1,0 +1,178 @@
+{
+  "dclde2011": {
+    "score_gt2011_min150ms_ov0.json": {
+      "silbido-graph-thr8": {
+        "precision": 59.50064925330715,
+        "recall": 80.48049672045755,
+        "f1": 67.35520326522928,
+        "deviation_hz": 109.96084752000135,
+        "coverage_pct": 86.31528388870436,
+        "fragmentation": 1.3263357775893536
+      },
+      "silbido-graph": {
+        "precision": 76.43599606883805,
+        "recall": 72.94550012167994,
+        "f1": 74.59639670545303,
+        "deviation_hz": 100.28225129651045,
+        "coverage_pct": 80.66070646669083,
+        "fragmentation": 1.2543479097121009
+      },
+      "silbido-graph-thr12": {
+        "precision": 79.34478895560136,
+        "recall": 57.015416534317254,
+        "f1": 66.05998298485538,
+        "deviation_hz": 100.79725388977334,
+        "coverage_pct": 73.6537322919998,
+        "fragmentation": 1.2435520193603682
+      },
+      "ridgenet-5-24_keep-harmonics": {
+        "precision": 56.25741369719082,
+        "recall": 86.94900976449316,
+        "f1": 67.0869589835248,
+        "deviation_hz": 93.92990842694581,
+        "coverage_pct": 86.63244681696291,
+        "fragmentation": 1.2961616354869887
+      }
+    },
+    "score_gt2011_min150ms.json": {
+      "silbido-graph-thr8": {
+        "precision": 47.967289725536226,
+        "recall": 78.11593386283737,
+        "f1": 58.709734268260945,
+        "deviation_hz": 109.01805709278693,
+        "coverage_pct": 85.14094867047926,
+        "fragmentation": 1.1359720883925781
+      },
+      "silbido-graph": {
+        "precision": 64.54045326685801,
+        "recall": 70.0465394708588,
+        "f1": 67.12667867878173,
+        "deviation_hz": 99.60728466473044,
+        "coverage_pct": 80.57799350041205,
+        "fragmentation": 1.1119705703002498
+      },
+      "silbido-graph-thr12": {
+        "precision": 64.68390241364607,
+        "recall": 52.20317071904758,
+        "f1": 57.44274521811307,
+        "deviation_hz": 98.80159405719826,
+        "coverage_pct": 75.26659765357796,
+        "fragmentation": 1.098174312114339
+      },
+      "ridgenet-5-24_keep-harmonics": {
+        "precision": 47.129858740029654,
+        "recall": 85.1847802470167,
+        "f1": 59.89937468716976,
+        "deviation_hz": 92.61096739267249,
+        "coverage_pct": 85.51557907853298,
+        "fragmentation": 1.1415944184074935
+      }
+    },
+    "score_gt2011_min150ms_fullband_ov0.json": {
+      "silbido-graph-thr8": {
+        "precision": 53.422538511750396,
+        "recall": 79.85492275977168,
+        "f1": 62.52557530802596,
+        "deviation_hz": 110.6294942459358,
+        "coverage_pct": 86.34789511694765,
+        "fragmentation": 1.3067657365867986
+      },
+      "silbido-graph": {
+        "precision": 71.35075356550527,
+        "recall": 72.44504859584674,
+        "f1": 71.63247648094129,
+        "deviation_hz": 100.65212098215062,
+        "coverage_pct": 80.46254957441418,
+        "fragmentation": 1.2321574881651929
+      },
+      "silbido-graph-thr12": {
+        "precision": 73.36152911533793,
+        "recall": 56.258908242078576,
+        "f1": 63.31393225077238,
+        "deviation_hz": 101.1670096290129,
+        "coverage_pct": 73.4580906950574,
+        "fragmentation": 1.2204103681953893
+      },
+      "ridgenet-5-24_keep-harmonics": {
+        "precision": 57.611928697765364,
+        "recall": 76.58165796410819,
+        "f1": 63.7817621189694,
+        "deviation_hz": 93.41341297358488,
+        "coverage_pct": 85.01394742612877,
+        "fragmentation": 1.28917486914891
+      }
+    },
+    "score_gt2011_min150ms_fullband.json": {
+      "silbido-graph-thr8": {
+        "precision": 43.98583881386005,
+        "recall": 77.59378382675587,
+        "f1": 55.104897563110605,
+        "deviation_hz": 109.47595705704325,
+        "coverage_pct": 85.44448298070157,
+        "fragmentation": 1.1309795172216512
+      },
+      "silbido-graph": {
+        "precision": 61.2787475507088,
+        "recall": 69.76813342542144,
+        "f1": 65.11966300243238,
+        "deviation_hz": 100.11331631529893,
+        "coverage_pct": 80.42071835525236,
+        "fragmentation": 1.102679203988895
+      },
+      "silbido-graph-thr12": {
+        "precision": 60.9605314533531,
+        "recall": 51.851666752534655,
+        "f1": 55.72796909756663,
+        "deviation_hz": 99.52321046521931,
+        "coverage_pct": 74.92269973915197,
+        "fragmentation": 1.0870406464891826
+      },
+      "ridgenet-5-24_keep-harmonics": {
+        "precision": 48.535869344971076,
+        "recall": 74.54918007340437,
+        "f1": 57.33302104718082,
+        "deviation_hz": 92.20231317608634,
+        "coverage_pct": 84.35091402441827,
+        "fragmentation": 1.1372228620925786
+      }
+    }
+  },
+  "nowhistle_benchmark_rule_both": {
+    "ridgenet-5-24": {
+      "detections": 131,
+      "minutes": 145.53,
+      "per_minute": 0.9001583790875096,
+      "range95": [
+        0.5401343494180256,
+        1.2959035002579449
+      ]
+    },
+    "silbido-graph-thr8": {
+      "detections": 4417,
+      "minutes": 145.53,
+      "per_minute": 30.351141682668167,
+      "range95": [
+        21.208162391619023,
+        39.00837183939111
+      ]
+    },
+    "silbido-graph": {
+      "detections": 713,
+      "minutes": 145.53,
+      "per_minute": 4.8993352999190405,
+      "range95": [
+        3.1415886318579846,
+        6.812203875068565
+      ]
+    },
+    "silbido-graph-thr12": {
+      "detections": 114,
+      "minutes": 145.53,
+      "per_minute": 0.7833439329463824,
+      "range95": [
+        0.41629715838949205,
+        1.1924984678862594
+      ]
+    }
+  }
+}

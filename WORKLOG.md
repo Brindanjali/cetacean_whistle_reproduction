@@ -139,6 +139,10 @@ The plan, pass marks and rules are frozen in `whistlecode/PLAN.md` section 8.7.
 
 Newest first. Older history is grouped by stage. Commit hashes are given where the work was committed; an entry's own commit is the one that adds it.
 
+### 2026-11-25
+
+- **Detector 5-24 kHz**: full 5-24 kHz detector added from the RidgeTrace v1 repository: `mod_detector_5_24/` (DCLDE 2011 benchmark, no-whistle and false-alarm tests, Silbido scripts and detections, tools, guides), `results/` (DCLDE 2011 detections and scores, no-whistle, false alarms, Silbido thresholds and pictures), `docs/whistle_detector_guide.md` and two detector figures. Paper files left out. Lint fixes by `ruff --fix`; 4 `noqa` for intended loop lambdas and unused loop names.
+
 ### 2026-11-24
 
 - **Deployment (BUG-9)**: the server image installs every package at its locked version, and the page runs on it.

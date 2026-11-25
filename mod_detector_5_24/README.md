@@ -19,6 +19,11 @@ excluded at scoring time.
 
 Changed lines in the two TOML files are marked `MOD 5-24`.
 
+One difference is not in the configs: the synthetic whistles' starting pitch is drawn from a fixed 3–17 kHz
+range in `src/whistlepipe/synth/whistles.py`, which `f_range_hz` does not change. About 20 % of the 5–24 kHz
+training whistles therefore start at the 5.4 kHz lower limit (`docs/whistle_detector_guide.md`, section 11).
+The effect on the scores is unknown.
+
 ## How to use
 Always go through `whistle_5_24.py`. It runs the normal CLI with this folder's configs (`--config` is refused).
 ```bash
@@ -43,7 +48,7 @@ The background picker lists the whole encounter-191 folder, so the notebook crea
 empty name-only placeholders and checks that the picker chose exactly the 56 downloaded files.
 
 ## DCLDE 2011 benchmark (Li et al. 2023 test set)
-`dclde2011.py` runs the detector on the 9 test recordings and scores it with the Li et al. (2023) protocol,
+`dclde2011.py` runs the detector on the 12 test recordings and scores it with the Li et al. (2023) protocol,
 re-implemented from Silbido's scoring code (details in the file's docstring).
 ```bash
 python mod_detector_5_24/dclde2011.py selftest                       # scorer check: GT vs itself = 100 %, shifted/truncated copies rejected
@@ -52,6 +57,8 @@ python mod_detector_5_24/dclde2011.py detect --tag ridgenet-5-24_keep-harmonics 
 python mod_detector_5_24/dclde2011.py score --tag ridgenet-5-24_keep-harmonics --min-det-ms 150 [--gt 2025] [--min-overlap 0] [--full-band]
 ```
 Data: `colab_download_dclde2011.py` (Drive) or the same files under `mod_detector_5_24/data/dclde2011/` (git-ignored).
+The final 12-recording results are committed in `results/dclde2011_detections/` at the top of the repository;
+`detect` and `score` write new runs to the git-ignored `mod_detector_5_24/data/dclde2011_detections/`.
 About 3 s of CPU per minute of audio. Detections are written in Silbido's tonal format (`.det`), so Silbido's
 `scoreall` can cross-check the scores.
 
@@ -60,6 +67,10 @@ About 3 s of CPU per minute of audio. Detections are written in Silbido's tonal 
 * **Minimum detection length.** Silbido's graph search (the benchmark's baseline, and the extraction step in Li et al.)
   only outputs tonals of at least 150 ms; S6 keeps tracks from ~64 ms. The main score uses `--min-det-ms 150`; the
   score without it is reported too. 150 ms is Silbido's default, not a value tuned on these files.
+* **Silbido baseline:** `silbido/run_silbido_dclde2011.m` (MATLAB) runs Silbido 3.0's classic graph search on the same
+  12 recordings; its detections are scored with the same command as ours. For the no-whistle test,
+  `colab_silbido_audio.py` prepares the 146 recordings in Drive and `silbido/run_silbido_nowhistle.m` (guide:
+  `silbido/silbido_nowhistle_guide.html`) runs Silbido on them, plus thresholds 8 and 12 dB on both test sets.
 * **Colab:** `colab_dclde2011_benchmark.py` (one cell) runs the self-test, both detection sets and all score variants
   from Drive; `DETECT = False` re-scores existing detections only.
 * **Band.** Ground-truth whistles not entirely inside 5–24 kHz are excluded like low-SNR ones (not expected, not

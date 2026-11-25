@@ -2,6 +2,7 @@
 
     python mod_detector_5_24/dclde2011.py detect   [--tag NAME] [--override KEY=VALUE ...] [--device cpu|cuda]
     python mod_detector_5_24/dclde2011.py score    --tag NAME [--gt 2011|2025] [--min-det-ms 150] [--min-overlap 0.3] [--full-band]
+                                                   [--list-detections]   (also lists each detection's verdict; scores unchanged)
     python mod_detector_5_24/dclde2011.py selftest [--gt 2011|2025]
 
 Data (colab_download_dclde2011.py layout, default mod_detector_5_24/data/dclde2011, --data to change):
@@ -20,7 +21,9 @@ criteria of Li et al. (2023, JASA, doi:10.1121/10.0020274, Sec. II E):
     unexpected GT count neither way. recall = expected GT matched / expected GT. Counts are pooled per species, then
     precision, recall and F1 are averaged over the four species.
 Band limit (this detector only sees 5-24 kHz): GT whistles not entirely inside [band_lo_hz, band_hi_hz] of
-pipeline.toml are treated like low-SNR ones (not expected, not penalised). --full-band switches this off.
+pipeline.toml are treated like low-SNR ones (not expected, not penalised), and detections whose median frequency lies
+outside the band are dropped (they only occur for detectors that search beyond it, e.g. Silbido's 5-50 kHz; this
+detector's tracks are always inside). --full-band switches both off.
 Minimum detection length: Silbido's graph search only outputs tonals >= 150 ms (odontocete.xml minlen_ms), while S6
 keeps tracks from ~64 ms. --min-det-ms 150 drops shorter detections before scoring, so the output follows the same
 convention as the benchmark's detectors (default 0 = all tracks).
@@ -46,17 +49,21 @@ import whistlepipe.config as C  # noqa: E402
 
 DEFAULT_DATA = HERE / "data" / "dclde2011"
 
-# Li et al. (2023) test set: 9 development files, 4 species (all mono, 192 kHz).
+# Li et al. (2023) test set: 12 development files, 4 species, 43.2 min, 6011 annotated whistles (all mono, 192 kHz).
+# Their Table III repeats some names; these 12 match their Table I and the list in Silbido's batchdetect.m.
 TEST_FILES = [
     ("bottlenose", "Qx-Tt-SCI0608-N1-060814-121518"),
     ("bottlenose", "palmyra092007FS192-070924-205305"),
     ("bottlenose", "palmyra092007FS192-070924-205730"),
     ("common", "Qx-Dc-CC0411-TAT11-CH2-041114-154040-s"),
     ("common", "QX-Dc-FLIP0610-VLA-061015-165000"),
+    ("common", "Qx-Dc-SC03-TAT09-060516-171606"),
     ("melon-headed", "palmyra092007FS192-071004-032342"),
     ("melon-headed", "palmyra102006-061020-204327_4"),
+    ("melon-headed", "palmyra092007FS192-070925-023000"),
     ("spinner", "palmyra092007FS192-070927-224737"),
     ("spinner", "palmyra102006-061103-213127_4"),
+    ("spinner", "palmyra092007FS192-071011-232000"),
 ]
 
 # Silbido scoring constants (odontocete.xml defaults; dtPerformance.m sets blocklen_s = 5, PeakTolerance 500, Match 350)
@@ -193,6 +200,7 @@ def score_file(dets, gts, expected: np.ndarray, skipped: np.ndarray, min_overlap
     det_t0 = np.array([t[0] for t, _ in dets]) if dets else np.zeros(0)
     det_t1 = np.array([t[-1] for t, _ in dets]) if dets else np.zeros(0)
     false_pos = np.ones(len(dets), bool)
+    status = np.zeros(len(dets), np.int8)   # per detection: 0 false alarm, 1 matches only uncounted GT, 2 matches expected GT
     det_matches_expected = 0
     gt_match = gt_miss = 0
     deviations, coverage = [], []
@@ -214,6 +222,7 @@ def score_file(dets, gts, expected: np.ndarray, skipped: np.ndarray, min_overlap
             if dev.mean() <= MATCH_TOL_HZ and (min_overlap <= 0 or span > min_overlap * dur):
                 matched = True
                 false_pos[d] = False
+                status[d] = max(status[d], 2 if expected[g] else 1)
                 det_matches_expected += int(expected[g])
                 devs.append(dev)
                 covered += span
@@ -226,7 +235,7 @@ def score_file(dets, gts, expected: np.ndarray, skipped: np.ndarray, min_overlap
                 gt_miss += 1
     return {"n_detections": len(dets), "detections_matched": det_matches_expected, "false_pos": int(false_pos.sum()),
             "gt_expected": gt_match + gt_miss, "gt_matched": gt_match, "gt_missed": gt_miss,
-            "deviations_hz": deviations, "coverage_pct": coverage}
+            "deviations_hz": deviations, "coverage_pct": coverage, "det_status": status}
 
 
 def summarise(rows: list[dict]) -> dict:
@@ -329,8 +338,12 @@ def load_gt(wav: Path, ann: Path) -> tuple:
     return _GT_CACHE[str(ann)]
 
 
+STATUS_NAMES = ("false_alarm", "matches_uncounted_only", "matches_counted")
+
+
 def score_set(data: Path, det_dir: Path | None, gt: str, band, full_band: bool, min_overlap: float, dets_from_gt=None,
-              min_det_s: float = 0.0) -> dict:
+              min_det_s: float = 0.0, det_rows: list | None = None) -> dict:
+    """det_rows: if a list is given, one row per scored detection is appended to it (does not change the scores)."""
     per_file, by_species = {}, {}
     for sp, stem in TEST_FILES:
         wav, ann = data / "development" / sp / f"{stem}.wav", gt_path(data, sp, stem, gt)
@@ -339,9 +352,18 @@ def score_set(data: Path, det_dir: Path | None, gt: str, band, full_band: bool, 
             continue
         gts, snr, skipped = load_gt(wav, ann)
         exp, counts = expected_mask(gts, snr, skipped, band, full_band)
-        dets = dets_from_gt(gts) if dets_from_gt else read_tonals(det_p)
-        dets = [(t, f) for t, f in dets if t[-1] - t[0] >= min_det_s]
+        raw = dets_from_gt(gts) if dets_from_gt else read_tonals(det_p)
+        keep = [i for i, (t, f) in enumerate(raw) if t[-1] - t[0] >= min_det_s
+                and (full_band or band[0] <= np.median(f) <= band[1])]
+        dets = [raw[i] for i in keep]
         r = score_file(dets, gts, exp, skipped, min_overlap)
+        if det_rows is not None:
+            assert int((r["det_status"] == 0).sum()) == r["false_pos"]
+            for i, (t, f), s in zip(keep, dets, r["det_status"]):
+                det_rows.append({"species": sp, "recording": stem, "det_index": i, "start_s": round(float(t[0]), 4),
+                                 "end_s": round(float(t[-1]), 4), "min_hz": round(float(f.min()), 1),
+                                 "max_hz": round(float(f.max()), 1), "median_hz": round(float(np.median(f)), 1),
+                                 "status": STATUS_NAMES[s]})
         per_file[stem] = {"species": sp, **counts, **summarise([r]), "_raw": r}
         by_species.setdefault(sp, []).append(r)
     species = {sp: summarise(rows) for sp, rows in by_species.items()}
@@ -375,12 +397,22 @@ def cmd_score(a) -> None:
     det_dir = Path(f"{a.data}_detections") / a.tag
     if not det_dir.is_dir():
         sys.exit(f"no detections in {det_dir} (run detect first)")
-    res = score_set(a.data, det_dir, a.gt, band_hz(load_cfg([])), a.full_band, a.min_overlap, min_det_s=a.min_det_ms / 1000)
+    rows = [] if a.list_detections else None
+    res = score_set(a.data, det_dir, a.gt, band_hz(load_cfg([])), a.full_band, a.min_overlap, min_det_s=a.min_det_ms / 1000,
+                    det_rows=rows)
     print_table(res)
     name = (f"score_gt{a.gt}{f'_min{a.min_det_ms:g}ms' if a.min_det_ms else ''}{'_fullband' if a.full_band else ''}"
             f"{'' if a.min_overlap == 0.3 else f'_ov{a.min_overlap:g}'}.json")
     (det_dir / name).write_text(json.dumps(res, indent=2))
     print(f"saved {det_dir / name}")
+    if rows is not None:
+        import csv
+        out = det_dir / name.replace(".json", "_detections.csv")
+        with open(out, "w", newline="") as fh:
+            w = csv.DictWriter(fh, fieldnames=list(rows[0]) if rows else ["recording"])
+            w.writeheader()
+            w.writerows(rows)
+        print(f"saved {out}  ({len(rows)} detections, {sum(r['status'] == 'false_alarm' for r in rows)} false alarms)")
 
 
 def cmd_selftest(a) -> None:
@@ -420,6 +452,8 @@ def main(argv=None) -> None:
     s.add_argument("--min-overlap", type=float, default=0.3, help="Li et al.: detection must cover > 30%% of the whistle (0 = Silbido default)")
     s.add_argument("--min-det-ms", type=float, default=0.0, help="drop detections shorter than this (Silbido outputs >= 150 ms)")
     s.add_argument("--full-band", action="store_true", help="do not exclude GT whistles outside the detector band")
+    s.add_argument("--list-detections", action="store_true",
+                   help="also write <score name>_detections.csv: each scored detection and whether it matched (scores unchanged)")
     a = ap.parse_args(argv)
     {"detect": cmd_detect, "score": cmd_score, "selftest": cmd_selftest}[a.cmd](a)
 

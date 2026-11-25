@@ -1,0 +1,355 @@
+{
+  "seed": 2026,
+  "n_boot": 10000,
+  "manifest_md5": "1a47c5a9d22842861b6db9d034670ae3",
+  "rates": {
+    "ridgenet-5-24": {
+      "benchmark rule (5-24 kHz, >= 150 ms)": {
+        "beaked whale": {
+          "detections": 73,
+          "minutes": 71.53,
+          "per_minute": 1.0205515930374653,
+          "range95": [
+            0.4717672499000495,
+            1.7297732161396027
+          ]
+        },
+        "sperm whale": {
+          "detections": 58,
+          "minutes": 74.0,
+          "per_minute": 0.7837837837837838,
+          "range95": [
+            0.3382352941176471,
+            1.2297297297297298
+          ]
+        },
+        "both": {
+          "detections": 131,
+          "minutes": 145.53,
+          "per_minute": 0.9001583790875096,
+          "range95": [
+            0.5401343494180256,
+            1.2959035002579449
+          ]
+        }
+      },
+      "all tracks the detector outputs": {
+        "beaked whale": {
+          "detections": 356,
+          "minutes": 71.53,
+          "per_minute": 4.9769365359087345,
+          "range95": [
+            3.138454946882037,
+            7.17777451974787
+          ]
+        },
+        "sperm whale": {
+          "detections": 293,
+          "minutes": 74.0,
+          "per_minute": 3.9594594594594597,
+          "range95": [
+            1.825,
+            5.9865118243243245
+          ]
+        },
+        "both": {
+          "detections": 649,
+          "minutes": 145.53,
+          "per_minute": 4.459563267387738,
+          "range95": [
+            3.0348236663441086,
+            5.932557717145624
+          ]
+        }
+      }
+    },
+    "ridgenet-v2c": {
+      "benchmark rule (5-24 kHz, >= 150 ms)": {
+        "beaked whale": {
+          "detections": 58,
+          "minutes": 71.53,
+          "per_minute": 0.8108492109064793,
+          "range95": [
+            0.4733050941031201,
+            1.2181929365046298
+          ]
+        },
+        "sperm whale": {
+          "detections": 44,
+          "minutes": 74.0,
+          "per_minute": 0.5945945945945946,
+          "range95": [
+            0.29411764705882354,
+            0.8875
+          ]
+        },
+        "both": {
+          "detections": 102,
+          "minutes": 145.53,
+          "per_minute": 0.7008866768467632,
+          "range95": [
+            0.47417315504746865,
+            0.9407039684386055
+          ]
+        }
+      },
+      "all tracks the detector outputs": {
+        "beaked whale": {
+          "detections": 634,
+          "minutes": 71.53,
+          "per_minute": 8.863420684736342,
+          "range95": [
+            6.2023214285714285,
+            11.835257978505924
+          ]
+        },
+        "sperm whale": {
+          "detections": 473,
+          "minutes": 74.0,
+          "per_minute": 6.391891891891892,
+          "range95": [
+            3.3748161764705884,
+            9.350033783783783
+          ]
+        },
+        "both": {
+          "detections": 1107,
+          "minutes": 145.53,
+          "per_minute": 7.606681875189871,
+          "range95": [
+            5.570165713005566,
+            9.684937304873424
+          ]
+        }
+      }
+    },
+    "silbido-graph": {
+      "benchmark rule (5-24 kHz, >= 150 ms)": {
+        "beaked whale": {
+          "detections": 373,
+          "minutes": 71.53,
+          "per_minute": 5.214599235657186,
+          "range95": [
+            2.8054561581052497,
+            8.175796467685528
+          ]
+        },
+        "sperm whale": {
+          "detections": 340,
+          "minutes": 74.0,
+          "per_minute": 4.594594594594595,
+          "range95": [
+            2.0588235294117645,
+            7.2
+          ]
+        },
+        "both": {
+          "detections": 713,
+          "minutes": 145.53,
+          "per_minute": 4.8993352999190405,
+          "range95": [
+            3.1415886318579846,
+            6.812203875068565
+          ]
+        }
+      },
+      "all tracks the detector outputs": {
+        "beaked whale": {
+          "detections": 390,
+          "minutes": 71.53,
+          "per_minute": 5.4522619354056365,
+          "range95": [
+            2.865036120615561,
+            8.741583706047631
+          ]
+        },
+        "sperm whale": {
+          "detections": 346,
+          "minutes": 74.0,
+          "per_minute": 4.675675675675675,
+          "range95": [
+            2.161290322580645,
+            7.243243243243243
+          ]
+        },
+        "both": {
+          "detections": 736,
+          "minutes": 145.53,
+          "per_minute": 5.057378374109978,
+          "range95": [
+            3.2359862078556643,
+            7.057266128948381
+          ]
+        }
+      }
+    },
+    "silbido-graph-thr8": {
+      "benchmark rule (5-24 kHz, >= 150 ms)": {
+        "beaked whale": {
+          "detections": 2226,
+          "minutes": 71.53,
+          "per_minute": 31.119833508238326,
+          "range95": [
+            20.25408490116112,
+            40.94571706676075
+          ]
+        },
+        "sperm whale": {
+          "detections": 2191,
+          "minutes": 74.0,
+          "per_minute": 29.60810810810811,
+          "range95": [
+            14.256418918918918,
+            43.30031249999999
+          ]
+        },
+        "both": {
+          "detections": 4417,
+          "minutes": 145.53,
+          "per_minute": 30.351141682668167,
+          "range95": [
+            21.208162391619023,
+            39.00837183939111
+          ]
+        }
+      },
+      "all tracks the detector outputs": {
+        "beaked whale": {
+          "detections": 2401,
+          "minutes": 71.53,
+          "per_minute": 33.5663612997665,
+          "range95": [
+            22.480045442687477,
+            44.01677228728479
+          ]
+        },
+        "sperm whale": {
+          "detections": 2295,
+          "minutes": 74.0,
+          "per_minute": 31.013513513513512,
+          "range95": [
+            15.756418918918918,
+            44.74324324324324
+          ]
+        },
+        "both": {
+          "detections": 4696,
+          "minutes": 145.53,
+          "per_minute": 32.26827288698431,
+          "range95": [
+            22.94073368270931,
+            41.10023770172975
+          ]
+        }
+      }
+    },
+    "silbido-graph-thr12": {
+      "benchmark rule (5-24 kHz, >= 150 ms)": {
+        "beaked whale": {
+          "detections": 48,
+          "minutes": 71.53,
+          "per_minute": 0.6710476228191553,
+          "range95": [
+            0.24048898027523,
+            1.2839603693175234
+          ]
+        },
+        "sperm whale": {
+          "detections": 66,
+          "minutes": 74.0,
+          "per_minute": 0.8918918918918919,
+          "range95": [
+            0.33783783783783783,
+            1.475
+          ]
+        },
+        "both": {
+          "detections": 114,
+          "minutes": 145.53,
+          "per_minute": 0.7833439329463824,
+          "range95": [
+            0.41629715838949205,
+            1.1924984678862594
+          ]
+        }
+      },
+      "all tracks the detector outputs": {
+        "beaked whale": {
+          "detections": 56,
+          "minutes": 71.53,
+          "per_minute": 0.7828888932890145,
+          "range95": [
+            0.2790601912983374,
+            1.4588471940500334
+          ]
+        },
+        "sperm whale": {
+          "detections": 72,
+          "minutes": 74.0,
+          "per_minute": 0.972972972972973,
+          "range95": [
+            0.3783783783783784,
+            1.5875
+          ]
+        },
+        "both": {
+          "detections": 128,
+          "minutes": 145.53,
+          "per_minute": 0.8795440650626047,
+          "range95": [
+            0.4753170117398468,
+            1.3210366117810768
+          ]
+        }
+      }
+    }
+  },
+  "differences": {
+    "ridgenet-5-24": {
+      "beaked whale": {
+        "per_minute": -4.194044456871243,
+        "range95": [
+          -6.582115800950466,
+          -2.1493493078780426
+        ]
+      },
+      "sperm whale": {
+        "per_minute": -3.810810810810811,
+        "range95": [
+          -6.2125,
+          -1.6451612903225807
+        ]
+      },
+      "both": {
+        "per_minute": -3.9991754277468563,
+        "range95": [
+          -5.631113720756735,
+          -2.497511605042681
+        ]
+      }
+    },
+    "ridgenet-v2c": {
+      "beaked whale": {
+        "per_minute": -4.403746679714805,
+        "range95": [
+          -7.03401457087151,
+          -2.2034156479366356
+        ]
+      },
+      "sperm whale": {
+        "per_minute": -4.0,
+        "range95": [
+          -6.378378378378379,
+          -1.756756756756757
+        ]
+      },
+      "both": {
+        "per_minute": -4.198447055589913,
+        "range95": [
+          -5.931470067755579,
+          -2.6105942385187317
+        ]
+      }
+    }
+  }
+}

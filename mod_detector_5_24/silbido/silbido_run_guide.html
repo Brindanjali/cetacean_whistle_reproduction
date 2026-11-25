@@ -1,0 +1,137 @@
+<title>Silbido Run Guide</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Serif:wght@500&display=swap">
+<style>
+/* Layout: one narrow reading column; numbered steps are a real sequence, commands sit in code bars. */
+:root {
+  --bg: #f6f8f8; --fg: #17262b; --muted: #52666d; --line: #cdd9db;
+  --surface: #e9f0f1; --accent: #0b6470; --warn: #8a4b08;
+  --display: "IBM Plex Serif", Georgia, serif;
+  --body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "IBM Plex Mono", Consolas, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #101a1d; --fg: #e3ecee; --muted: #9db0b6; --line: #2d3f44;
+    --surface: #1a282c; --accent: #6cc7d3; --warn: #e6b16a; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #101a1d; --fg: #e3ecee; --muted: #9db0b6; --line: #2d3f44;
+  --surface: #1a282c; --accent: #6cc7d3; --warn: #e6b16a; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--fg); font: 400 16px/1.6 var(--body);
+  padding-block: 40px 56px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+main { max-width: 680px; margin: 0 auto; display: grid; gap: 36px; }
+main > * { min-width: 0; }
+h1 { font: 500 clamp(1.9rem, 6vw, 2.5rem)/1.15 var(--display); margin: 0 0 10px; text-wrap: balance; }
+h2 { font: 600 1.15rem/1.3 var(--body); margin: 0 0 12px; text-wrap: balance; }
+p { margin: 0; }
+.lead { color: var(--muted); font-size: 1.05rem; }
+ul { margin: 0; padding-left: 1.2em; display: grid; gap: 6px; }
+ol.steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 22px; counter-reset: s; }
+ol.steps > li { counter-increment: s; display: grid; grid-template-columns: 2rem minmax(0, 1fr); column-gap: 8px; }
+ol.steps > li::before { content: counter(s); font: 500 1.05rem/1.55 var(--mono); color: var(--accent); }
+.step { display: grid; gap: 8px; min-width: 0; }
+code { font: 400 .92em var(--mono); overflow-wrap: anywhere; }
+b { font-weight: 600; }
+.cmd {
+  display: flex; align-items: center; gap: 10px; background: var(--surface);
+  border: 1px solid var(--line); border-radius: 4px; padding: 8px 8px 8px 12px;
+}
+.cmd code { flex: 1; min-width: 0; font-size: .9rem; }
+button {
+  font: 500 .8rem var(--body); color: var(--accent); background: transparent;
+  border: 1px solid var(--accent); border-radius: 4px; padding: 4px 10px; cursor: pointer; flex: none;
+}
+button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: .95rem; }
+th, td { text-align: left; vertical-align: top; padding: 9px 12px 9px 0; border-bottom: 1px solid var(--line); }
+th { font-weight: 600; color: var(--muted); font-size: .85rem; }
+.note { border-top: 1px solid var(--line); padding-top: 18px; color: var(--muted); font-size: .92rem; }
+.warn { color: var(--warn); }
+</style>
+
+<main>
+  <header>
+    <h1>Running Silbido in MATLAB</h1>
+    <p class="lead">One script runs the Silbido whistle detector on 12 public dolphin and whale recordings from the DCLDE 2011 dataset, then makes a zip file to send back.</p>
+  </header>
+
+  <section>
+    <h2>What you need</h2>
+    <ul>
+      <li>The file <code>run_silbido_dclde2011.m</code>, sent with this guide</li>
+      <li>Desktop MATLAB, R2019b or newer</li>
+      <li>Signal Processing Toolbox and Image Processing Toolbox</li>
+      <li>Internet and about 1.5 GB of free disk space</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Steps</h2>
+    <ol class="steps">
+      <li><div class="step">
+        <p><b>Give Java more memory.</b> Open <b>Preferences</b> (called <b>Settings</b> in the newest MATLAB versions), go to <b>General &rsaquo; Java Heap Memory</b>, set it to <b>2048 MB</b>, then restart MATLAB.</p>
+      </div></li>
+      <li><div class="step">
+        <p><b>Set up a folder.</b> Create a new empty folder, put <code>run_silbido_dclde2011.m</code> in it, and make that folder MATLAB's current folder.</p>
+      </div></li>
+      <li><div class="step">
+        <p><b>Start the script.</b> Type this in the Command Window and press Enter:</p>
+        <div class="cmd"><code>run_silbido_dclde2011</code><button type="button" id="copy-run">Copy</button></div>
+        <p>It downloads Silbido 3.0 and the recordings (about 1.1 GB) from NOAA's public data bucket, then processes the recordings one at a time. Progress appears in the Command Window.</p>
+      </div></li>
+      <li><div class="step">
+        <p><b>Wait for it to finish.</b> The time depends on the computer and may be an hour or more. If it stops or MATLAB closes, run the same command from the same folder. It keeps finished downloads and recordings.</p>
+      </div></li>
+      <li><div class="step">
+        <p><b>Send the result.</b> When it prints <b>DONE</b>, send back <code>silbido_detections.zip</code> from that folder. You can delete the rest of the folder after that.</p>
+      </div></li>
+    </ol>
+  </section>
+
+  <section>
+    <h2>If something goes wrong</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Message</th><th>What to do</th></tr></thead>
+        <tbody>
+          <tr><td><code>Silbido needs the ... Toolbox</code></td><td>Install that toolbox with the MATLAB Add-On Explorer, then run the script again.</td></tr>
+          <tr><td><code>at least 1 GB of Java heap memory</code></td><td>Do step 1, restart MATLAB, then run the script again.</td></tr>
+          <tr><td><code>could not download ...</code></td><td>Check the internet connection and run the script again later. Some university networks block downloads, so another network may help.</td></tr>
+          <tr><td>Anything else</td><td>Send a screenshot or copy of the red error text. This is the script's first real run, so it may need a small fix.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <p class="note"><span class="warn">Optional:</span> if you have the Deep Learning Toolbox and its ONNX converter support package, <code>run_silbido_dclde2011(true)</code> also runs Silbido's deep-learning version. Please try the normal command first. The script has not been tried on MATLAB Online, so use desktop MATLAB.</p>
+</main>
+
+<script>
+  const btn = document.getElementById("copy-run");
+  btn.addEventListener("click", async () => {
+    const text = "run_silbido_dclde2011";
+    try {
+      await navigator.clipboard.writeText(text);
+      btn.textContent = "Copied";
+    } catch {
+      const range = document.createRange();
+      range.selectNodeContents(btn.previousElementSibling);
+      const sel = getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+      btn.textContent = "Selected";
+    }
+    setTimeout(() => { btn.textContent = "Copy"; }, 1800);
+  });
+</script>

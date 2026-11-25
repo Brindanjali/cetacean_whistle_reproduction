@@ -1,6 +1,6 @@
 # Colab cell: download the DCLDE 2011 test set of Li et al. (2023, JASA, doi:10.1121/10.0020274) from NOAA's public
-# bucket into Google Drive: 9 recordings from the development folder, the 2011 annotations (what Li et al. scored
-# against), the revised 2025 annotations, the corpus README and the silbidopy reader for the .ann format (~0.82 GB).
+# bucket into Google Drive: 12 recordings from the development folder, the 2011 annotations (what Li et al. scored
+# against), the revised 2025 annotations, the corpus README and the silbidopy reader for the .ann format (~1.15 GB).
 # Paste this whole file into ONE Colab cell and run it. Nothing touches your own computer.
 # Safe to re-run: files already in Drive with the right size and MD5 are skipped; a broken download is retried.
 # Data: Roch et al. (2025) DCLDE 2011 Conference Data, doi:10.25921/wsnc-js16 (research and educational use).
@@ -17,7 +17,7 @@ TMP = "/content/_dl_dclde2011"
 
 # path relative to the bucket folder, size in bytes, MD5 (from the bucket listing).
 # development/<species>/X.ann = 2011 annotations; annotations2025/development/<species>/X.ann = revised 2025 annotations.
-# All 9 recordings are 192 kHz wav; none has a reliability footnote in the corpus README.
+# All 12 recordings are 192 kHz wav; none has a reliability footnote in the corpus README.
 FILES = """
 development/bottlenose/Qx-Tt-SCI0608-N1-060814-121518.wav,145859024,016bde125be1e6a9c31bbf8731ba234b
 development/bottlenose/Qx-Tt-SCI0608-N1-060814-121518.ann,1138112,9a8a2d4893289df52f3d5b222ded7179
@@ -34,23 +34,32 @@ annotations2025/development/common/Qx-Dc-CC0411-TAT11-CH2-041114-154040-s.ann,52
 development/common/QX-Dc-FLIP0610-VLA-061015-165000.wav,115200044,1cf400d3e834f8e9bbadf1e9afbc2b06
 development/common/QX-Dc-FLIP0610-VLA-061015-165000.ann,3670027,91a0d97ebe82ff023f7b6375decf5f4d
 annotations2025/development/common/QX-Dc-FLIP0610-VLA-061015-165000.ann,3761771,fa636e332b0abaa64454d7588c545a03
+development/common/Qx-Dc-SC03-TAT09-060516-171606.wav,89835564,3fcb59129285fe4a1afdd234c21b9e3c
+development/common/Qx-Dc-SC03-TAT09-060516-171606.ann,1088156,5a7b14fc2aca4255b283f57b371f9b6c
+annotations2025/development/common/Qx-Dc-SC03-TAT09-060516-171606.ann,1088156,5a7b14fc2aca4255b283f57b371f9b6c
 development/melon-headed/palmyra092007FS192-071004-032342.wav,76161068,002bb860f8bbe07dab66fa2ffcb2c6da
 development/melon-headed/palmyra092007FS192-071004-032342.ann,1811336,60739fe84a64051af77f91beb6fb1255
 annotations2025/development/melon-headed/palmyra092007FS192-071004-032342.ann,1811336,60739fe84a64051af77f91beb6fb1255
 development/melon-headed/palmyra102006-061020-204327_4.wav,25034796,1d18c137211b6bbb450747bdef77443f
 development/melon-headed/palmyra102006-061020-204327_4.ann,5040324,d690d3b6c710e1989171c004f0fa6ebc
 annotations2025/development/melon-headed/palmyra102006-061020-204327_4.ann,5040324,d690d3b6c710e1989171c004f0fa6ebc
+development/melon-headed/palmyra092007FS192-070925-023000.wav,160201004,0cdead90218710396f7a419487988bb3
+development/melon-headed/palmyra092007FS192-070925-023000.ann,7019267,f8c99c4538d7d61684a6197d98bf67ea
+annotations2025/development/melon-headed/palmyra092007FS192-070925-023000.ann,7019267,f8c99c4538d7d61684a6197d98bf67ea
 development/spinner/palmyra092007FS192-070927-224737.wav,54794540,1785cc925537ad78fb10bc6cf8018cfd
 development/spinner/palmyra092007FS192-070927-224737.ann,8118024,70266825517e7e87cd268b1f77c31d66
 annotations2025/development/spinner/palmyra092007FS192-070927-224737.ann,8118024,70266825517e7e87cd268b1f77c31d66
 development/spinner/palmyra102006-061103-213127_4.wav,60522540,50595518e6a39e42d05a68809d5edb16
 development/spinner/palmyra102006-061103-213127_4.ann,4942180,b5a733b4be8bfa6b23eed52b25e29116
 annotations2025/development/spinner/palmyra102006-061103-213127_4.ann,4942180,b5a733b4be8bfa6b23eed52b25e29116
+development/spinner/palmyra092007FS192-071011-232000.wav,48215852,0b34faa434be823eccdc64462d9c3df1
+development/spinner/palmyra092007FS192-071011-232000.ann,4226240,e731c168b1e02d766fa87b13909e85d6
+annotations2025/development/spinner/palmyra092007FS192-071011-232000.ann,4226240,e731c168b1e02d766fa87b13909e85d6
 DCLDE2011-README.md,46860,11450fd6f5d64fb5ed492371f79f2008
 software/silbidopy-commit-64da6e0fbca86a35725dea4cec9fab9d049bd5ec.zip,20384,8cb08348b53b04ce7852a033b5e0dab6
 """
 files = [(p, int(s), m) for p, s, m in (l.split(",") for l in FILES.strip().splitlines())]
-assert len(files) == 29 and sum(p.endswith(".wav") for p, _, _ in files) == 9
+assert len(files) == 38 and sum(p.endswith(".wav") for p, _, _ in files) == 12
 
 drive.mount("/content/drive")
 os.makedirs(TMP, exist_ok=True)

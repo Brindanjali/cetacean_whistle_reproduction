@@ -2,7 +2,7 @@
 # Paste this whole file into ONE Colab cell and run it. A CPU runtime is enough (~15-25 min, mostly the scorer's SNR pass).
 # Needs in Google Drive:
 #   MyDrive/whistle_detector_5_24/code/whistle_code_5_24.zip   <- python mod_detector_5_24/make_colab_bundle_5_24.py
-#   MyDrive/whistle_detector_5_24/dclde2011/                   <- colab_download_dclde2011.py (29 files)
+#   MyDrive/whistle_detector_5_24/dclde2011/                   <- colab_download_dclde2011.py (38 files)
 # Writes detections and score_*.json files to MyDrive/whistle_detector_5_24/dclde2011_detections/<tag>/.
 # Safe to re-run (detections are recomputed, scores overwritten).
 import importlib
@@ -23,8 +23,11 @@ DATA = f"{DRIVE}/dclde2011"
 
 drive.mount("/content/drive")
 assert os.path.exists(f"{DRIVE}/code/whistle_code_5_24.zip"), "upload whistle_code_5_24.zip to MyDrive/whistle_detector_5_24/code/"
+if os.path.exists(f"{DRIVE}/silbido_detections.zip"):   # result of silbido/run_silbido_dclde2011.m, if uploaded
+    with zipfile.ZipFile(f"{DRIVE}/silbido_detections.zip") as z:
+        z.extractall(f"{DATA}_detections")
 n_wav = len(list(Path(DATA).glob("development/*/*.wav")))
-assert n_wav == 9, f"{DATA} has {n_wav} of 9 recordings: run colab_download_dclde2011.py first"
+assert n_wav == 12, f"{DATA} has {n_wav} of 12 recordings: run colab_download_dclde2011.py first"
 
 shutil.rmtree(CODE, ignore_errors=True)
 with zipfile.ZipFile(f"{DRIVE}/code/whistle_code_5_24.zip") as z:
@@ -58,9 +61,20 @@ for tag, extra, title in [
         (KEEP, M150 + ["--gt", "2025"], "harmonics kept, >= 150 ms, revised 2025 answer key"),
         (KEEP, M150 + ["--min-overlap", "0"], "harmonics kept, >= 150 ms, without Li et al.'s 30 % overlap rule (Silbido default)"),
         (KEEP, M150 + ["--full-band"], "harmonics kept, >= 150 ms, all whistles counted, also those above 24 kHz"),
+        (KEEP, M150 + ["--min-overlap", "0", "--full-band"], "harmonics kept, >= 150 ms, no 30 % rule, all whistles"),
         ("ridgenet-5-24", M150, "harmonics suppressed (VAE-GMM tracker setting), >= 150 ms, 2011 answer key")]:
     print(f"\n--- {title}")
     D.main(data + ["score", "--tag", tag] + extra)
+
+# Silbido baselines (mod_detector_5_24/silbido/run_silbido_dclde2011.m; unzip its result into dclde2011_detections/),
+# scored with exactly the same command as the MAIN result
+for tag in ("silbido-graph", "silbido-deepwhistle"):
+    if os.path.isdir(f"{DATA}_detections/{tag}"):
+        for extra, title in [(M150, "same rules as MAIN"), (M150 + ["--full-band"], "all whistles, also above 24 kHz"),
+                             (M150 + ["--min-overlap", "0"], "without the 30 % rule, 5-24 kHz"),
+                             (M150 + ["--min-overlap", "0", "--full-band"], "without the 30 % rule, all whistles (compare: Li et al. report F1 75.95)")]:
+            print(f"\n--- BASELINE {tag}: {title}")
+            D.main(data + ["score", "--tag", tag] + extra)
 
 drive.flush_and_unmount()   # make sure Drive has finished writing
 print("\nDONE: copy everything from '===== 1.' down and send it.")
