@@ -172,3 +172,20 @@ Dated lines, newest last. Details are in `WORKLOG.md`.
     - **Fallbacks:** a forced lost context (the words stand alone, then the scene rebuilds); no WebGL 2 (the constructor refuses, and the words stand alone); reduced motion (settled pictures).
     - **Controls:** "Hear it" plays; the header links land on their beats.
   - **Not checked yet:** whole-page frame times with the pane visible (the pane was hidden, which throttles animation frames), Edge, and Docker over Funnel. Those are P5.
+- **2026-11-26, P4 done.** Every beat's words checked against its record:
+  - **Speak:** no longer says a whistle is "a letter"; a whistle carries six bits, a letter five.
+  - **Hide:** "about a third" now counts whistles only.
+  - **Learn:** says the whistles come from one encounter.
+  - **Listen:** says its whistle was recorded off Hawai‘i in 2017.
+  - **The line before the beats:** now asks whether a whistle can carry a message.
+  - Each line is in `project/TRACEABILITY.md`.
+- **2026-11-26, P5 done, except two items.** Headless Chrome and Edge, on the Radeon 610M at 2560 × 1600, driven over the DevTools protocol:
+  - **Edge:** every beat shows its words, and screenshots of Speak and Hear are right.
+  - **Chrome:**
+    - WebGL turned off: the words stand alone.
+    - No server: Encode says how to start it.
+    - Reduced motion, set through the browser's own media setting: settled pictures.
+    - On `whistlecode serve`: Encode is ready; a send and decode round trip reads "SEE YOU AT NOON" with the key and finds no message with a wrong key; `model.html` offers Nyx and Delphi.
+  - **Console errors:** none, apart from Encode's expected 404 on the static server.
+  - **Frame times:** a 10 s scroll through the film at 720p, alternating against the page on `main`. In the clean second round there were no frames over 33 ms on either page; the 95th percentile was 21.0 ms against 20.9; the film's own work was 0.4 ms against 1.1 ms. Headless frame times are not a screen's, so the 6 ms target on a visible 240 Hz screen remains unmeasured.
+  - **Still open:** that visible-screen measurement, and Docker over Funnel. Funnel puts the page on the internet, so it needs your go-ahead, in P6.

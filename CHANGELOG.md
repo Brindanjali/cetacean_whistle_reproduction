@@ -13,6 +13,7 @@ Notable changes to this project, release by release. The format follows [Keep a 
 
 ### Changed
 
+- **The film's words, final pass** (WEB-5 P4): each beat says only what its record holds. Speak no longer calls a whistle "a letter" (a whistle carries six bits, a letter five); Hide's "about a third" now counts whistles only, not clicks; Learn says the whistles come from one encounter; Listen says where its whistle was recorded (off Hawai‘i, 2017); the line before the beats asks whether a whistle that can carry a name can carry a message.
 - **The page tells Falsetto's story first** (on the branch `web-retelling`): the header reads "Falsetto"; Encode and Decode follow the film directly, brought in by the tide; the film's last line leads to Encode; the footer states the limits (simulation only; the coded shapes can still be told from real ones). The tide and the sea moved from `lab.js` to `web/water.js`, unchanged.
 - **Data-whistle share reconciled** (WC-R7): one in four rhythm-bank whistles can carry data, and about a third of a played message does. `TEST_PROTOCOL.md` is corrected, with a dated note, and so is its outdated line on epoch 150.
 
