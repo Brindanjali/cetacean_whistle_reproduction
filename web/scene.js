@@ -3,9 +3,10 @@
  * `python whistlecode/whistlecode.py export-film` (web/PLAN.md, WEB-5). As in the rest of the film, every frame is a pure
  * function of the scroll position (timings: shots.js VIZ) and one camera moves through all of it: nothing cuts.
  *
- *   01 Listen  one encounter-191 training image as a landscape (time across, pitch into the distance, loudness up), cropped
- *              around its whistle; the contour it was made from is the glowing ridge. The camera tips over until the
- *              ridge is a line: the whistle's shape
+ *   01 Listen  one encounter-191 training image, cropped around its whistle: its pixel grid as a floor of fine dots (time
+ *              across, pitch into the distance), the contour it was made from traced on that floor, and, at every frame
+ *              of the image, a hairline rising to the image's level there; along their tops, the contour as one amber line.
+ *              The camera tips over until the hairlines are points and the amber line lies on its trace: the shape
  *   02 Learn   the line shrinks into a point: that same whistle's place among all 63,490 whistles the model learned from
  *              (latent means on three principal axes). The others appear around it, coloured by mixture component
  *   03 Speak   the codebook's 16 families light up and unfold into their mean shapes; at the four pitches of a slot, a
@@ -14,6 +15,10 @@
  *              whistles, cover whistles as played, recorded clicks), all alike
  *   05 Hear    the key's whistles rise out of the river; the one the receiver misread in the sea shows, then is repaired;
  *              the message whistles become the letters (the receiver's own record of that send)
+ *
+ * The look (web/PLAN-SCENE.md, D-027): fine lines over the page's own blue water, white with one amber accent (the whistle
+ * the film follows); things fade into the water with distance. Listen is redrawn that way; Learn and Speak keep their WEB-5
+ * design, made bolder (crisp points drawn over the water; solid, thicker strokes); Hide and Hear are as in WEB-5.
  *
  * The 3D is on #gl (gl.js); labels, glows and letters on #sig (2D). Camera moves and colours are style: every shape, time
  * and point comes from film/film.json and film/learn.bin.
@@ -37,6 +42,8 @@
   const CLOUD = 1.35;          // Learn: the cloud's half-width on its widest axis
   const CROP_T = 22;           // Listen: image columns kept either side of the whistle
   const CROP_F = 26;           //         image rows kept either side of its centre
+  const HMAX = 0.55;           //         a hairline's height at the image's full level
+  const DOT = 2;               //         one floor dot per DOT x DOT image pixels
   const GAP = 0.22, TS = 0.42; // Speak: column spacing; units per second of a shape
   const HS = 1.3;              //         height spanned by the four pitches
   const KT = 0.13;             // Hide: units per second along the river
@@ -47,30 +54,51 @@ layout(location = 0) in vec3 aP;
 layout(location = 1) in float aK;
 layout(location = 2) in float aSel;
 uniform mat4 uM; uniform vec3 uO, uFocus; uniform vec3 uHue[5];
-uniform float uScale, uPx, uReveal, uRevealR, uPick, uDim, uFollow, uA;
-out vec4 vCol;
+uniform float uScale, uPx, uReveal, uRevealR, uPick, uDim, uFollow, uA, uBase;
+out vec4 vCol; out float vSize;
 void main() {
   vec3 w = aP * uScale + uO;
   gl_Position = uM * vec4(w, 1.0);
   float shown = 1.0 - smoothstep(uReveal * uRevealR - 0.3, uReveal * uRevealR, distance(w, uFocus));
   vec3 c = uHue[int(mod(aK * 7.0 + floor(aK / 5.0), 5.0))];
-  float a = 0.24 * shown, pick = 0.0;
+  float a = uBase * shown * exp(-max(0.0, gl_Position.w - 3.4) * 0.45), pick = 0.0;
   if (aSel < 16.5) {
     pick = uPick;
     vec3 hi = abs(aSel - uFollow) < 0.5 ? vec3(0.949, 0.816, 0.588) : vec3(0.918, 0.965, 0.984);
     c = mix(c, hi, pick); a = mix(a, 0.9 * shown, pick);
   } else a *= 1.0 - uDim;
-  gl_PointSize = max(1.0, uPx * (1.0 + 1.4 * pick) * clamp(3.2 / gl_Position.w, 0.9, 2.2));
+  vSize = max(1.0, uPx * (1.0 + 1.1 * pick) * clamp(3.2 / gl_Position.w, 0.9, 2.2));
+  gl_PointSize = vSize + 1.0;
   vCol = vec4(c * a, a) * uA;
 }`;
+  /* a crisp round point, drawn over the water: where points crowd, the colour holds instead of burning white */
   const POINT_FS = `#version 300 es
-precision mediump float;
-in vec4 vCol; out vec4 o;
+precision highp float;
+in vec4 vCol; in float vSize; out vec4 o;
 ${K.SHADE}
 void main() {
-  vec2 q = gl_PointCoord - 0.5; float r = dot(q, q) * 4.0;
-  if (r > 1.0) discard;
-  o = vCol * exp(-r * 2.6) * shade();
+  float d = length(gl_PointCoord - 0.5) * (vSize + 1.0), cov = clamp(0.5 * vSize - d + 0.5, 0.0, 1.0);
+  if (cov <= 0.0) discard;
+  o = vCol * cov * shade();
+}`;
+
+  /* ---- 01 Listen: the image's pixel grid as fine dots on the floor, fading towards the crop's edges and into the water */
+  const DOT_VS = `#version 300 es
+layout(location = 0) in vec4 aP;
+uniform mat4 uM; uniform float uPx, uA; uniform vec2 uFog;
+out float vA;
+void main() {
+  vec4 c = uM * vec4(aP.xyz, 1.0);
+  gl_Position = c; gl_PointSize = uPx + 1.0;
+  vA = uA * aP.w * exp(-max(0.0, c.w - uFog.x) * uFog.y);
+}`;
+  const DOT_FS = `#version 300 es
+precision highp float;
+in float vA; uniform float uPx; uniform vec3 uInk; out vec4 o;
+${K.SHADE}
+void main() {
+  float r = length(gl_PointCoord - 0.5) * (uPx + 1.0), a = vA * clamp(0.5 * uPx - r + 0.5, 0.0, 1.0) * shade();
+  o = vec4(uInk * a, a);
 }`;
 
   /* a camera pose: the point it looks at, the turn around it (yaw), the tilt above it (pitch) and the distance */
@@ -151,44 +179,40 @@ void main() {
 
     prepareListen(l) {
       const lv = Uint8Array.from(atob(l.levels_b64), c => c.charCodeAt(0));
-      const rowOf = f => l.zero_row - (f - l.center_hz) / l.hz_per_row;
+      const rowOf = f => l.zero_row - (f - l.center_hz) / l.hz_per_row, hzOf = r => l.center_hz + (l.zero_row - r) * l.hz_per_row;
       const rows = l.contour_hz.map(rowOf), rc = Math.round(rows.reduce((a, b) => a + b, 0) / rows.length);
       const c0 = Math.max(0, l.col0 - CROP_T), c1 = Math.min(l.cols - 1, l.col0 + l.contour_hz.length - 1 + CROP_T);
       const r0 = Math.max(0, rc - CROP_F), r1 = Math.min(l.rows - 1, rc + CROP_F);
       const X = c => lerp(-1.3, 1.3, (c - c0) / (c1 - c0)), Z = r => lerp(-1, 1, (r - r0) / (r1 - r0));
-      const H = (r, c) => lv[Math.round(clamp(r, 0, l.rows - 1)) * l.cols + Math.round(clamp(c, 0, l.cols - 1))] / 255 * 0.55;
-      // the landscape as line segments; a flat stretch is one long segment
-      const segs = [];
-      const run = (pts, alpha) => {
-        let a = 0;
-        for (let k = 1; k < pts.length; k++) {
-          const flat = pts[k][1] === 0 && pts[a][1] === 0 && pts[k - 1][1] === 0;
-          if (flat && k < pts.length - 1) continue;
-          if (flat) { segs.push([pts[a], pts[k], alpha]); a = k; continue; }
-          if (k - 1 > a) segs.push([pts[a], pts[k - 1], alpha]);
-          const h = Math.max(pts[k - 1][1], pts[k][1]);
-          segs.push([pts[k - 1], pts[k], alpha * (1 + 2.2 * h)]);
-          a = k;
-        }
+      // the image's level between pixels (bicubic)
+      const px = (r, c) => lv[clamp(r, 0, l.rows - 1) * l.cols + clamp(c, 0, l.cols - 1)] / 255;
+      const cub = (p0, p1, p2, p3, t) => p1 + 0.5 * t * (p2 - p0 + t * (2 * p0 - 5 * p1 + 4 * p2 - p3 + t * (3 * (p1 - p2) + p3 - p0)));
+      const S = (r, c) => {
+        const ri = Math.floor(r), ci = Math.floor(c), tr = r - ri, row = k => cub(px(k, ci - 1), px(k, ci), px(k, ci + 1), px(k, ci + 2), c - ci);
+        return clamp(cub(row(ri - 1), row(ri), row(ri + 1), row(ri + 2), tr));
       };
-      for (let r = r0; r <= r1; r++) {
-        const pts = []; for (let c = c0; c <= c1; c++) pts.push([X(c), H(r, c), Z(r)]);
-        run(pts, 0.1 + 0.3 * (r - r0) / (r1 - r0));                 // near rows (low pitch) brighter: the floor recedes
-      }
-      for (let c = c0; c <= c1; c += 5) {
-        const pts = []; for (let r = r0; r <= r1; r++) pts.push([X(c), H(r, c), Z(r)]);
-        run(pts, 0.14);
-      }
-      this.terrainSegs = segs;
-      // the glowing ridge: the contour, at the image's crest (the highest level within two rows of it). The contour falls
-      // between pixel rows, so the crest alternates by about 15 % from frame to frame; the line takes a five-frame average
-      // (the landscape itself keeps every pixel)
-      const crest = l.contour_hz.map((f, k) => Math.max(...[-2, -1, 0, 1, 2].map(d => H(rowOf(f) + d, l.col0 + k))));
+      // a hairline at every frame of the contour, as tall as the image's level there: the highest within a row of the
+      // contour, averaged over five frames (the contour falls between pixel rows, so the level read at it alternates from
+      // frame to frame by up to 15 %; the drawing smooths that, the image keeps every pixel)
+      const crest = l.contour_hz.map((f, k) => Math.max(...[-1, -0.5, 0, 0.5, 1].map(d => S(rowOf(f) + d, l.col0 + k))));
       const avg = crest.map((_, k) => { const w = crest.slice(Math.max(0, k - 2), k + 3); return w.reduce((a, b) => a + b, 0) / w.length; });
-      this.ridge = l.contour_hz.map((f, k) => [X(l.col0 + k), avg[k] + 0.012, Z(rowOf(f))]);
-      const a = this.ridge[0], e = this.ridge[this.ridge.length - 1];
-      this.axes = { t: [e[0] + 0.3, 0, Math.max(a[2], e[2]) + 0.5], f: [a[0] - 0.3, 0, Math.min(a[2], e[2]) - 0.6],
-                    tl: [e[0], 0, Math.max(a[2], e[2]) + 0.22], fl: [a[0] - 0.12, 0, Math.min(a[2], e[2]) - 0.1] };
+      this.hairs = l.contour_hz.map((f, k) => [X(l.col0 + k), avg[k] * HMAX, Z(rowOf(f))]);
+      // the amber line along their tops, and its trace on the floor: the contour through a Catmull-Rom curve
+      const n = this.hairs.length, per = 6, curve = [];
+      for (let k = 0; k < n - 1; k++) for (let j = 0; j < per; j++) {
+        const t = j / per, P = i => this.hairs[clamp(i, 0, n - 1)], p0 = P(k - 1), p1 = P(k), p2 = P(k + 1), p3 = P(k + 2);
+        curve.push([0, 1, 2].map(d => p1[d] + 0.5 * t * (p2[d] - p0[d] + t * (2 * p0[d] - 5 * p1[d] + 4 * p2[d] - p3[d] + t * (3 * (p1[d] - p2[d]) + p3[d] - p0[d])))));
+      }
+      curve.push(this.hairs[n - 1].slice());
+      this.ridge = curve;                                       // u along the contour: index / (length - 1)
+      // the floor: one dot per DOT x DOT pixels of the crop, fading out over the outer fifth of each side
+      const dots = [];
+      for (let r = r0; r <= r1; r += DOT) for (let c = c0; c <= c1; c += DOT) {
+        const ex = Math.min(c - c0, c1 - c) / ((c1 - c0) * 0.2), ez = Math.min(r - r0, r1 - r) / ((r1 - r0) * 0.2);
+        dots.push(X(c), 0, Z(r), sm(0, 1, ex) * sm(0, 1, ez));
+      }
+      this.dotData = new Float32Array(dots); this.nDots = dots.length / 4;
+      this.floor = { dur: (c1 - c0) * l.s_per_col, fLo: hzOf(r1), fHi: hzOf(r0), time: [0.15, 0, 0.92], pitch: [-1.18, 0, -0.1] };
     }
 
     prepareRiver(hide, hear) {
@@ -232,10 +256,14 @@ void main() {
       const gl = this.gl;
       this.segProg = K.program(gl, K.SEG_VS, K.SEG_FS);
       this.ptProg = K.program(gl, POINT_VS, POINT_FS);
-      this.terrain = new K.Segments(gl, this.terrainSegs.length, this.segProg);
-      for (const [a, b, al] of this.terrainSegs) this.terrain.add(a, b, PALE, Math.min(1, al), 1);
-      this.terrain.upload();
+      this.dotProg = K.program(gl, DOT_VS, DOT_FS);
+      this.lines = new K.Lines(gl, 4000);
+      this.timer = new K.GpuTimer(gl);
       this.dyn = new K.Segments(gl, 12000, this.segProg);
+      this.dots = gl.createVertexArray();
+      gl.bindVertexArray(this.dots);
+      gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer()); gl.bufferData(gl.ARRAY_BUFFER, this.dotData, gl.STATIC_DRAW);
+      gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 4, gl.FLOAT, false, 16, 0);
       this.cloud = gl.createVertexArray();
       gl.bindVertexArray(this.cloud);
       gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
@@ -255,8 +283,12 @@ void main() {
       const gl = this.gl, id = new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]), keep = this.mvp;
       const shade = this.shadeU || [new Float32Array([0, 0, 1, 1]), 0];
       gl.viewport(0, 0, 1, 1); gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE);
-      this.terrain.draw(id, [1, 1], shade, { passes: [[1, 0]] });
+      this.dyn.clear(); this.dyn.add([0, 0, 0], [0.1, 0, 0], INK, 0.01, 1); this.dyn.upload();
+      this.dyn.draw(id, [1, 1], shade, { passes: [[1, 0]] }); this.dyn.clear();
+      this.lines.clear(); this.lines.line([[0, 0, 0], [0.1, 0, 0]], INK, 0.01, 1); this.lines.draw(id, [1, 1], shade); this.lines.clear();
       this.mvp = id; this.shadeU = shade;
+      this.drawDots(0.001);
+      gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE);
       this.drawCloud(0, { learn: 1, pick: 0, lattice: 0 });
       this.mvp = keep;
       gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array(4));
@@ -281,12 +313,14 @@ void main() {
 
     /* ------------------------------------------------------------------ one camera for the whole scene */
     camera(P) {
-      const A0 = pose([0, 0.05, 0], -0.34, 0.44, 3.25), A1 = pose([0, 0, 0], 0, Math.PI / 2 - 1e-3, 2.85);
+      // Listen: the camera comes round from low on the side as the whistle rises, then tips over it
+      const A0s = pose([0, 0.12, 0.05], -0.82, 0.24, 3.15), A0 = pose([0, 0.14, 0], -0.5, 0.4, 2.8);
+      const A1 = pose([0, 0, 0], 0, Math.PI / 2 - 1e-3, 2.85);
       const B = pose(this.C, 0.9, 0.32, 3.7), S = pose(this.Lc, 0, 0.05, 6.2);
       // Hide: the river seen from its side at an angle, time running across and into the distance; the camera drifts along it
       const river = tc => pose([this.R0[0], this.R0[1] + 0.7, this.zR(tc)], 0.95, 0.24, 4.4);
       const E = pose([this.R0[0], this.R0[1] + 1.75, this.zMid - 0.4], 1.42, 0.2, 6.8);
-      if (P.learn <= 0) return mixPose(A0, A1, smoother(P.tip));
+      if (P.learn <= 0) return mixPose(mixPose(A0s, A0, smoother(clamp(0.2 + 0.8 * P.rise))), A1, smoother(P.tip));
       if (P.pick <= 0) { const b = mixPose(A1, B, smoother(sm(0.08, 1, P.learn))); b.yaw += 0.25 * P.learn; return b; }
       const B1 = { ...B, yaw: B.yaw + 0.25 };
       if (P.hide <= 0) return mixPose(B1, S, smoother(clamp(0.35 * P.pick + 0.65 * P.lattice)));
@@ -303,6 +337,7 @@ void main() {
       return out;
     }
 
+    /* a label: text, or [word, detail] with the detail fainter after it */
     label(text, p, alpha, align = 'left', dx = 0, dy = 0) {
       if (alpha < 0.02) return;
       const s = M.screen(this.mvp, p, this.W, this.H);
@@ -311,15 +346,27 @@ void main() {
     flushLabels(cx) {
       const t = this.text;
       cx.font = `400 ${this.fs}px "IBM Plex Mono", monospace`;
-      if ('letterSpacing' in cx) cx.letterSpacing = '0.06em';
-      for (let [text, x, y, alpha, align] of this.labels) {
-        const w = cx.measureText(text).width, l = align === 'right' ? x - w : align === 'center' ? x - w / 2 : x;
-        // a label that would sit on the words moves out to their right
-        if (t && y > t.y0 - 12 && y < t.y1 + this.fs + 12 && l < t.x1 + 16 && l + w > t.x0) { x = t.x1 + 28; align = 'left'; }
-        cx.textAlign = align; cx.lineWidth = 4; cx.strokeStyle = `rgba(4,22,40,${0.55 * alpha})`; cx.strokeText(text, x, y);
-        cx.fillStyle = `rgba(226,242,248,${0.95 * alpha})`; cx.fillText(text, x, y);
+      if ('letterSpacing' in cx) cx.letterSpacing = '0.16em';
+      cx.textBaseline = 'middle'; cx.textAlign = 'left';
+      cx.shadowColor = 'rgba(2,10,20,0.5)'; cx.shadowBlur = 10; cx.shadowOffsetY = 1;
+      for (const [text, x, y, alpha, align] of this.labels) {
+        const [word, more] = Array.isArray(text) ? text : [text, ''];
+        const w1 = cx.measureText(word.toUpperCase()).width, gap = more ? this.fs : 0, w = w1 + gap + (more ? cx.measureText(more).width : 0);
+        const l = align === 'right' ? x - w : align === 'center' ? x - w / 2 : x;
+        if (t && y > t.y0 - 12 && y < t.y1 + this.fs + 12 && l < t.x1 + 16 && l + w > t.x0) continue;    // never over the words
+        cx.fillStyle = `rgba(${S_INK},${0.92 * alpha})`; cx.fillText(word.toUpperCase(), l, y);
+        if (more) { cx.fillStyle = `rgba(${S_INK},${0.6 * alpha})`; cx.fillText(more, l + w1 + gap, y); }
       }
+      cx.shadowColor = 'transparent'; cx.shadowBlur = 0; cx.shadowOffsetY = 0; cx.textBaseline = 'alphabetic';
       this.labels.length = 0;
+    }
+    /* a point marked on the 2D layer: a small filled dot and, if ring > 0, a thin ring of that radius */
+    mark(cx, p, r, ring, alpha, color) {
+      if (alpha < 0.01) return;
+      const s = M.screen(this.mvp, p, this.W, this.H);
+      if (!(s[2] > 0)) return;
+      cx.fillStyle = `rgba(${color},${alpha})`; cx.beginPath(); cx.arc(s[0], s[1], r, 0, 2 * Math.PI); cx.fill();
+      if (ring > 0) { cx.strokeStyle = `rgba(${color},${0.6 * alpha})`; cx.lineWidth = 1; cx.beginPath(); cx.arc(s[0], s[1], ring, 0, 2 * Math.PI); cx.stroke(); }
     }
     glow(cx, p, r, alpha, color = S_INK) {
       if (alpha < 0.01) return;
@@ -341,28 +388,31 @@ void main() {
       const proj = M.shift(M.perspective(this.fov, this.W / this.H, 0.05, 80), this.dx, this.dy);
       this.mvp = M.mul(proj, M.lookAt(eye, cam.t, up));
       const res = [this.cv.width, this.cv.height], D = this.dyn;
+      this.timer.begin();
       gl.viewport(0, 0, res[0], res[1]); gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT);
-      gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE);
       D.clear();
 
-      /* ---- 01 Listen: the landscape and its ridge, then the ridge shrinks into a point ---- */
-      const flat = 1 - P.tip, gone = sm(0, 0.35, P.learn);
-      const landA = A * P.rise * (1 - gone) * lerp(1, 0.35, P.tip);
-      if (landA > 0.004) this.terrain.draw(this.mvp, res, this.shadeU, { s: [1, P.rise * flat, 1], passes: [[1, landA]] });
-      const shrink = 1 - sm(0.05, 0.4, P.learn), ridgeA = A * P.rise * (1 - sm(0.3, 0.45, P.learn));
-      if (ridgeA > 0.004) {
-        const pts = this.ridge.map(p => lerp3([0, 0, 0], [p[0], p[1] * P.rise * flat, p[2]], shrink));
-        D.line(pts, INK, ridgeA, 2.2 * this.d);
-      }
+      /* ---- 01 Listen: the floor, the trace, the hairlines and the amber line; seen from above, one line, which then
+         shrinks into its own point ---- */
+      const gone = sm(0, 0.35, P.learn), shrink = 1 - sm(0.05, 0.4, P.learn);
+      const floorA = A * sm(0, 0.45, P.rise) * (1 - gone);
+      if (floorA > 0.004) this.drawDots(floorA);
+      const lineA = A * (1 - sm(0.3, 0.45, P.learn));
+      if (lineA > 0.004 && P.rise > 0) this.drawListen(lineA, P, shrink);
+      gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE);
 
       /* ---- 02 Learn and 03 Speak: every whistle as a point; the codebook's families light up ---- */
-      const cloudA = A * sm(0.12, 0.45, P.learn) * (1 - sm(0.1, 0.5, P.hide));
+      const cloudA = A * sm(0.12, 0.45, P.learn) * (1 - sm(0.1, 0.5, P.hide)) * (1 - 0.85 * sm(0.2, 0.8, P.lattice));
       if (cloudA > 0.004) this.drawCloud(cloudA, P);
 
       /* ---- 03 Speak: the lattice of 64 whistles ---- */
       const latA = A * sm(0, 0.15, P.lattice) * (1 - sm(0.05, 0.35, P.hide));
       let playAt = null;
-      if (latA > 0.004) playAt = this.drawLattice(D, latA, P.lattice, playT);
+      if (latA > 0.004) {
+        this.lines.clear(); playAt = this.drawLattice(this.lines, latA, P.lattice, playT);
+        this.lines.draw(this.mvp, res, this.shadeU, [8, 0.3]);
+        gl.blendFunc(gl.ONE, gl.ONE);
+      }
 
       /* ---- 04 Hide and 05 Hear: the river of one real send ---- */
       const riverA = A * sm(0.1, 0.45, P.hide);
@@ -372,34 +422,73 @@ void main() {
       D.draw(this.mvp, res, this.shadeU, { passes: [[5, 0.09], [1, 1]] });
 
       /* ---- the 2D layer: glows, labels, letters ---- */
-      this.glow(cx, [0, 0, 0], 26, A * sm(0.25, 0.4, P.learn) * (1 - sm(0.7, 1, P.learn)), S_INK);
-      if (playAt) this.glow(cx, playAt, 18, A, S_SUN);
-      const listenA = A * P.rise * (1 - sm(0.05, 0.4, P.tip)), topA = A * sm(0.65, 1, P.tip) * (1 - sm(0, 0.15, P.learn));
-      const ax = this.axes, peak = this.ridge[this.ridge.length >> 1];
-      this.label('time →', ax.t, listenA, 'right', 0, 18);
-      this.label('pitch', ax.f, listenA, 'right', -10, 0);
-      this.label('loudness ↑', [peak[0], peak[1] * P.rise, peak[2]], listenA * sm(0.5, 1, P.rise), 'right', -18, -28);
-      this.label('time →', ax.tl, topA, 'right', 0, 22);
-      this.label('pitch ↑', ax.fl, topA, 'right', -8, 0);
-      this.label('its shape', this.ridge[this.ridge.length - 1], topA, 'left', 16, 5);
+      const pointA = A * sm(0.3, 0.42, P.learn) * (1 - sm(0, 0.4, P.pick));
+      this.mark(cx, [0, 0, 0], 3.5, 3.5 + 10 * sm(0.3, 0.6, P.learn), pointA, S_SUN);
+      if (playAt) this.mark(cx, playAt, 4, 10, A, S_SUN);
+      const fl = this.floor, kHz = v => (v / 1000).toFixed(1), axisA = A * sm(0.55, 1, P.rise) * (1 - sm(0, 0.2, P.learn));
+      const topA = A * sm(0.7, 1, P.tip) * (1 - sm(0, 0.15, P.learn));
+      this.label(['time', `${fl.dur.toFixed(2)} s`], fl.time, axisA, 'center', 0, 0);
+      this.label(['pitch', `${kHz(fl.fLo)}–${kHz(fl.fHi)} kHz`], fl.pitch, axisA, 'right', 0, 0);
+      this.label('its shape', this.ridge[this.ridge.length - 1], topA, 'left', 16, 0);
       const learnA = A * sm(0.55, 0.85, P.learn) * (1 - sm(0, 0.4, P.pick));
-      this.label(`${this.n.toLocaleString('en-GB')} whistles, one point each`, add(this.C, [0, -CLOUD * 0.95, 0]), learnA, 'center');
+      this.label(`${this.n.toLocaleString('en-GB')} whistles, one point each`, add(this.C, [0, -CLOUD * 1.0, 0]), learnA, 'center');
       const lat = A * sm(0.6, 1, P.lattice) * (1 - sm(0, 0.2, P.hide)), Lc = this.Lc;
-      this.label('16 shapes →', add(Lc, [GAP * 8, -HS / 2 - 0.3, 0]), lat, 'right');
-      this.label('4 pitches ↑', add(Lc, [-GAP * 8 - 0.1, -HS / 2, 0]), lat, 'right');
+      this.label('16 shapes', add(Lc, [GAP * 8, -HS / 2 - 0.3, 0]), lat, 'right');
+      this.label('4 pitches', add(Lc, [-GAP * 8 - 0.1, -HS / 2, 0]), lat, 'right');
       const tLabel = lerp(8, 24, sm(0.3, 1, P.hide)) + 3;                 // just ahead of where the camera looks
       this.label('time →', [this.R0[0], this.R0[1] - 0.12, this.zR(tLabel)], riverA * (1 - sm(0, 0.2, P.hear)), 'left', 8, 20);
       if (P.hear > 0) this.drawLetters(cx, A, P.hear);
       this.flushLabels(cx);
+      this.timer.end();
+    }
+
+    drawDots(alpha) {
+      const gl = this.gl, { p, u } = this.dotProg;
+      gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+      gl.useProgram(p); gl.bindVertexArray(this.dots);
+      gl.uniformMatrix4fv(u.uM, false, this.mvp); gl.uniform1f(u.uPx, 1.9 * (this.d || 1)); gl.uniform1f(u.uA, 0.6 * alpha);
+      gl.uniform2f(u.uFog, 3, 0.35); gl.uniform3fv(u.uInk, INK);
+      K.setShade(gl, u, this.shadeU);
+      gl.drawArrays(gl.POINTS, 0, this.nDots);
+      gl.bindVertexArray(null);
+    }
+
+    /* the trace draws itself along time; then the hairlines rise, one frame after another, and the amber line rides
+       their tops; as the camera tips over, the hairlines sink into points and the amber line comes down onto its trace */
+    drawListen(alpha, P, shrink) {
+      const L = this.lines, n = this.hairs.length, m = this.ridge.length, flat = 1 - P.tip, d = this.d;
+      const up = u => smoother(clamp(P.rise * 1.7 - 0.5 - 0.6 * u)) * flat;     // how far the hairline at u (0-1) has risen
+      const at = q => lerp3([0, 0, 0], q, shrink);
+      L.clear();
+      // the trace on the floor, drawn along time
+      const drawn = sm(0, 0.45, P.rise) * (m - 1), k1 = Math.floor(drawn), trace = [];
+      for (let j = 0; j <= Math.min(k1 + 1, m - 1); j++) {
+        const q = [this.ridge[j][0], 0, this.ridge[j][2]];
+        trace.push(at(j <= k1 ? q : lerp3(trace[j - 1], q, drawn - k1)));
+      }
+      L.line(trace, INK, 0.55 * alpha * (1 - 0.7 * P.tip), 1 * d);
+      // the hairlines, fainter at their feet
+      const hairA = 0.6 * alpha * (1 - sm(0.25, 0.75, P.tip));
+      for (let k = 0; k < n; k++) {
+        const h = this.hairs[k], e = up(k / (n - 1));
+        if (e <= 0.002) continue;
+        L.line([at([h[0], 0, h[2]]), at([h[0], h[1] * e, h[2]])], INK, hairA, 1 * d, j => (j ? 1 : 0.15));
+      }
+      // the amber line along their tops
+      const top = this.ridge.map((q, j) => at([q[0], q[1] * up(j / (m - 1)), q[2]]));
+      const crestA = alpha * sm(0.25, 0.6, P.rise);
+      L.line(top, SUN, crestA, 2 * d);
+      L.draw(this.mvp, [this.cv.width, this.cv.height], this.shadeU, [3.2, 0.4]);
     }
 
     drawCloud(alpha, P) {
       const gl = this.gl, { p, u } = this.ptProg;
+      gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
       gl.useProgram(p); gl.bindVertexArray(this.cloud);
       gl.uniformMatrix4fv(u.uM, false, this.mvp);
       gl.uniform3fv(u.uO, this.off); gl.uniform3fv(u.uFocus, [0, 0, 0]);
       gl.uniform3fv(u.uHue, new Float32Array(HUES.flat()));
-      gl.uniform1f(u.uScale, this.scale); gl.uniform1f(u.uPx, 2.3 * this.d);
+      gl.uniform1f(u.uScale, this.scale); gl.uniform1f(u.uPx, 2.4 * (this.d || 1)); gl.uniform1f(u.uBase, 0.5);
       gl.uniform1f(u.uReveal, sm(0.15, 0.8, P.learn)); gl.uniform1f(u.uRevealR, this.revealR + 0.3);
       // the families light up, then dim again as their shapes fly out of them into the lattice
       gl.uniform1f(u.uPick, P.pick * (1 - 0.65 * P.lattice)); gl.uniform1f(u.uDim, 0.78 * P.pick); gl.uniform1f(u.uFollow, this.followed[0]);
@@ -407,10 +496,11 @@ void main() {
       gl.uniform4fv(u.uShade, this.shadeU[0]); gl.uniform1f(u.uShadeK, this.shadeU[1]);
       gl.drawArrays(gl.POINTS, 0, this.n);
       gl.bindVertexArray(null);
+      gl.blendFunc(gl.ONE, gl.ONE);
     }
 
     /* each family's shape flies from its family in the cloud to its column, once at each of the four pitches */
-    drawLattice(D, alpha, t, playT) {
+    drawLattice(L, alpha, t, playT) {
       const [fs, fb] = this.followed, Lc = this.Lc;
       let playAt = null;
       for (let i = 0; i < 16; i++) for (let b = 0; b < 4; b++) {
@@ -419,7 +509,7 @@ void main() {
         const slot = [Lc[0] + (i - 7.5) * GAP, Lc[1] + this.pitchY[b], Lc[2]], c = lerp3(this.cent[i], slot, e), k = lerp(0.12, 1, e);
         const pts = this.shapes[i].map(([x, y]) => [c[0] + x * k, c[1] + y * k, c[2]]);
         const mine = i === fs && b === fb;
-        D.line(pts, mine ? SUN : INK, alpha * (mine ? 1 : 0.72) * sm(0, 0.2, e), (mine ? 2.4 : 1.3) * this.d);
+        L.line(pts, mine ? SUN : INK, alpha * (mine ? 1 : 0.92) * sm(0, 0.2, e), (mine ? 3.6 : 2.6) * this.d);
         if (mine && playT != null && e > 0.9) playAt = pts[Math.round(clamp(playT) * (pts.length - 1))];
       }
       return playAt;
@@ -471,7 +561,8 @@ void main() {
       }
       cx.shadowBlur = 0; cx.textBaseline = 'alphabetic';
       const key = this.film.provenance.example.key, last = this.letters[this.letters.length - 1].at;
-      this.label(`read with the key “${key}”`, [last[0], last[1] - 0.42, lerp(this.letters[0].at[2], last[2], 0.5)], A * sm(0.8, 0.9, h), 'center');
+      // the key as a detail: labels set their first word in capitals, and a key is case-sensitive
+      this.label(['read with the key', `“${key}”`], [last[0], last[1] - 0.42, lerp(this.letters[0].at[2], last[2], 0.5)], A * sm(0.8, 0.9, h), 'center');
     }
   }
   window.ResearchScene = ResearchScene;

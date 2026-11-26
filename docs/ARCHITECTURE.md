@@ -68,7 +68,7 @@ Every arrow that produces a file also writes its lineage: the configuration and 
 
 ```mermaid
 flowchart LR
-    B["Browser<br/>index.html: app.js, gl.js, scene.js,<br/>water.js, message.js<br/>model.html: water.js, lab.js"] --> APP
+    B["Browser<br/>index.html: app.js, gl.js, scene.js,<br/>water.js, message.js<br/>lab.js (Try it)<br/>model.html: a redirect to #try"] --> APP
     subgraph APP["FastAPI app · wcode/web.py create_app"]
         H["GET /healthz"]
         WC["/api/wc/*<br/>status, frame, send, sea,<br/>decode, decode-job, check,<br/>jobs, files"]
@@ -86,7 +86,7 @@ flowchart LR
 | `GET /healthz` | monitoring: `ok`, `starting` or `down`, with the version (`project/RELEASES.md`) |
 | `/api/wc/...` | Encode, the sea, Decode and the comparison (route list in `whistlecode/wcode/web.py`) |
 | `/api/...` | Try it: analyse an upload or an example, generate, job state and results (`src/whistlepipe/server.py`); `POST /api/reload-model` only with `allow_reload = true` |
-| `/` | the page itself, from `web/`: `index.html` (the film, then Encode and Decode), `model.html` (Try it), and the film's static data in `web/film/` (no route of its own) |
+| `/` | the page itself, from `web/`: `index.html` (the film, then Encode, Decode and Try it), `model.html` (a redirect to Try it), and the film's static data in `web/film/` (no route of its own) |
 
 ## 4. Deployment
 

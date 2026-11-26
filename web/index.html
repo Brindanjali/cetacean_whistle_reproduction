@@ -38,6 +38,7 @@
       <a href="#hear" data-stop="hear">Hear</a>
       <a href="#encode">Encode</a>
       <a href="#decode">Decode</a>
+      <a href="#try">Try it</a>
     </nav>
   </header>
 
@@ -111,8 +112,8 @@
 
   <!-- The lab: an ordinary page after the film, opening on Encode. The film ends under a tide of layered swells whose front
        crest is a whistle drawing itself; below it, the water itself (light rays, marine snow). Both are water.js.
-       Try it, the whistle model on its own, is on model.html (WEB-5, web/PLAN.md). -->
-  <section class="lab" id="lab" tabindex="-1" aria-label="Encode and Decode">
+       After Decode, Try it: the whistle model on its own (lab.js), back on this page since 2026-11-26 (WEB-6). -->
+  <section class="lab" id="lab" tabindex="-1" aria-label="Encode, Decode and Try it">
     <!-- the water itself: light from above, the shimmer of the surface, drifting snow (one shader, water.js setupSea);
          it stays with the viewer and dims as you go deeper -->
     <div class="sea" aria-hidden="true"><div class="sea-view" id="sea-view"><canvas class="sea-gl" id="sea-gl"></canvas></div></div>
@@ -240,14 +241,83 @@
       <p class="lab-note wc-foot" id="wc-foot"></p>
     </section>
 
+    <!-- 08 · Try it: the whistle model on its own (lab.js), with its model selector (Nyx, Delphi). Live analysis needs
+         `python whistle.py serve` or `python whistlecode/whistlecode.py serve`; on a static host it shows the examples
+         analysed in advance (python whistle.py export-web). On model.html from WEB-5 until 2026-11-26 (WEB-6) -->
+    <section class="wc" id="try" tabindex="-1" aria-labelledby="try-title">
+      <div class="lab-head">
+        <p class="step">08 · Try it</p>
+        <h2 id="try-title">Bring a voice from the deep.<br /><i>Hear what the machine makes of it.</i></h2>
+        <p class="body lab-lede">Start with a recording made off Hawai‘i, or drop in your own. The machine finds every whistle in it, redraws it, and plays it back to you.</p>
+        <!-- the model selector (lab.js setupModels): one quiet control, shown only when the server offers more than one model -->
+        <div class="mdl" id="mdl" hidden>
+          <span class="mdl-h" id="mdl-h">Model</span>
+          <div class="mdl-seg" id="mdl-track" role="radiogroup" aria-labelledby="mdl-h"><span class="mdl-lens" aria-hidden="true"></span></div>
+        </div>
+        <div class="lab-status" id="lab-status" role="status"><span class="dot"></span><span class="txt">Checking the model…</span></div>
+      </div>
+
+      <div class="examples" id="examples" hidden>
+        <p class="ex-h">Recorded off Hawai‘i</p>
+        <div class="ex-row" id="ex-row"></div>
+      </div>
+
+      <div class="lab-input">
+        <p class="ex-h">Or bring your own recording</p>
+        <label class="drop" id="drop">
+          <input type="file" id="file" accept=".wav,.flac,.ogg,.mp3,audio/*" />
+          <span class="drop-t" id="drop-t">Drop a recording here, or <u>choose a file</u></span>
+          <span class="drop-n" id="drop-n">WAV, FLAC, OGG or MP3 · 32 kHz or more · up to 120 s</span>
+        </label>
+        <div class="lab-opts">
+          <label>Channel <input type="number" id="channel" min="0" max="63" value="0" /></label>
+          <label>New whistles per whistle <input type="number" id="nsamples" min="0" max="8" value="4" /></label>
+          <button class="btn" id="run" type="button" disabled>Analyse</button>
+        </div>
+      </div>
+      <div class="job" id="job" hidden><span></span><b><i></i></b></div>
+
+      <div class="results" id="results" hidden>
+        <p class="sum" id="sum"></p>
+        <div class="ov-card">
+          <div class="ov-f" aria-hidden="true"></div>
+          <div class="ov" id="ov"><canvas id="ov-img"></canvas><svg id="ov-svg" preserveAspectRatio="none"></svg></div>
+          <div class="ov-t" id="ov-t" aria-hidden="true"></div>
+        </div>
+        <p class="ov-hint">Each box is one whistle. Click one to hear it.</p>
+        <div class="split">
+          <div class="wlist"><table id="wtable"><thead><tr><th>#</th><th>start</th><th>length</th><th>centre</th><th>range</th><th>family</th></tr></thead><tbody></tbody></table></div>
+          <div class="detail" id="detail" aria-live="polite"></div>
+        </div>
+      </div>
+
+      <div class="gen" id="gen">
+        <div class="gen-top">
+          <h3>Imagine new voices</h3>
+          <div class="lbl" id="gen-mdl-w" hidden><span id="gen-mdl-l">Imagined by</span><span class="mdl-mini" id="gen-mdl" role="radiogroup" aria-labelledby="gen-mdl-l"><i class="mdl-thumb" aria-hidden="true"></i></span></div>
+        </div>
+        <p class="body">No recording needed: the machine dreams up brand-new whistles from everything it has heard. Choose how many, and if you like, ask for a certain kind.</p>
+        <div class="lab-opts">
+          <label>How many <input type="number" id="gen-n" min="1" max="16" value="8" /></label>
+          <label>Kind <select id="gen-cond"><option value="">any</option></select></label>
+          <label>Centre pitch (Hz) <input type="number" id="gen-fc" min="2000" max="24000" step="100" placeholder="auto" title="Empty: each whistle gets a centre pitch drawn from the training whistles" /></label>
+          <label>Seed <input type="number" id="gen-seed" min="0" value="0" /></label>
+          <button class="btn" id="gen-run" type="button" disabled>Imagine</button>
+        </div>
+        <div class="job" id="gen-job" hidden><span></span><b><i></i></b></div>
+        <p class="lab-note" id="gen-note"></p>
+        <div class="gen-grid" id="gen-grid"></div>
+      </div>
+    </section>
+
     <footer class="lab-foot">
       <p>Tested in simulation only: no message has been played into water yet, and a trained classifier can still tell the coded whistle shapes from real ones.</p>
       <p>Whistle model after Park et al., “A Generative Model for Cetacean Whistles Using Variational Autoencoder and Mixture of Gaussians,” <i>IEEE Access</i> 14 (2026), pp. 27877–27894. Recordings: NOAA DCLDE 2022 (HICEAS 2017), false killer whales. Footage: LisaOlivia (Pixabay), Daniel Torobekov (Pexels).</p>
-      <p><a href="model.html">The whistle model</a> on its own: find the whistles in a recording, hear them redrawn, or imagine new ones.</p>
+      <p>Try it: every image is a 0.68 s, ±6 kHz picture of one whistle’s shape with its centre pitch removed; the sound is a pure tone that follows it (the paper’s Fig. 2), placed back at the whistle’s own centre pitch. Real whistles also carry harmonics, loudness changes and noise; the model does not.</p>
     </footer>
   </section>
 
   <div class="progress" aria-hidden="true"><b id="progress-bar"></b></div>
-  <script src="shots.js"></script><script src="gl.js"></script><script src="scene.js"></script><script src="app.js"></script><script src="water.js"></script><script src="message.js"></script>
+  <script src="shots.js"></script><script src="gl.js"></script><script src="scene.js"></script><script src="app.js"></script><script src="water.js"></script><script src="message.js"></script><script src="lab.js"></script>
 </body>
 </html>

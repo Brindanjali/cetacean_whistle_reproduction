@@ -1,6 +1,6 @@
 /**
- * Try it, on the whistle model's own page (model.html): upload a recording, follow the job, read the result; generate without
- * a recording. The water behind it is water.js. (Until WEB-5 this was section 04 of the film's page; web/PLAN.md.)
+ * Try it, section 08 of the page (index.html, after Decode): upload a recording, follow the job, read the result; generate
+ * without a recording. The water behind it is water.js. (Section 04 until WEB-5, then on model.html until 2026-11-26.)
  *
  * Talks to the API of `python whistle.py serve` (same origin). Without it (a static host, or web/serve.py) the
  * upload is disabled and the examples open their pre-rendered results (data/examples.json, from

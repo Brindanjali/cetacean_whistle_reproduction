@@ -57,6 +57,13 @@ Source: [`whistlecode/THREAT_MODEL.md`](../whistlecode/THREAT_MODEL.md) section 
 | "Without it, there is no message" (05 · Hear) | C4: no wrong-key message accepted, 0 in 3,700 (`t5_false_messages.csv`) |
 | "Spare whistles repair what the sea broke" (05 · Hear) | C2 and Reed–Solomon (`whistlecode/PLAN.md` section 4.2); in this send 1 wrong whistle repaired, `film.json` `hear.repair` |
 
+*The scene's own labels (added 2026-11-27, WEB-6):* computed in `web/scene.js` (`prepareListen`) from `film.json` `listen`, not typed in.
+
+| Label in the scene | Record |
+|---|---|
+| "time 0.37 s" (01 · Listen) | the crop shown: 70 image columns (the whistle's 27 frames and 22 either side) × `s_per_col` 5.33 ms |
+| "pitch 2.6–7.4 kHz" (01 · Listen) | the crop shown: rows 38–90 (26 either side of the contour's mean row), each `hz_per_row` 93.75 Hz from `center_hz` 5,083 Hz at `zero_row` 63 |
+
 ### WhistleCode pass marks v2
 
 Source: [`whistlecode/PLAN.md`](../whistlecode/PLAN.md) section 8.7, frozen 2026-11-21. All are measured once, by campaign v2 (EXP-024).

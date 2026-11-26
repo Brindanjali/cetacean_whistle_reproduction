@@ -17,7 +17,7 @@ The message pipeline (format v2):
         collect the real whistle shapes, voices and clicks the sender plays (a few minutes; needs the raw recordings)
 
     python whistlecode/whistlecode.py serve [--lan] [--host 127.0.0.1] [--port 8000] [--device cpu]
-        the project page (the film, Encode and Decode; Try it on model.html; wcode/web.py), on one port.
+        the project page (the film, Encode, Decode and Try it; wcode/web.py), on one port.
         --lan: also for other computers on this network, over https (a self-signed certificate), so they can record
 
     python whistlecode/whistlecode.py export-film [--out web/film] [--device auto]

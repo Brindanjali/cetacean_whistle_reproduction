@@ -38,6 +38,9 @@ Project-level choices: what was decided, why, what else was considered, and what
 | [D-023](#d-023) | 2026-11-23 | How the public README presents the project: unofficial, a course project, written with an AI assistant | in force; the reproduction framing replaced by D-024 |
 | [D-024](#d-024) | 2026-11-23 | The project is the message system, under the temporary name Falsetto | in force |
 | [D-025](#d-025) | 2026-11-26 | The page is retold as Falsetto: a real-data 3D film in WebGL, then Encode and Decode; Try it gets its own page | in force; done and merged into `main` 2026-11-26 (`f5b794e`), in v1.0.0 |
+| [D-026](#d-026) | 2026-11-26 | The film's 3D scene is redrawn: deep-water light, glow, lit surfaces and ribbons; still hand-written WebGL 2, full quality on the RTX 5060 | look superseded by D-027 the same day; the redraw itself (WEB-6) stays |
+| [D-027](#d-027) | 2026-11-26 | The redrawn scene keeps the page's own blue water and is drawn in fine lines: minimal, no glow | in force; done 2026-11-27 on the branch `web-scene-v2` (WEB-6), to be merged into `main` (YOU-15) |
+| [D-028](#d-028) | 2026-11-26 | Try it, with its model selector (Nyx, Delphi), is back on the page as section 08, after Decode; `model.html` leads there | in force; on the branch `web-scene-v2` |
 
 ## Whistle model
 
@@ -129,7 +132,56 @@ Project-level choices: what was decided, why, what else was considered, and what
 
 *Update 2026-11-26 (P6):* the owner approved deploying the retold page before its release. It is live from the branch `web-retelling` (`e983ad4`), untagged and still numbered 0.10.0, because v1.1.0 can only follow the v1.0.0 freeze release. This is an exception to "deploy tagged releases" (`project/RELEASES.md`, What is live). After the freeze, the branch merges into `main` and is released as v1.1.0, and that tag is deployed.
 
+*Superseded in part by [D-028](#d-028) (2026-11-26):* Try it is back on the film's page, after Decode, instead of on `model.html`.
+
 *Update 2026-11-26 (merge):* the owner merged `web-retelling` into `main` before the freeze (`f5b794e`; the branch is deleted). So the retold page is part of the v1.0.0 freeze release instead of a later v1.1.0, and the live page, which serves the checked-out tree, now runs from `main`. The untagged exception above ends with the v1.0.0 tag.
+
+### D-026
+
+**The film's 3D scene is redrawn, following [`web/PLAN-SCENE.md`](../web/PLAN-SCENE.md)** (WEB-6). *Decided by:* the owner, who judged the WEB-5 scene odd and unprofessional and approved the plan on 2026-11-26. *What:*
+- The research beats go dark, as in deep water, and only the data glows: a high-range picture with glow, tone mapping, depth of field and fog; solid lit surfaces instead of wireframes; smoothed ribbons instead of one-pixel lines; one spline camera path.
+- Still hand-written WebGL 2 with no library.
+- Full quality is designed for the owner's NVIDIA RTX 5060; the scene steps down by itself on weaker chips.
+- Every shape, time and point still comes from `web/film/`.
+
+*Why:* the owner wanted the 3D to look professional. *Alternatives:*
+- Three.js: its stock glow is heavier than the scene can afford on a built-in chip, and the scene's camera, labels and fallbacks would be rewritten.
+- Polish the WEB-5 drawing (thicker lines, darker ground): it keeps the wireframes and flat strokes that make it look odd.
+
+*Consequence:*
+- A page cannot choose the graphics chip: Chrome on Windows gives WebGL the Radeon 610M whatever the page asks (measured 2026-11-26). The RTX 5060 is set per browser in Windows.
+- The work is on the branch `web-scene-v2`; it merges before the v1.0.0 freeze only if its checks pass by 28 Nov, otherwise it ships as v1.1.0.
+- The plan's other `[DECISION]` tags stay inline in `web/PLAN-SCENE.md`.
+
+*Superseded in part by [D-027](#d-027) (2026-11-26):* the look (deep water, glow, tone mapping, lit surfaces, quality steps). The redraw itself, hand-written WebGL 2, the graphics-chip finding and the timing rule stay.
+
+### D-027
+
+**The redrawn scene keeps the page's own blue water and is drawn in fine lines** (WEB-6, [`web/PLAN-SCENE.md`](../web/PLAN-SCENE.md)). Supersedes D-026's look. *Decided by:* the owner, who on 2026-11-26 judged the first style frame (dark water, glow, a translucent sheet of light) childish and unprofessional, and asked for the old theme, kept minimal, sophisticated and well planned. *What:*
+- The canvas stays transparent over the page's water, as in WEB-5.
+- The scene is fine white lines and small dots, with one amber accent (the whistle the film follows; the key in Hear) and coral only for the misread whistle. No glow, bloom, fills, particles or post-processing. Depth is shown by fading into the water.
+- Labels in the page's mono with a soft shadow, numbers with units, never over the words.
+- Listen is redrawn first as the style frame: a dotted floor of the image's pixel grid, the contour's trace, a hairline per frame and the contour as an amber line along their tops.
+
+*Why:* the owner's judgement of the first style frame. *Alternatives:* keep the dark theme but tone down its glow (rejected with it). *Consequence:*
+- `Frame`, the bloom, the drawn water and the quality steps are removed from `web/gl.js`; without post-processing, Listen costs about 0.1 ms per frame even on the Radeon 610M.
+- The "loudness" label goes: the training image is the contour resynthesised at constant strength and drawn as an image, so its height is not loudness.
+
+*Update 2026-11-26:* the owner approved the second Listen style frame.
+
+*Update 2026-11-26 (Learn and Speak):* the owner asked that Learn and Speak keep their WEB-5 design and only gain boldness (crisper, stronger points; thicker strokes), not the full redesign planned for them. The canvas also drops multisampling: every line and point smooths its own edge.
+
+*Update 2026-11-27:* the owner chose to leave Hide and Hear as in WEB-5; the camera keeps its WEB-5 moves apart from Listen's opening. WEB-6 is Listen redrawn, Learn and Speak made bolder, and Try it back on the page (D-028).
+
+### D-028
+
+**Try it is back on the page, as section 08 after Decode** (WEB-6 follow-up). Supersedes D-025's "Try it moves to its own page". *Decided by:* the owner, 2026-11-26: the old whistle models (Nyx and Delphi) belong in the current page too, and of the old page only Try it, with nothing before it changed. *What:*
+- The Try it markup of `model.html` (the pre-WEB-5 section, unchanged but for its number) sits in the lab after Decode, with a header link "Try it" after Decode; `lab.js` is loaded by `index.html`.
+- After Decode, not between the film and Encode where it was before WEB-5: so nothing before it on the page changes, Encode and Decode keep their numbers (06, 07), and the message system still comes straight after the film (D-024, D-025).
+- `model.html` becomes a redirect to `./#try`, so old links and bookmarks still land on Try it, and the Try it markup exists once.
+- The footer's link to `model.html` gives way to Try it's image note (0.68 s, ±6 kHz, a pure tone), which was on `model.html`.
+
+*Consequence:* the docs that said Try it is on `model.html` say it is on the page (README, `web/README.md`, `deploy/README.md`, `docs/ARCHITECTURE.md`, `docs/INDEX.md`, `docs/TECHNICAL_REFERENCE.md`, `whistlecode.py`'s help).
 
 ## Engineering
 
@@ -183,4 +235,5 @@ Where the parameter-level `[DECISION]` tags are (counted 2026-11-21; `git grep -
 | `mod_detector_5_24/pipeline.toml` | 26 |
 | `configs/inference.toml` | 15 |
 | `web/PLAN.md` (added 2026-11-26) | 14 |
+| `web/PLAN-SCENE.md` (added 2026-11-26) | 5 |
 | Code docstrings and comments (`src/`, `whistlecode/`, `post_training/`) | about 35 |
