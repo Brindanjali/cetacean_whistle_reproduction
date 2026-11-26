@@ -37,6 +37,7 @@ Project-level choices: what was decided, why, what else was considered, and what
 | [D-022](#d-022) | 2026-11-22 | The code is licensed under Apache 2.0 | in force |
 | [D-023](#d-023) | 2026-11-23 | How the public README presents the project: unofficial, a course project, written with an AI assistant | in force; the reproduction framing replaced by D-024 |
 | [D-024](#d-024) | 2026-11-23 | The project is the message system, under the temporary name Falsetto | in force |
+| [D-025](#d-025) | 2026-11-26 | The page is retold as Falsetto: a real-data 3D film in WebGL, then Encode and Decode; Try it gets its own page | in force; work not started (WEB-5, after the freeze) |
 
 ## Whistle model
 
@@ -104,6 +105,26 @@ Project-level choices: what was decided, why, what else was considered, and what
 
 **The page is designed for desktop browsers only.** Phone layouts are not built or audited.
 
+### D-025
+
+**The page is retold as Falsetto, following [`web/PLAN.md`](../web/PLAN.md)** (WEB-5). *Decided by:* the owner, who approved the plan on 2026-11-26. *What:*
+- The film's research beats become Listen → Learn → Speak → Hide → Hear (WC-R7). They are one 3D scene drawn with WebGL 2 and no library, built only from real records that a new `export-film` command writes to `web/film/`, which is tracked in git. Learn shows all 63,490 whistles.
+- Encode and Decode follow the film directly. Try it moves to its own page, `web/model.html`, which keeps the model selector.
+- The header reads "Falsetto", and the footer states the limits (simulation only; the coded shapes can still be told from real ones).
+- The demonstration decode uses encounter-214 noise, with a seed chosen by a rule fixed in advance. The film claims no success rate.
+- The current footage stays as atmosphere; no computer-made whales and no pre-rendered video.
+
+*Why:* the page told the whistle model's story, with the message system at the bottom (D-024). *Alternatives:*
+- Only rename and reorder (the small version): the identity is fixed, but the story is not.
+- Keep the 2D canvas: the cloud would be capped at about 1,500 points.
+- Three.js: a dependency the scene does not need.
+
+*Consequence:*
+- WEB-2 is covered by WEB-5.
+- Work starts after the v1.0.0 freeze and ships as v1.1.0.
+- The data-whistle share (WC-R7) must be settled first.
+- The plan's other `[DECISION]` tags stay inline in `web/PLAN.md`.
+
 ## Engineering
 
 ### D-016
@@ -155,4 +176,5 @@ Where the parameter-level `[DECISION]` tags are (counted 2026-11-21; `git grep -
 | `configs/pipeline.toml` | 26 |
 | `mod_detector_5_24/pipeline.toml` | 26 |
 | `configs/inference.toml` | 15 |
+| `web/PLAN.md` (added 2026-11-26) | 14 |
 | Code docstrings and comments (`src/`, `whistlecode/`, `post_training/`) | about 35 |

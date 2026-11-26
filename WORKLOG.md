@@ -2,7 +2,7 @@
 
 The single place for what is planned, what is waiting, and what has been done in this project: the message system (WhistleCode), the whistle model (VAE-GMM), the detector paper, the web page and the repository itself. Every change to the project adds a line here ([how](#how-this-log-works)).
 
-**Updated:** 2026-11-24
+**Updated:** 2026-11-26
 
 ## At a glance
 
@@ -11,7 +11,7 @@ The single place for what is planned, what is waiting, and what has been done in
 | Whistle model (VAE-GMM) | Complete. Dataset built; model V1 trained to epoch 150; Gaussian mixtures for epochs 101 and 150; paper evaluation done on epoch 101 | Nothing required (epoch-150 evaluation is optional: REP-1) |
 | Message system (WhistleCode) | v1 built and tested (campaign v1). Second round: R0, R1 and R2 (drift correction, adopted) done | **WC-R3** shape covertness |
 | Detector paper | A draft exists (`docs/private/Mentor_Review_1.pdf`, never in git); its to-do file is older than the draft | DET-1, DET-2 |
-| Web page and deployment | Film, Try it (models Nyx and Delphi), Encode, Decode and Record; self-hosted with Docker and Tailscale; `/healthz` and a Docker healthcheck. The 2026-11-23 audit's public-page bugs BUG-2 to BUG-7 and BUG-13 are fixed and live (rebuilt and redeployed 2026-11-24, `1613c18`) | WEB-1 static examples are out of date |
+| Web page and deployment | Film, Try it (models Nyx and Delphi), Encode, Decode and Record; self-hosted with Docker and Tailscale; `/healthz` and a Docker healthcheck. The 2026-11-23 audit's public-page bugs BUG-2 to BUG-7 and BUG-13 are fixed and live (rebuilt and redeployed 2026-11-24, `1613c18`). The page still tells the whistle model's story | WEB-5 retelling as Falsetto, approved (`web/PLAN.md`, D-025), starts after the freeze; WEB-1 static examples are out of date |
 | Engineering | 25 systems in place ([`project/README.md`](project/README.md)): tracker, Definition of Done, review, lint, tests, CI, lock file, releases, monitoring, registers, security. v0.9.0 and v0.10.0 tagged (CI green on v0.10.0); code licensed under Apache 2.0; no pin has a known advisory, and the server image installs exactly the pins. Whole-project audit 2026-11-23 ([`project/AUDIT_2026-11-23.md`](project/AUDIT_2026-11-23.md)): records and numbers sound; 11 bugs recorded | Audit bugs still open: BUG-8, BUG-10 to BUG-12; OPS-10 to OPS-13 |
 | Course | Week 7 of 8 | Final review at the end of Week 8 |
 
@@ -108,6 +108,7 @@ The plan, pass marks and rules are frozen in `whistlecode/PLAN.md` section 8.7.
 - [ ] **WEB-2** Replace the film's hand-made research illustration (Listen → Learn → Imagine) with real model output. This is the page's Phase 4; it overlaps WC-R7.
 - [x] **WEB-3** Decide what to do with the untracked `cluster/` kit (running the demo on the college cluster): commit it, or ignore it. Decided: commit it (D-021).
 - [ ] **WEB-4** From the 2026-11-23 audit: hide Try it's `/api/docs` and `/api/openapi.json` on the public page, and list every route (with `/api/reload-model`) in `docs/ARCHITECTURE.md` and the exposure table of `.github/SECURITY.md`; point model 1 at `final.pt` instead of `last.pt` (byte-identical today) in `configs/inference.toml`, so a resume in that folder cannot change Nyx.
+- [ ] **WEB-5** Retell the page as Falsetto, after the v1.0.0 freeze, following `web/PLAN.md`. The film becomes Listen → Learn → Speak → Hide → Hear, built from real data exported by a new `export-film` and drawn as one 3D scene in WebGL (all 63,490 whistles in Learn); Encode and Decode follow the film directly; Try it moves to its own `model.html`; the footer states the limits. This carries out WC-R7's page story and includes WEB-2. Needs first: the data-whistle share settled (WC-R7). Phases P1-P6, about 7½ days. Ships as v1.1.0.
 
 ### Repository housekeeping
 
@@ -138,6 +139,12 @@ The plan, pass marks and rules are frozen in `whistlecode/PLAN.md` section 8.7.
 ## Done
 
 Newest first. Older history is grouped by stage. Commit hashes are given where the work was committed; an entry's own commit is the one that adds it.
+
+### 2026-11-26
+
+- **Web (plan)**: the page reviewed as Falsetto. The message system sits at the bottom; the header mark still reads "Whistle VAE-GMM"; the research beats and Try it tell the whistle model's story; the page never states its limits. Plan for the full retelling written: `web/PLAN.md` (new; listed in `docs/INDEX.md`); to-do WEB-5. No page file changed.
+- **Web (plan)**: `web/PLAN.md` gains "The 3D scene". The research beats are drawn with WebGL 2, hand-written with no library, so Learn shows all 63,490 whistles (exported as `learn.bin`). Plus fallbacks for reduced motion and missing WebGL, and checks for them. No computer-made whales and no pre-rendered video. P3 grows to 4 days; WEB-5 is now about 7½ days.
+- **Web (plan) approved**: you approved `web/PLAN.md`. Its main choices are recorded as D-025 in `project/DECISIONS.md` (index row, entry, and the plan's 14 inline tags in the tag table). The plan's status line is now "approved"; so is its row in `docs/INDEX.md`. Work starts after the v1.0.0 freeze.
 
 ### 2026-11-25
 

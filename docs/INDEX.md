@@ -38,6 +38,7 @@ Every document in the repository: what it is the authority on, and its state. Wh
 | Document | Authority on | State |
 |---|---|---|
 | [`web/README.md`](../web/README.md) | running the page; Encode, Decode, Record; video files | static examples out of date (WEB-1) |
+| [`web/PLAN.md`](../web/PLAN.md) | the plan to retell the page as Falsetto (WEB-5): story beats, the 3D scene, data export, changes by file, checks | approved (D-025), not started |
 | [`web/CREDITS.md`](../web/CREDITS.md) | footage and font sources and licences | current |
 | [`deploy/README.md`](../deploy/README.md) | self-hosting with Docker and Tailscale Funnel | current |
 | [`cluster/node/README_CLUSTER.md`](../cluster/node/README_CLUSTER.md) | course lab: running the demo on the college's teaching cluster | current |
