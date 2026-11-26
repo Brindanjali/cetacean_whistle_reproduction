@@ -18,7 +18,7 @@ Project-level choices: what was decided, why, what else was considered, and what
 | [D-003](#d-003) | 2026-10-08 | Use hydrophone channel 0 only | in force |
 | [D-004](#d-004) | 2026-11-03 | Batch 5,772 on one GPU, learning rates scaled linearly | in force |
 | [D-005](#d-005) | 2026-11-02 | Train on encounter 191 only, 150 epochs, K = 3,000 | in force |
-| [D-006](#d-006) | 2026-11-09 | Fig. 11 and Tables 2, 4, 5 are not computed | in force |
+| [D-006](#d-006) | 2026-11-09 | Fig. 11 and Tables 2, 4, 5 are not computed | in force for Tables 2, 4, 5; Fig. 11 superseded for Delphi by D-029 |
 | [D-007](#d-007) | 2026-11-20 | Epoch 101 (Nyx) stays the final model; epoch 150 (Delphi) is a second model | in force |
 | [D-008](#d-008) | 2026-10-28 | Gate G4 accepted without a longer run | in force |
 | [D-009](#d-009) | 2026-11-21 | Data splits: 191 trains, 214 develops, 276 tests | in force |
@@ -41,6 +41,7 @@ Project-level choices: what was decided, why, what else was considered, and what
 | [D-026](#d-026) | 2026-11-26 | The film's 3D scene is redrawn: deep-water light, glow, lit surfaces and ribbons; still hand-written WebGL 2, full quality on the RTX 5060 | look superseded by D-027 the same day; the redraw itself (WEB-6) stays |
 | [D-027](#d-027) | 2026-11-26 | The redrawn scene keeps the page's own blue water and is drawn in fine lines: minimal, no glow | in force; merged into `main` 2026-11-27 (`9f91c3b`), in v1.0.0 |
 | [D-028](#d-028) | 2026-11-26 | Try it, with its model selector (Nyx, Delphi), is back on the page as section 08, after Decode; `model.html` leads there | in force; merged into `main` 2026-11-27 (`9f91c3b`), in v1.0.0 |
+| [D-029](#d-029) | 2026-11-27 | Fig. 11's clustering scores are computed for Delphi (epoch 150) at K = 3,000 only; no fits at other K | in force |
 
 ## Whistle model
 
@@ -68,6 +69,8 @@ Project-level choices: what was decided, why, what else was considered, and what
 
 **Fig. 11 and Tables 2, 4 and 5 are not computed.** They need GMM fits at other K and the Inception-V3 and VGG-16 weights, whose download the owner declined. *Decided by:* the owner, 2026-11-09.
 
+*Superseded in part by [D-029](#d-029)* (Fig. 11's scores at K = 3,000, for Delphi only).
+
 ### D-007
 
 **Epoch 101 (Nyx) stays the final model** for the paper results and WhistleCode campaign v1. The resumed run's epoch 150 (Delphi) lives in its own folder with its own GMM and is Try it's model 2. *Why:* every result so far was made with epoch 101; replacing it would invalidate them. *Consequence:* the main run folder must not be refreshed to epoch 150 without repointing model 1. Delphi's paper evaluation is optional (REP-1), and its use as WhistleCode's voice is tested in WC-R3.
@@ -75,6 +78,10 @@ Project-level choices: what was decided, why, what else was considered, and what
 ### D-008
 
 **Gate G4 accepted without a longer run.** The overfit test reached 0.416 against a mark of ≤ 0.3 in 3,000 steps, with a steady fall that extrapolated to the mark at about 3,300-3,500 steps (not measured). *Decided by:* the owner, 2026-10-28. Records: `models/vaegmm/_gates/G4_*`.
+
+### D-029
+
+**Fig. 11's clustering scores are computed for Delphi (epoch 150) at K = 3,000 only.** Supersedes D-006 for that one point; Fig. 11's other K values and Tables 2, 4 and 5 stay not computed, no mixtures are fitted at other K, and Nyx gets no Fig. 11. *Decided by:* the owner, 2026-11-27: they want the epoch-150 tests only, and at K = 3,000 only. Fits at the paper's other six K were started and stopped at the owner's request (EXP-026). *Why:* the silhouette, Davies-Bouldin and Calinski-Harabasz scores at K = 3,000 need only Delphi's existing mixture. *Consequence:* Fig. 11 is one point, not a curve, so no figure is drawn; the scores are in `eval/fig11_clustering.json` and the comparison CSV.
 
 ## WhistleCode
 

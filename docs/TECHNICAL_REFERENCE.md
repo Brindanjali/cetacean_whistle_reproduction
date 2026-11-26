@@ -374,6 +374,9 @@ Side by side with the paper: `post_training/out/paper_comparison_V1_L64_b1e-4_cr
 * **Table 3 / Fig. 12:** every diagonal entry of Fig. 12 is its row's minimum (13 of 13); recall 84.7–96.9 %, precision
   74.5–79.7 %, F1 79.3–85.8 %, against the paper's 98.2–99.3 %, 82.7–90.8 %, 90.1–94.4 %.
 * **Figs. 7–10** are made (`.../E191_epoch150/figures/`).
+* **Fig. 11, K = 3,000 only** ([D-029](../project/DECISIONS.md#d-029), EXP-026; `vae-eval cluster --K 3000`): silhouette 0.091
+  (paper 0.401), Davies-Bouldin 1.478 (paper 0.767), Calinski-Harabasz 398.8 (paper 21.2; not comparable in size, as it
+  grows with the number of images). No fits at other K, so no curve and no figure.
 * **Table 6:** the same decoder (368,097 parameters, 557.3 MFLOPs). Paper protocol: B = 1 1.31 ms (paper 1.7 ms); warm
   GPU (`table6_warm.py --run-id`): B = 16 0.114 ms and B = 32 0.110 ms per image (paper 0.11 and 0.054). The web
   server's container was running during the timing.

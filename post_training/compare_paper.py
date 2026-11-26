@@ -1,4 +1,5 @@
-"""Our V1 results next to the paper's (Table 1 row L = 64, Table 3; transcribed from the paper PDF, pages 10 and 12).
+"""Our V1 results next to the paper's (Table 1 row L = 64, Table 3, Table 6 and, where the run has it, Fig. 11; transcribed
+from the paper PDF, pages 10-12 and 14).
 
 Reads models/vaegmm/<run_id>/eval/table1_recon.json and table3_fig12_K<K>.json; writes post_training/out/paper_comparison.csv
 and prints both tables. The paper's Table 3 uses K = 10,000 and 228,673 images (all encounters); ours K = 3,000 and the
@@ -38,6 +39,9 @@ PAPER_T3 = {1: (30593, 1.0075, 0.0899, 98.94, 83.95, 90.83), 2: (8202, 1.7744, 1
 # Table 6, VAE-GMM L = 64 (page 14): params, FLOPs, inference latency (B = 1), per-image latency at B = 16 and B = 32
 PAPER_T6 = {"decoder_params": 368e3, "decoder_FLOPs": 557e6, "B1_latency_ms": 1.7, "B16_per_image_ms": 0.11,
             "B32_per_image_ms": 0.054}
+# Fig. 11 (page 11), values printed at the points: K -> (silhouette, Davies-Bouldin, Calinski-Harabasz)
+PAPER_F11 = {1000: (0.167, 1.07, 17.8), 3000: (0.401, 0.767, 21.2), 5000: (0.517, 0.621, 24.9), 7000: (0.638, 0.547, 24.9),
+             10000: (0.745, 0.448, 31.3), 12000: (0.78, 0.455, 29.8), 15000: (0.798, 0.425, 29.0)}
 
 
 def out_name(run_id: str) -> str:
@@ -100,6 +104,18 @@ def compare(cfg, run_id: str, K: int) -> list[dict]:
                 print(f"  {key:22s} {a:12.4g}   {b:22.4g}   {PAPER_T6[key]:.4g}")
                 for row, v in (("decoder only, warm", a), ("GMM sampling + decoder, warm", b)):
                     rows.append({"table": "6", "row": f"VAE-GMM L=64 {row}", "metric": key, "ours": v, "paper": PAPER_T6[key]})
+    f11p = ev / "fig11_clustering.json"
+    if f11p.exists():
+        f11 = json.loads(f11p.read_text(encoding="utf-8"))
+        print("\nFig. 11 (ours: encounter 191, 63,490 images; paper: 228,673 images)")
+        print("      K   silhouette ours/paper   DBI ours/paper     CH ours/paper")
+        for r in f11["rows"]:
+            ps, pd, pc = PAPER_F11[r["K"]]
+            print(f"  {r['K']:6d}   {r['silhouette']:8.3f}/{ps:<8.3f}    {r['davies_bouldin']:6.3f}/{pd:<6.3f}   "
+                  f"{r['calinski_harabasz']:9.4g}/{pc:<6.4g}")
+            for name, o, pv in (("silhouette", r["silhouette"], ps), ("davies_bouldin", r["davies_bouldin"], pd),
+                                ("calinski_harabasz", r["calinski_harabasz"], pc)):
+                rows.append({"table": "Fig. 11", "row": f"K={r['K']}", "metric": name, "ours": o, "paper": pv})
     return rows
 
 

@@ -95,3 +95,6 @@ table,row,metric,ours,paper
 6,"VAE-GMM L=64 GMM sampling + decoder, warm",B16_per_image_ms,0.134765624998181,0.11
 6,"VAE-GMM L=64 decoder only, warm",B32_per_image_ms,0.11036362500362884,0.054
 6,"VAE-GMM L=64 GMM sampling + decoder, warm",B32_per_image_ms,0.11685234374681386,0.054
+Fig. 11,K=3000,silhouette,0.09134672880900344,0.401
+Fig. 11,K=3000,davies_bouldin,1.4776522623938466,0.767
+Fig. 11,K=3000,calinski_harabasz,398.7567987600306,21.2

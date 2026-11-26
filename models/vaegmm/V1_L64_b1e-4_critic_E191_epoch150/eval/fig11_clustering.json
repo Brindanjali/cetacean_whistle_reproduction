@@ -1,0 +1,14 @@
+{
+  "run_id": "V1_L64_b1e-4_critic_E191_epoch150",
+  "space": "encoder means (unrotated), Euclidean",
+  "labels": "MAP (eq. 12)",
+  "rows": [
+    {
+      "K": 3000,
+      "silhouette": 0.09134672880900344,
+      "davies_bouldin": 1.4776522623938466,
+      "calinski_harabasz": 398.7567987600306,
+      "n_clusters_used": 3000
+    }
+  ]
+}

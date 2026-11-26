@@ -97,6 +97,7 @@ Every number the README, the review slides or a paper reports, and the record th
 | GMM: 111 iterations, converged; post-fit check | **`.../E191/gmm_K3000/gmm.json`**, **`post_training/out/gmm_check_K3000.json`** | EXP-006 |
 | Delphi (epoch 150) Table 1: MSE 5.42, PSNR 34.81 dB, SSIM 0.9934, KL 757.7 | **`.../E191_epoch150/eval/table1_recon.json`**, **`post_training/out/paper_comparison_V1_L64_b1e-4_critic_E191_epoch150.csv`** | EXP-025 |
 | Delphi Table 3 rows (recall 84.7-96.9 %, precision 74.5-79.7 %, F1 79.3-85.8 %); Fig. 12 diagonal 13 of 13 | **`.../E191_epoch150/eval/table3_fig12_K3000.json`**, **`.../E191_epoch150/figures/fig12_lnFFD.png`** | EXP-025 |
+| Delphi Fig. 11 at K = 3,000: silhouette 0.091, Davies-Bouldin 1.478, Calinski-Harabasz 398.8 | **`.../E191_epoch150/eval/fig11_clustering.json`**, **`post_training/out/paper_comparison_V1_L64_b1e-4_critic_E191_epoch150.csv`** | EXP-026 |
 | Delphi Figs. 7-10 | **`.../E191_epoch150/figures/`** | EXP-025 |
 | Delphi Table 6 timing (warm B = 16: 0.114 ms per image) | **`.../E191_epoch150/eval/table6_cost.json`**, **`post_training/out/table6_warm_V1_L64_b1e-4_critic_E191_epoch150.json`** | EXP-025 |
 | Delphi GMM: 150 iterations; check | **`.../E191_epoch150/gmm_K3000/gmm.json`**, **`post_training/out/gmm_check_V1_L64_b1e-4_critic_E191_epoch150_K3000.json`** | EXP-011 |

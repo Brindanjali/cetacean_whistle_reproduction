@@ -49,7 +49,7 @@ The code and older documents call the message system WhistleCode, its first work
 | Whistle detector (S5/S6) | **Adopted** | `ridgenet-v2c`: 14,209 weights, trained only on synthetic whistles |
 | Whistle model: VAE training (run V1) | **Complete** | 150 / 150 epochs on encounter 191 (Colab A100 80 GB); epochs 102–150 resumed on 2026-11-20 |
 | Whistle model: Gaussian mixture, K = 3,000 | **Fitted for both checkpoints** | Post-fit checks passed |
-| Whistle model checked against Park *et al.* | **Complete for both checkpoints** | Tables 1, 3 and 6; Figs. 7–10 and 12. Fig. 11 and Tables 2, 4, 5 not computed (maintainer's decision) |
+| Whistle model checked against Park *et al.* | **Complete for both checkpoints** | Tables 1, 3 and 6; Figs. 7–10 and 12. Fig. 11 for epoch 150 at K = 3,000 only; Tables 2, 4, 5 not computed (maintainer's decision) |
 | Web demo | **Runs locally** | Encode, Decode and Record, then Try it for the whistle model (Nyx or Delphi); can be self-hosted with Docker and Tailscale Funnel. Retold as Falsetto: the film is drawn from real records in WebGL ([plan](web/PLAN.md)) |
 
 ## How it works
@@ -217,7 +217,7 @@ Because the model follows a published method, its numbers can be set beside the 
 
 Table 3 trails the paper in value but matches it in structure. Table 6's paper-protocol timing includes the laptop GPU waking from idle after each 0.5 s pause, so a warm-GPU supplement is reported as well.
 
-**Epoch 150 (Delphi)** was evaluated the same way ([`paper_comparison_V1_L64_b1e-4_critic_E191_epoch150.csv`](post_training/out/paper_comparison_V1_L64_b1e-4_critic_E191_epoch150.csv), figures in [`models/vaegmm/V1_L64_b1e-4_critic_E191_epoch150/figures/`](models/vaegmm/V1_L64_b1e-4_critic_E191_epoch150/figures/)). Table 1: MSE 5.42, PSNR 34.81 dB, SSIM 0.9934, KL 757.7, so again only SSIM matches. Table 3: recall 84.7–96.9 %, precision 74.5–79.7 %, F1 79.3–85.8 %, and every Fig. 12 diagonal entry is still its row's minimum. Table 6: the same decoder; 0.114 ms per image at B = 16 on a warm GPU.
+**Epoch 150 (Delphi)** was evaluated the same way ([`paper_comparison_V1_L64_b1e-4_critic_E191_epoch150.csv`](post_training/out/paper_comparison_V1_L64_b1e-4_critic_E191_epoch150.csv), figures in [`models/vaegmm/V1_L64_b1e-4_critic_E191_epoch150/figures/`](models/vaegmm/V1_L64_b1e-4_critic_E191_epoch150/figures/)). Table 1: MSE 5.42, PSNR 34.81 dB, SSIM 0.9934, KL 757.7, so again only SSIM matches. Table 3: recall 84.7–96.9 %, precision 74.5–79.7 %, F1 79.3–85.8 %, and every Fig. 12 diagonal entry is still its row's minimum. Table 6: the same decoder; 0.114 ms per image at B = 16 on a warm GPU. Fig. 11 at K = 3,000 only: silhouette 0.091 against the paper's 0.401 and Davies-Bouldin 1.48 against 0.77, so its latent clusters are much less separated.
 
 *Note on MSE.* The paper's MSE column is read as a per-image sum of squared errors, because that is what its PSNR values imply (PSNR = 10 log₁₀(16384 / MSE)); see the [training spec](resources/TRAINING_SPECIFICATION.md) §3.7.
 
@@ -420,7 +420,7 @@ The `[paper]` sections of `pipeline.toml` and `vaegmm.toml` are locked, and the 
 - **Slow, and not secret.** About 1.2 bit/s. The key scrambles the message but is not encryption, and there is no protection against replayed or forged messages ([`THREAT_MODEL.md`](whistlecode/THREAT_MODEL.md)).
 - **The whistle model is below the paper's reconstruction quality.** Only SSIM matches in Table 1, and Table 3 values trail the paper's even though its structure matches. Epoch 150 does better on Table 1 but still matches only SSIM, and it has not been used for messages.
 - **No real-data detector accuracy is known for the 2017 recordings.** No annotated 2017 data exists. The detector is nearly blind below about 5 dB local SNR and can swap identities in very dense crossings. On the annotated DCLDE 2011 files, the 5–24 kHz variant's precision is 53.6 %.
-- **Reduced scope.** The VAE is trained on one encounter. K is 3,000. Fig. 11 and Tables 2, 4 and 5 are not computed. Only one hydrophone channel is used (channel 0, chosen arbitrarily).
+- **Reduced scope.** The VAE is trained on one encounter. K is 3,000. Fig. 11 is computed for epoch 150 at K = 3,000 only, and Tables 2, 4 and 5 are not computed. Only one hydrophone channel is used (channel 0, chosen arbitrarily).
 - **Not peer reviewed.** This is a course project; no part of it has been through external review.
 
 The full, observed list for the whistle model is in the [technical reference](docs/TECHNICAL_REFERENCE.md#known-limitations).
