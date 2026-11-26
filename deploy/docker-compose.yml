@@ -1,4 +1,4 @@
-# The project page (the film, Try it, 05 · Encode, 06 · Decode) served from this computer and put on the internet at
+# The project page (the film, Encode, Decode, and Try it on model.html) served from this computer and put on the internet at
 # https://whistle.<your tailnet>.ts.net by Tailscale Funnel. Steps: deploy/README.md. From the repository root:
 #
 #   docker compose -f deploy/docker-compose.yml up -d --build

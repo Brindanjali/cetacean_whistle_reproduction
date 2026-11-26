@@ -43,6 +43,8 @@ Source: [`whistlecode/THREAT_MODEL.md`](../whistlecode/THREAT_MODEL.md) section 
 | C13 | Message confidentiality | — | Not claimed |
 | C14 | New: no published messaging system read so far draws its symbols from the components of a density model of whistles, each whistle a fresh sample (README, "What is new") | `whistlecode/RELATED_WORK.md` sections 4, 5 and 7 | Draft; the literature search is incomplete (WC-R1a) |
 
+*Where the page states these (added 2026-11-26, WEB-5):* the footer of `web/index.html` says the system was "tested in simulation only: no message has been played into water yet" (C10, not tested) and that "a trained classifier can still tell the coded whistle shapes from real ones" (C7, not supported; shape AUC 0.944). The film's demonstration decode is one run, not a rate. Its record is `web/film/film.json` (`hear`; the seed rule and skipped seeds are in `provenance`).
+
 ### WhistleCode pass marks v2
 
 Source: [`whistlecode/PLAN.md`](../whistlecode/PLAN.md) section 8.7, frozen 2026-11-21. All are measured once, by campaign v2 (EXP-024).

@@ -37,6 +37,15 @@ class SentData:
 
 
 @dataclass(frozen=True)
+class PlayedCover:
+    """A cover whistle as it was played (the page's film draws these; web/PLAN.md)."""
+    bank_index: int
+    start_s: float                  # in the frame, like a data slot's start_s
+    fc_hz: float                    # mid-range pitch as played: its real one, or the one it moved to
+    state: int                      # 0 = at its real pitch, 1 = moved away from a data whistle, 2 = collided and could not move
+
+
+@dataclass(frozen=True)
 class Transmission:
     audio: np.ndarray               # float32, mono
     fs: int
@@ -51,6 +60,8 @@ class Transmission:
     bank_sha256: str
     n_real_shapes: int = 0          # data whistles with the shape of a real whistle
     n_clicks: int = 0               # recorded clicks played
+    covers: tuple = ()              # PlayedCover, in the order of the layout's cover slots
+    clicks_s: tuple = ()            # start of each recorded click played, in the frame (like a slot's start_s)
 
     @property
     def duration_s(self) -> float:
@@ -114,7 +125,8 @@ class Sender(transmitter.Transmitter):
         return out, redraws, fell, int(real.sum())
 
     def _render_real(self, x: np.ndarray, data: list, covers: list, segments: list, lead: float, rng: np.random.Generator) -> tuple:
-        """Data and cover whistles with recorded voices and virtual animals, then the recorded clicks."""
+        """Data and cover whistles with recorded voices and virtual animals, then the recorded clicks.
+        Returns (cover counts by state, number of clicks, PlayedCover per cover, click start times)."""
         cfg, lib = self.cfg, self.library
         fs, amp = int(cfg["synth"]["fs_hz"]), float(cfg["sender"]["data_amplitude"])
         fade = float(cfg["realism"]["edge_fade_ms"])
@@ -127,6 +139,7 @@ class Sender(transmitter.Transmitter):
         events = sorted([(d.slot.start_s, 0, i) for i, d in enumerate(data)] + [(c.start_s, 1, i) for i, c in enumerate(covers)])
         animals = realism.group_of_animals(len(events), rng, cfg)
         counts = [0, 0, 0]
+        record: list = [None] * len(covers)
         for (_, kind, i), who in zip(events, animals):
             level = amp * 10 ** ((realism.data_level_db(who.level_db, cfg) if kind == 0 else who.level_db) / 20)
             if kind == 0:
@@ -137,6 +150,7 @@ class Sender(transmitter.Transmitter):
                 f = self.bank.contour_hz(cv.bank_index)
                 fc, state = self._cover_pitch(f, cv.start_s, cv.start_s + len(f) * self.bank.hop_s, d_on, d_off, d_fc, rng)
                 counts[state] += 1
+                record[i] = PlayedCover(int(cv.bank_index), float(cv.start_s), float(fc), int(state))
                 contour, start = Contour(centred(f), self.bank.hop_s), cv.start_s
             w = synth.voiced_whistle(contour, fc, lib.env_db[v], lib.h2_db[v], lib.h3_db[v], who.tone_db, fade, fs)
             _add(x, lead + start, level * w, fs)
@@ -147,7 +161,7 @@ class Sender(transmitter.Transmitter):
         for t, i in played:
             w = lib.click_wave[i].astype(np.float64) * lib.click_gain
             _add(x, lead + t, w * min(1.0, top / max(float(np.abs(w).max()), 1e-12)), fs)
-        return counts, len(played)
+        return counts, len(played), tuple(record), tuple(float(t) for t, _ in played)
 
     def _cover_pitch(self, f: np.ndarray, t_on: float, t_off: float, data_on, data_off, data_fc, rng) -> tuple[float, int]:
         """(mid-range pitch of a cover whistle, 0 = stays, 1 = moved, 2 = collides and could not move)."""
@@ -200,20 +214,22 @@ class Sender(transmitter.Transmitter):
         x = np.zeros(int(np.ceil((lead + end_s + tail) * fs)))
         covers = head.covers + pay.covers
         if real_voices:
-            counts, n_clicks = self._render_real(x, data, covers, [*head.segments, *pay.segments], lead, rng)
+            counts, n_clicks, record, clicks_s = self._render_real(x, data, covers, [*head.segments, *pay.segments], lead, rng)
             return Transmission(x.astype(np.float32), fs, fr, data, len(covers), counts[1], counts[2], lead, tau,
-                                self.codebook_sha256, self.bank.sha256, n_real, n_clicks)
+                                self.codebook_sha256, self.bank.sha256, n_real, n_clicks, record, clicks_s)
         for d in data:
             _add(x, lead + d.slot.start_s, amp * synth.whistle(d.contour, d.fc_hz, rng, cfg, fs), fs)
 
         extra_lo, extra_hi = cfg["sender"]["cover_extra_db"]
         counts = [0, 0, 0]
+        record = []
         for cv in covers:
             f = self.bank.contour_hz(cv.bank_index)
             t_off = cv.start_s + len(f) * self.bank.hop_s
             mid, state = self._cover_pitch(f, cv.start_s, t_off, d_on, d_off, d_fc, rng)
             counts[state] += 1
+            record.append(PlayedCover(int(cv.bank_index), float(cv.start_s), float(mid), int(state)))
             level = amp * 10 ** (float(rng.uniform(float(extra_lo), float(extra_hi))) / 20)
             _add(x, lead + cv.start_s, level * synth.cover_whistle(Contour(centred(f), self.bank.hop_s), mid, rng, cfg, fs), fs)
         return Transmission(x.astype(np.float32), fs, fr, data, len(covers), counts[1], counts[2], lead, tau,
-                            self.codebook_sha256, self.bank.sha256)
+                            self.codebook_sha256, self.bank.sha256, covers=tuple(record))

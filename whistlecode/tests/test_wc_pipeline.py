@@ -168,6 +168,18 @@ def test_same_input_same_audio(tx):
     assert len(a.audio) != len(c.audio) or not np.array_equal(a.audio, c.audio)
 
 
+def test_the_sender_records_each_cover_as_played(tx, small_bank):
+    sent = tx.send("MEET AT DAWN", KEY, 11, tau=0)
+    assert len(sent.covers) == sent.n_cover > 0
+    assert sum(c.state == 1 for c in sent.covers) == sent.n_cover_moved
+    assert sum(c.state == 2 for c in sent.covers) == sent.n_cover_stuck
+    for c in sent.covers:
+        f = small_bank.contour_hz(c.bank_index)
+        if c.state != 1:                            # not moved: played at its own mid-range pitch
+            assert c.fc_hz == pytest.approx(0.5 * (float(f.min()) + float(f.max())))
+    assert sent.clicks_s == ()                      # the plain sender plays no recorded clicks
+
+
 def test_audio_format_and_silent_lead_in(tx):
     sent = tx.send("HI", KEY, 7, tau=0)
     assert sent.audio.dtype == np.float32 and sent.fs == 96000

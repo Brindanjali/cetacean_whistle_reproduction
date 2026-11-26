@@ -30,15 +30,15 @@ Every document in the repository: what it is the authority on, and its state. Wh
 | [`whistlecode/PLAN.md`](../whistlecode/PLAN.md) | design, experiments, pass marks (8.6, 8.7 frozen), parameters, revision history | current |
 | [`whistlecode/THREAT_MODEL.md`](../whistlecode/THREAT_MODEL.md) | adversaries, security properties, the claims C1-C13 | current |
 | [`whistlecode/RELATED_WORK.md`](../whistlecode/RELATED_WORK.md) | literature, comparison table, novelty statement | WC-R1a open |
-| [`whistlecode/paper/TEST_PROTOCOL.md`](../whistlecode/paper/TEST_PROTOCOL.md) | campaign methods (for a paper's Methods section) | one outdated line on epoch 150 (fixed in WC-R7) |
+| [`whistlecode/paper/TEST_PROTOCOL.md`](../whistlecode/paper/TEST_PROTOCOL.md) | campaign methods (for a paper's Methods section) | current (epoch-150 line and data-whistle share corrected 2026-11-26, WC-R7) |
 | [`whistlecode/paper/RESULTS.md`](../whistlecode/paper/RESULTS.md) | campaign v1 verdicts, tables and figures | frozen record |
 
 ## Page, deployment, other machines
 
 | Document | Authority on | State |
 |---|---|---|
-| [`web/README.md`](../web/README.md) | running the page; Encode, Decode, Record; video files | static examples out of date (WEB-1) |
-| [`web/PLAN.md`](../web/PLAN.md) | the plan to retell the page as Falsetto (WEB-5): story beats, the 3D scene, data export, changes by file, checks | approved (D-025), not started |
+| [`web/README.md`](../web/README.md) | running the two pages (the film with Encode, Decode and Record; Try it on `model.html`); the film's data; video files | static examples out of date (WEB-1) |
+| [`web/PLAN.md`](../web/PLAN.md) | the plan to retell the page as Falsetto (WEB-5): story beats, the 3D scene, data export, changes by file, checks | approved (D-025); in progress on the branch `web-retelling` (P1 and P2 done) |
 | [`web/CREDITS.md`](../web/CREDITS.md) | footage and font sources and licences | current |
 | [`deploy/README.md`](../deploy/README.md) | self-hosting with Docker and Tailscale Funnel | current |
 | [`cluster/node/README_CLUSTER.md`](../cluster/node/README_CLUSTER.md) | course lab: running the demo on the college's teaching cluster | current |

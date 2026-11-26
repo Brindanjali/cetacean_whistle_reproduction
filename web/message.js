@@ -1,5 +1,5 @@
 /**
- * 05 · Encode and 06 · Decode — WhistleCode on the project page.
+ * Encode and Decode — WhistleCode on the project page, right after the film (Encode opens the lab).
  *
  * Encode: as you type, /api/wc/frame returns every step from letters to whistles with the real values (no audio is made).
  * "Hide it" makes the sound the sender would play, which is silent between the animals' sounds; "Hear it in the sea" mixes that
@@ -247,7 +247,7 @@
   }
   const setStations = (ol, list) => [...ol.children].forEach((_, k) => setStation(ol, k, list[k]));
 
-  /* ================================================================== 05 · Encode */
+  /* ================================================================== Encode */
   const two = a => a.slice(0, 6).map(v => String(v).padStart(2, '0')).join(' ') + (a.length > 6 ? ' …' : '');
   const sentMatches = () => S.sent && S.sent.text === $('#enc-text').value && S.sent.key === $('#enc-key').value;
 
@@ -409,7 +409,7 @@
     S.busySea = false; updateEnc();
   }
 
-  /* ================================================================== 06 · Decode */
+  /* ================================================================== Decode */
   const srcName = src => src.rec ? `${src.label} · ${s1(src.rec)} s`
     : src.kind === 'file' ? `${src.file.name} · ${(src.file.size / 1048576).toFixed(1)} MB` : `${src.label}, made above`;
   function setSource(src) {
@@ -772,17 +772,15 @@
     $('#dec-wrong').addEventListener('click', () => { const k = newKey($('#dec-key').value); decode(k, `Read with a wrong key, “${k}”`); });
   }
 
-  /* the index: app.js marks "Try it" for the whole page below the film; these two places mark their own links */
+  /* the index: app.js marks the film's beats; below the film, these two places mark their own links */
   function setupIndex() {
-    const links = { encode: $('a[href="#encode"]'), decode: $('a[href="#decode"]') }, tryLink = $('a[data-stop="try"]');
-    let took = false, raf = 0;
+    const links = { encode: $('a[href="#encode"]'), decode: $('a[href="#decode"]') };
+    let raf = 0;
     const mark = () => {
       raf = 0;
       let cur = null;
       for (const id of ['encode', 'decode']) if ($(`#${id}`).getBoundingClientRect().top <= innerHeight * 0.5) cur = id;
       for (const [id, a] of Object.entries(links)) if (a) id === cur ? a.setAttribute('aria-current', 'step') : a.removeAttribute('aria-current');
-      if (cur && tryLink && tryLink.hasAttribute('aria-current')) { tryLink.removeAttribute('aria-current'); took = true; }
-      else if (!cur && took) { took = false; if (tryLink && document.body.classList.contains('lab-on')) tryLink.setAttribute('aria-current', 'step'); }
     };
     addEventListener('scroll', () => { if (!raf) raf = requestAnimationFrame(mark); }, { passive: true });
     addEventListener('scrollend', mark);

@@ -1,6 +1,6 @@
 # Page retelling plan (WEB-5)
 
-**Status:** approved by the owner 2026-11-26 (D-025), not started. Work starts after the v1.0.0 code freeze (29 Nov 2026) and ships as v1.1.0 (`project/RELEASES.md`: new features, old results still hold). It carries out the page story of WC-R7 (Listen → Learn → Speak → Hide → Hear) and includes WEB-2 (real model output in the film). Desktop only (D-015); controls stay minimal, with no explanatory panels.
+**Status:** approved by the owner 2026-11-26 (D-025). Started 2026-11-26, at the owner's request, on the branch `web-retelling`, so `main` stays ready for the v1.0.0 code freeze (29 Nov 2026). The branch merges after the freeze and ships as v1.1.0 (`project/RELEASES.md`: new features, old results still hold). It carries out the page story of WC-R7 (Listen → Learn → Speak → Hide → Hear) and includes WEB-2 (real model output in the film). Desktop only (D-015); controls stay minimal, with no explanatory panels.
 
 `[DECISION]` marks a choice this plan makes. The main ones are recorded together as [D-025](../project/DECISIONS.md#d-025); the rest stay here.
 
@@ -96,8 +96,8 @@ New command: `python whistlecode/whistlecode.py export-film` (code in `whistleco
 
 ## Before it starts
 
-1. The v1.0.0 freeze has passed.
-2. **WC-R7, "reconcile the data-whistle share (one in four vs a third)",** is done. The Hide beat draws that share, so it must be settled first.
+1. The v1.0.0 freeze has passed. *(2026-11-26: replaced by working on the branch `web-retelling`, which merges after the freeze.)*
+2. **WC-R7, "reconcile the data-whistle share (one in four vs a third)",** is done. The Hide beat draws that share, so it must be settled first. *(Done 2026-11-26: one in four bank whistles can carry data; about a third of a played message does, 33-36 % in `RESULTS.md` section 6.)*
 3. Each number the film states has a row in `project/TRACEABILITY.md`: 63,490 whistles, 3,000 families, 16 shapes, 4 pitches, 6 bits. Kept to these few. `[DECISION]`
 4. Copy rule from WC-R7a: no "no two whistles alike" or "a brand-new voice every time". The samples are tempered (tau 0.5), and a whistle that fails its self-check falls back to its type's mean shape.
 
@@ -140,3 +140,19 @@ New command: `python whistlecode/whistlecode.py export-film` (code in `whistleco
 - **New footage.** No free false killer whale video was found (2026-11-26). Pexels and Pixabay have none. The clips found (BBC, sold through Getty) are paid. NOAA's public-domain material is low-resolution stills. `[DECISION]` Keep the current footage as atmosphere (`web/CREDITS.md` already says so); the species is right where it matters, in the data the scene draws.
 - **Phone layouts** (D-015).
 - **Any change to how Encode and Decode work.**
+
+## Progress
+
+Dated lines, newest last. Details are in `WORKLOG.md`.
+
+- **2026-11-26, started** on the branch `web-retelling`; prerequisite 2 done (data-whistle share reconciled).
+- **2026-11-26, P1 done.** `export-film` (`whistlecode/wcode/film.py`, settings `[film]` in `whistlecode/config.toml`) wrote `web/film/`: `film.json` 75 KB, `learn.bin` 508 KB, `hear_it.wav` 24 KB. The send had 31 data and 51 cover whistles (38 % data) and 50 clicks, over 53.9 s. Seed 0 decoded "MEET AT DAWN" exactly, with no seed skipped and 1 wrong whistle repaired. The three PCA axes keep 60 % of the latent variance; all 3,000 components have members. The followed whistle is shape 3 (component 440, carrying "M" and the start of "E"), and the Listen image is that component's most typical member. The sender gained a record of each cover whistle as played (`Transmission.covers`, `clicks_s`), which the Hide beat needs. Tests: `whistlecode/tests/test_wc_film.py`, plus one in `test_wc_pipeline.py`.
+- **2026-11-26, P2 done.**
+  - Changes: the identity strings; header links without Try it; the Falsetto question in the opening; the film's last line leads to Encode; the lab (`#lab`) opens on 04 · Encode, with Encode's heading taking the arrival; the limits line and a link to `model.html` in the footer.
+  - New files: `web/model.html` (Try it as it was) and `web/water.js` (the tide and the sea, moved from `lab.js` unchanged).
+  - Checked in the browser with `whistlecode serve`:
+    - both pages load with no console errors;
+    - the tide brings in Encode, which reports ready and frames the default message;
+    - the header links Listen and Decode land and mark themselves;
+    - `model.html` offers Nyx and Delphi, shows its three examples, and its Imagine made two whistles.
+  - Numbering until P3: the film's beats stay 01-03, so Encode and Decode are 04 and 05; they become 06 and 07 with the new beats.

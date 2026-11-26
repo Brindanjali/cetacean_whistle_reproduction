@@ -17,8 +17,12 @@ The message pipeline (format v2):
         collect the real whistle shapes, voices and clicks the sender plays (a few minutes; needs the raw recordings)
 
     python whistlecode/whistlecode.py serve [--lan] [--host 127.0.0.1] [--port 8000] [--device cpu]
-        the project page with Try it and its 05 · Encode and 06 · Decode places (wcode/web.py), on one port.
+        the project page (the film, Encode and Decode; Try it on model.html; wcode/web.py), on one port.
         --lan: also for other computers on this network, over https (a self-signed certificate), so they can record
+
+    python whistlecode/whistlecode.py export-film [--out web/film] [--device auto]
+        write the page film's data from real records: one send, decoded in sea noise; every latent; the codebook; one
+        training image (wcode/film.py, web/PLAN.md). A few minutes
 
 P1 commands (the whistle alphabet):
 
@@ -235,6 +239,21 @@ def cmd_receive(args) -> int:
     return 0
 
 
+def cmd_export_film(args) -> int:
+    from wcode import film
+
+    f = film.export(default_config(), args.out, args.device, log=lambda m: print(m, flush=True))
+    h, hr = f["hide"], f["hear"]
+    print(f"hide     : {h['n_data']} data + {h['n_cover']} cover whistles ({h['data_share']:.0%} data), {h['n_clicks']} clicks, "
+          f"{h['duration_s']:.1f} s")
+    print(f"hear     : seed {hr['seed']} ({len(hr['skipped'])} skipped), read {hr['text']!r}, "
+          f"{hr['repair']['wrong']} wrong and {hr['repair']['lost']} lost whistles repaired")
+    print(f"learn    : {f['learn']['n']} whistles in {f['learn']['n_components_used']} components; "
+          f"axes keep {sum(f['learn']['share']):.0%} of the variance")
+    print(f"written  : {args.out or default_config()['film']['out_dir']}/film.json, learn.bin, hear_it.wav")
+    return 0
+
+
 def cmd_serve(args) -> int:
     from wcode import web
 
@@ -283,6 +302,10 @@ def main(argv=None) -> int:
     s.add_argument("--device", default=None, help="Try it's model device (auto | cuda | cpu)")
     s.add_argument("--lan", action="store_true", help="serve other computers on this network too, over https, so they can record")
     s.set_defaults(fn=cmd_serve)
+    s = sub.add_parser("export-film", help="write the page film's real data to web/film/ (web/PLAN.md)")
+    s.add_argument("--out", default=None, help="output folder; default from config.toml [film] (web/film)")
+    s.add_argument("--device", default=None, help="device for the component assignment (auto | cuda | cpu)")
+    s.set_defaults(fn=cmd_export_film)
     for name, fn, hlp in (("frame", cmd_frame, "show how a message is framed into whistle symbols"),
                           ("roundtrip", cmd_roundtrip, "frame, damage whistles, decode")):
         s = sub.add_parser(name, help=hlp)

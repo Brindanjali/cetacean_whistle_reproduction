@@ -1,2 +1,5 @@
 # The git hooks run under sh, which needs LF line endings even on Windows.
 .githooks/* text eol=lf
+# The page film's data (export-film): never convert line endings in these
+web/film/*.bin binary
+web/film/*.wav binary

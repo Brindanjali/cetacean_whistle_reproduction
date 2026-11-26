@@ -129,7 +129,7 @@ class Film {
     const sy = scrollY;
     this.top = this.secs.map(s => s.getBoundingClientRect().top + sy);
     this.h = this.secs.map(s => s.offsetHeight);
-    const lab = $('#try');
+    const lab = $('#lab');
     this.labTop = lab ? lab.getBoundingClientRect().top + sy : Infinity;
     const d = Math.min(2, devicePixelRatio || 1);
     this.cv.width = this.W * d; this.cv.height = this.H * d; this.cx.setTransform(d, 0, 0, d, 0, 0);
@@ -161,7 +161,7 @@ class Film {
     this.links.forEach(a => a.addEventListener('click', e => {
       e.preventDefault();
       const p = (window.STOPS || {})[a.dataset.stop], el = document.getElementById(a.dataset.stop);
-      const y = a.dataset.stop === 'try' ? this.labTop : p != null ? this.yAt(p) : null;
+      const y = p != null ? this.yAt(p) : null;
       if (y == null) return;
       this.pendingFocus = null;
       if (el && this.blocks.some(b => b.el === el)) this.pendingFocus = el;
@@ -215,7 +215,7 @@ class Film {
   render(now) {
     const pos = this.pos = this.posAt(this.cur), R = this.reduced;
 
-    /* ---- parked: the Try-it page covers the screen, so the film stops drawing and decoding ---- */
+    /* ---- parked: the lab covers the screen, so the film stops drawing and decoding ---- */
     const parked = this.target >= this.labTop - 1;
     if (parked !== this.parked) {
       this.parked = parked;
@@ -285,12 +285,12 @@ class Film {
     this.drawSignal(pos);
   }
 
-  /* index: the research beat on screen (timings from TEXT), or the Try-it page once it fills half the screen */
+  /* index: the research beat on screen (timings from TEXT); over the lab, message.js marks Encode and Decode itself */
   markIndex(pos) {
     const T = window.TEXT, order = ['signal', 'model', 'generate'];
     let cur = null;
     order.forEach((id, k) => { const end = order[k + 1] ? T[order[k + 1]][0] : T[id][3] + .09; if (pos >= T[id][0] - .03 && pos < end) cur = id; });
-    if (this.target >= this.labTop - this.vh / 2) cur = 'try';
+    if (this.target >= this.labTop - this.vh / 2) cur = null;
     const on = this.target >= this.labTop - 110;
     if (on !== this.labOn) { this.labOn = on; document.body.classList.toggle('lab-on', on); }
     if (cur !== this.cur_) {

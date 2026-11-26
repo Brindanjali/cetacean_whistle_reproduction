@@ -1,6 +1,8 @@
 # Raw audio data (never written to; verified against metadata/manifest_all.csv)
 encounter_*_audio/
 *.wav
+# ...except the page film's "Hear it" whistle (24 KB, written by export-film; web/PLAN.md)
+!web/film/*.wav
 *.flac
 *.mp3
 *.ogg

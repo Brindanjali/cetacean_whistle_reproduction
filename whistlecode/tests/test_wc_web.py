@@ -1,4 +1,4 @@
-"""05 · Encode and 06 · Decode on the project page (wcode/web.py)."""
+"""Encode and Decode on the project page (wcode/web.py)."""
 import json
 import time
 

@@ -4,7 +4,16 @@ Notable changes to this project, release by release. The format follows [Keep a 
 
 ## [Unreleased]
 
+### Added
+
+- **`export-film`** (`python whistlecode/whistlecode.py export-film`): the page film's data from real records only, written to `web/film/` and kept in git (WEB-5, `web/PLAN.md`). One real send of "MEET AT DAWN", decoded in encounter-214 sea noise at 10 dB with the first exact noise seed; all 63,490 latents on three principal axes with their mixture components; the codebook's shapes; one training image. A test fails if the model or codebook changes after the export.
+- **The whistle model's own page** (`web/model.html`): Try it, with its model selector, moved off the film's page.
+- **The sender records each cover whistle as played** (its pitch after any move) and the times of the recorded clicks (`Transmission.covers`, `clicks_s`). The audio is unchanged.
+
 ### Changed
+
+- **The page tells Falsetto's story first** (on the branch `web-retelling`): the header reads "Falsetto"; Encode and Decode follow the film directly, brought in by the tide; the film's last line leads to Encode; the footer states the limits (simulation only; the coded shapes can still be told from real ones). The tide and the sea moved from `lab.js` to `web/water.js`, unchanged.
+- **Data-whistle share reconciled** (WC-R7): one in four rhythm-bank whistles can carry data, and about a third of a played message does. `TEST_PROTOCOL.md` is corrected, with a dated note, and so is its outdated line on epoch 150.
 
 - **The project is presented as what it now is** (D-024): a biomimetic messaging system that hides short text messages in synthetic false killer whale whistles, under the temporary name Falsetto, and no longer as a reproduction of Park et al. The README leads with the message system and its results beside their pass marks; the VAE-GMM generator is "the whistle model", which follows Park et al.'s method and is checked against their paper. `CITATION.cff` cites the project and lists the paper under references. `pyproject.toml`, `NOTICE`, the page's title and footer and the CI step names follow. No numbers changed.
 - **README files rewritten for credibility** (no numbers changed): the main README now says the work is an independent, unofficial course project, written with an AI assistant; states the gaps to the paper beside the matches; uses the paper's term "biomimetic" instead of "covert"; names checkpoints by epoch; shows the DCLDE 2011 score beside Li et al.'s; gives full references; and has a "What runs from a clone" table with download sizes. `CITATION.cff` gains an abstract. `project/README.md`, `web/README.md`, `deploy/README.md` and `cluster/node/README_CLUSTER.md` are written for an outside reader.
