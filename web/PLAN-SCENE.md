@@ -1,6 +1,6 @@
 # The film's 3D scene redrawn (WEB-6)
 
-**Status:** approved by the owner 2026-11-26 (D-026). **Revised 2026-11-26 (D-027):** the owner rejected the first style frame (deep dark water, glow, a translucent sheet) as childish and unprofessional, and asked for the page's own blue water and a minimal, sophisticated drawing. This file now describes that direction; the first one is kept in "Progress". Work on the branch `web-scene-v2`; `main` stays ready to freeze as v1.0.0. The second style frame (S1, Listen) was approved the same day. **Done 2026-11-27:** Listen redrawn, Learn and Speak made bolder, Hide and Hear and the camera left as WEB-5 (owner), checks passed; the owner commits and merges it (YOU-15).
+**Status:** approved by the owner 2026-11-26 (D-026). **Revised 2026-11-26 (D-027):** the owner rejected the first style frame (deep dark water, glow, a translucent sheet) as childish and unprofessional, and asked for the page's own blue water and a minimal, sophisticated drawing. This file now describes that direction; the first one is kept in "Progress". Work on the branch `web-scene-v2`; `main` stays ready to freeze as v1.0.0. The second style frame (S1, Listen) was approved the same day. **Done 2026-11-27:** Listen redrawn, Learn and Speak made bolder, Hide and Hear and the camera left as WEB-5 (owner), checks passed. Committed (`0abb2b3`) and merged into `main` (`9f91c3b`) by the owner the same day; in v1.0.0.
 
 `[DECISION]` marks a choice this plan makes. The main ones are recorded as [D-026](../project/DECISIONS.md#d-026) and [D-027](../project/DECISIONS.md#d-027).
 
@@ -99,4 +99,4 @@ Dated lines, newest last. Details are in `WORKLOG.md`.
   - **Edge:** the RTX 5060; Listen, Learn and Speak draw as in Chrome; Try it offers both models; no errors.
   - **Review of the diff:** one real fault, fixed: the new label style sets a label in capitals, which turned Hear's key into "REEF-42"; the key is now the label's detail and keeps its case. Also the scene's header comment brought up to date and an unused class removed. Hide's and Hear's labels now use the new label style (capitals, a soft shadow instead of an outline); their drawing is unchanged.
   - **Numbers:** Listen's two labels (0.37 s; 2.6–7.4 kHz) are traced in `project/TRACEABILITY.md`.
-
+- **2026-11-27, merged.** The owner committed the work (`0abb2b3`) and merged it into `main` (`9f91c3b`); it ships in v1.0.0 and is live.

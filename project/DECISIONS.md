@@ -39,8 +39,8 @@ Project-level choices: what was decided, why, what else was considered, and what
 | [D-024](#d-024) | 2026-11-23 | The project is the message system, under the temporary name Falsetto | in force |
 | [D-025](#d-025) | 2026-11-26 | The page is retold as Falsetto: a real-data 3D film in WebGL, then Encode and Decode; Try it gets its own page | in force; done and merged into `main` 2026-11-26 (`f5b794e`), in v1.0.0 |
 | [D-026](#d-026) | 2026-11-26 | The film's 3D scene is redrawn: deep-water light, glow, lit surfaces and ribbons; still hand-written WebGL 2, full quality on the RTX 5060 | look superseded by D-027 the same day; the redraw itself (WEB-6) stays |
-| [D-027](#d-027) | 2026-11-26 | The redrawn scene keeps the page's own blue water and is drawn in fine lines: minimal, no glow | in force; done 2026-11-27 on the branch `web-scene-v2` (WEB-6), to be merged into `main` (YOU-15) |
-| [D-028](#d-028) | 2026-11-26 | Try it, with its model selector (Nyx, Delphi), is back on the page as section 08, after Decode; `model.html` leads there | in force; on the branch `web-scene-v2` |
+| [D-027](#d-027) | 2026-11-26 | The redrawn scene keeps the page's own blue water and is drawn in fine lines: minimal, no glow | in force; merged into `main` 2026-11-27 (`9f91c3b`), in v1.0.0 |
+| [D-028](#d-028) | 2026-11-26 | Try it, with its model selector (Nyx, Delphi), is back on the page as section 08, after Decode; `model.html` leads there | in force; merged into `main` 2026-11-27 (`9f91c3b`), in v1.0.0 |
 
 ## Whistle model
 
@@ -172,6 +172,8 @@ Project-level choices: what was decided, why, what else was considered, and what
 *Update 2026-11-26 (Learn and Speak):* the owner asked that Learn and Speak keep their WEB-5 design and only gain boldness (crisper, stronger points; thicker strokes), not the full redesign planned for them. The canvas also drops multisampling: every line and point smooths its own edge.
 
 *Update 2026-11-27:* the owner chose to leave Hide and Hear as in WEB-5; the camera keeps its WEB-5 moves apart from Listen's opening. WEB-6 is Listen redrawn, Learn and Speak made bolder, and Try it back on the page (D-028).
+
+*Update 2026-11-27 (merge):* the owner committed WEB-6 (`0abb2b3`) and merged it into `main` (`9f91c3b`), so it ships in the v1.0.0 freeze release, and the live page, which serves the checked-out tree, runs it.
 
 ### D-028
 
