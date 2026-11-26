@@ -45,10 +45,12 @@ not the recorded species.
 
 ## Sound
 
-**In the film:** one illustrative whistle, generated in the browser by
-`audio-engine.js` when the visitor asks for it. Its contour is drawn by hand,
-not by the model, and the page says so. It is never presented as a field
-recording or attributed to any animal shown.
+**In the film:** one data whistle of the example message "MEET AT DAWN", cut
+from a real send by `export-film` (`film/hear_it.wav`), played only when the
+visitor asks for it ("Hear it", in 03 · Speak). It is synthetic: WhistleCode's
+sender made it from the whistle model. It is never presented as a field
+recording or attributed to any animal shown. (Until WEB-5 the film played an
+illustrative tone drawn by hand, from `audio-engine.js`, now removed.)
 
 **In "Try it":** short excerpts of the NOAA recordings above (the examples, from
 encounters 191, 279 and 331) or of the visitor's own file; pure tones that

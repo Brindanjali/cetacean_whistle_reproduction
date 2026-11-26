@@ -36,7 +36,8 @@ body.cam-on .still-fallback{display:none}
    for research. Opacity from JS; nothing else is laid over the footage. */
 .veil{position:absolute;inset:0;opacity:0;visibility:hidden;will-change:opacity;background:
   radial-gradient(120% 70% at 0% 100%,rgba(3,16,29,.62) 0%,rgba(3,16,29,.28) 45%,transparent 70%)}
-#sig{position:absolute;inset:0;width:100%;height:100%;visibility:hidden}
+/* the research scene: the 3D on #gl (WebGL 2, scene.js), its labels and letters on #sig above it */
+#gl,#sig{position:absolute;inset:0;width:100%;height:100%;visibility:hidden}
 
 /* ---- the index: a faint scrim keeps it legible over the sunlit surface ---- */
 .bar{position:fixed;z-index:5;top:0;left:0;right:0;padding:28px var(--gutter) 56px;display:flex;justify-content:space-between;align-items:baseline;pointer-events:none;
@@ -92,11 +93,12 @@ h2{font-size:clamp(2.9rem,4vw,6.4rem);line-height:.98}
 .hear:focus-visible{outline:1px solid var(--pale);outline-offset:6px;border-radius:24px}
 .note{font:400 clamp(12px,.55vw,14px) var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--mist);opacity:.9}
 
-/* ---- 04 · Dive in: an ordinary page after the film, in the same water. The film ends under a tide: layered swells
-   roll in over it (a canvas), the front crest a whistle that draws itself (lab.js setupTide). Below, the water itself
-   stays with the viewer (.sea-view is sticky): light falls in soft, swaying rays, the surface's shimmer plays near the
-   top, marine snow drifts at two depths, and a fine grain keeps the blues from banding; it dims as you go deeper.
-   app.js parks the film once the page covers the screen. ---- */
+/* ---- The lab: an ordinary page after the film, in the same water, opening on Encode (index.html); the whistle model's
+   page (model.html) is the same water without the film. The film ends under a tide: layered swells roll in over it
+   (a canvas), the front crest a whistle that draws itself (water.js setupTide). Below, the water itself stays with the
+   viewer (.sea-view is sticky): light falls in soft, swaying rays, the surface's shimmer plays near the top, marine snow
+   drifts at two depths, and a fine grain keeps the blues from banding; it dims as you go deeper (water.js setupSea).
+   app.js parks the film once the lab covers the screen. ---- */
 .lab{--sea0:#0c3f66;--sea1:#093254;--sea2:#06243f;--sea3:#041a2f;--sea4:#020e1b;
   position:relative;z-index:3;min-height:100vh;padding:34vh var(--gutter) 10vh;font-family:var(--sans);
   background:linear-gradient(var(--sea0) 0,var(--sea1) 50vh,var(--sea2) 130vh,var(--sea3) 230vh,var(--sea4) 100%)}
@@ -125,6 +127,9 @@ h2{font-size:clamp(2.9rem,4vw,6.4rem);line-height:.98}
 .lab.anim.in .tide .crest{stroke-dashoffset:0}
 .lab:focus{outline:none}
 .lab [hidden]{display:none!important}
+/* the whistle model's own page: no film above it, so no tide to make room for */
+body.model-page .lab{padding-top:24vh}
+body.model-page .lab::before{display:none}
 .lab .results,.lab .gen,.lab #detail{scroll-margin-top:110px}
 /* over the page the index needs a solid band: content scrolls beneath it (app.js sets lab-on) */
 body.lab-on .bar{background:rgba(6,30,52,.94);padding-bottom:22px;box-shadow:0 1px 0 rgba(169,207,224,.12);transition:background .3s}
@@ -297,6 +302,7 @@ body.lab-on .bar{background:rgba(6,30,52,.94);padding-bottom:22px;box-shadow:0 1
 .gen-grid figcaption{font:400 11.5px/1.5 var(--mono);color:var(--mist)}
 .lab-foot{margin-top:14vh;padding-top:26px;border-top:1px solid rgba(169,207,224,.14);max-width:110ch}
 .lab-foot p{margin:0 0 12px;font:300 13.5px/1.7 var(--sans);color:var(--mist)}
+.lab-foot a{color:var(--pale);text-underline-offset:3px}
 @media(prefers-reduced-motion:reduce){.job.busy i{animation:none;width:100%;opacity:.4}.lab.anim .lab-head>*,.lab.anim .tide .crest{transition:none}}
 
 .progress{position:fixed;z-index:5;left:0;right:0;bottom:0;height:1px;pointer-events:none}
@@ -310,10 +316,11 @@ body:not(.cam-on) .sec{height:auto;min-height:100vh}
   .index a{transition:none}
 }
 
-/* ---- 05 · Encode and 06 · Decode (message.js): a message hidden in whistles and read back with the key. Built from the parts
-   of Try it above (status pill, panel, buttons, job line, drop zone, the lit sheet of shallow water); only the stations, the
-   whistle tiles and the result line are new, in the same colours ---- */
+/* ---- Encode and Decode (message.js): a message hidden in whistles and read back with the key. Built from the parts of Try
+   it (status pill, panel, buttons, job line, drop zone, the lit sheet of shallow water); only the stations, the whistle
+   tiles and the result line are new, in the same colours. Encode opens the lab, so it needs no gap above it ---- */
 .wc{margin-top:18vh;max-width:1320px;scroll-margin-top:110px}
+.lab>.wc:first-of-type{margin-top:0}
 .wc:focus{outline:none}
 .wc-panel{margin-top:5vh;padding:40px 44px 42px;border:1px solid rgba(169,207,224,.14);border-radius:20px;
   background:linear-gradient(160deg,rgba(169,207,224,.08),rgba(169,207,224,.015))}

@@ -1,6 +1,6 @@
 # Page retelling plan (WEB-5)
 
-**Status:** approved by the owner 2026-11-26 (D-025), not started. Work starts after the v1.0.0 code freeze (29 Nov 2026) and ships as v1.1.0 (`project/RELEASES.md`: new features, old results still hold). It carries out the page story of WC-R7 (Listen → Learn → Speak → Hide → Hear) and includes WEB-2 (real model output in the film). Desktop only (D-015); controls stay minimal, with no explanatory panels.
+**Status:** approved by the owner 2026-11-26 (D-025). Started 2026-11-26, at the owner's request, on the branch `web-retelling`, so `main` stays ready for the v1.0.0 code freeze (29 Nov 2026). The branch merges after the freeze and ships as v1.1.0 (`project/RELEASES.md`: new features, old results still hold). It carries out the page story of WC-R7 (Listen → Learn → Speak → Hide → Hear) and includes WEB-2 (real model output in the film). Desktop only (D-015); controls stay minimal, with no explanatory panels.
 
 `[DECISION]` marks a choice this plan makes. The main ones are recorded together as [D-025](../project/DECISIONS.md#d-025); the rest stay here.
 
@@ -96,8 +96,8 @@ New command: `python whistlecode/whistlecode.py export-film` (code in `whistleco
 
 ## Before it starts
 
-1. The v1.0.0 freeze has passed.
-2. **WC-R7, "reconcile the data-whistle share (one in four vs a third)",** is done. The Hide beat draws that share, so it must be settled first.
+1. The v1.0.0 freeze has passed. *(2026-11-26: replaced by working on the branch `web-retelling`, which merges after the freeze.)*
+2. **WC-R7, "reconcile the data-whistle share (one in four vs a third)",** is done. The Hide beat draws that share, so it must be settled first. *(Done 2026-11-26: one in four bank whistles can carry data; about a third of a played message does, 33-36 % in `RESULTS.md` section 6.)*
 3. Each number the film states has a row in `project/TRACEABILITY.md`: 63,490 whistles, 3,000 families, 16 shapes, 4 pitches, 6 bits. Kept to these few. `[DECISION]`
 4. Copy rule from WC-R7a: no "no two whistles alike" or "a brand-new voice every time". The samples are tempered (tau 0.5), and a whistle that fails its self-check falls back to its type's mean shape.
 
@@ -140,3 +140,61 @@ New command: `python whistlecode/whistlecode.py export-film` (code in `whistleco
 - **New footage.** No free false killer whale video was found (2026-11-26). Pexels and Pixabay have none. The clips found (BBC, sold through Getty) are paid. NOAA's public-domain material is low-resolution stills. `[DECISION]` Keep the current footage as atmosphere (`web/CREDITS.md` already says so); the species is right where it matters, in the data the scene draws.
 - **Phone layouts** (D-015).
 - **Any change to how Encode and Decode work.**
+
+## Progress
+
+Dated lines, newest last. Details are in `WORKLOG.md`.
+
+- **2026-11-26, started** on the branch `web-retelling`; prerequisite 2 done (data-whistle share reconciled).
+- **2026-11-26, P1 done.** `export-film` (`whistlecode/wcode/film.py`, settings `[film]` in `whistlecode/config.toml`) wrote `web/film/`: `film.json` 75 KB, `learn.bin` 508 KB, `hear_it.wav` 24 KB. The send had 31 data and 51 cover whistles (38 % data) and 50 clicks, over 53.9 s. Seed 0 decoded "MEET AT DAWN" exactly, with no seed skipped and 1 wrong whistle repaired. The three PCA axes keep 60 % of the latent variance; all 3,000 components have members. The followed whistle is shape 3 (component 440, carrying "M" and the start of "E"), and the Listen image is that component's most typical member. The sender gained a record of each cover whistle as played (`Transmission.covers`, `clicks_s`), which the Hide beat needs. Tests: `whistlecode/tests/test_wc_film.py`, plus one in `test_wc_pipeline.py`.
+- **2026-11-26, P2 done.**
+  - Changes: the identity strings; header links without Try it; the Falsetto question in the opening; the film's last line leads to Encode; the lab (`#lab`) opens on 04 · Encode, with Encode's heading taking the arrival; the limits line and a link to `model.html` in the footer.
+  - New files: `web/model.html` (Try it as it was) and `web/water.js` (the tide and the sea, moved from `lab.js` unchanged).
+  - Checked in the browser with `whistlecode serve`:
+    - both pages load with no console errors;
+    - the tide brings in Encode, which reports ready and frames the default message;
+    - the header links Listen and Decode land and mark themselves;
+    - `model.html` offers Nyx and Delphi, shows its three examples, and its Imagine made two whistles.
+  - Numbering until P3: the film's beats stay 01-03, so Encode and Decode are 04 and 05; they become 06 and 07 with the new beats.
+- **2026-11-26, P3 done.** The research section is one WebGL 2 scene, written by hand with no library: `web/gl.js` (programs, matrices, thick lines as instanced quads) and `web/scene.js`, rewritten.
+  - **The five beats:** Listen → Learn → Speak → Hide → Hear, drawn only from `film/`. `shots.js` gives the research section 6 screens.
+  - **"Hear it"** moved to Speak and plays `film/hear_it.wav`. `audio-engine.js` is removed.
+  - **Header links:** Listen · Learn · Speak · Hide · Hear · Encode · Decode. Encode and Decode are now 06 and 07.
+  - **Display choices, each with its reason:**
+    - **Listen crop:** Listen shows a crop of the 0.68 s × 12 kHz image around its whistle.
+    - **Ridge smoothing:** the ridge line takes a five-frame average of the image's crest, because the contour falls between pixel rows. The landscape keeps every pixel.
+    - **Cloud scale:** the cloud is scaled by its 98th-percentile radius, not its largest point, so outliers do not squeeze the bulk.
+    - **Clicks:** short ticks on the riverbed.
+  - **Checked in the in-app browser on this laptop's Radeon 610M:**
+    - **Every beat:** a screenshot of each.
+    - **Speed:** at 3840 × 2400 device pixels (more than the laptop's screen), the scene alone costs a median 0.8 ms per frame, 1.9 ms at the 95th percentile and 2.4 ms at most, measured with a one-pixel read-back to wait for the GPU. That leaves room within the 6 ms target for the rest of the page, which was not measured here.
+    - **Warm-up:** first draws cost up to 13 ms until the shaders were warmed at load; after the warm-up, every first draw is under 5 ms.
+    - **Fallbacks:** a forced lost context (the words stand alone, then the scene rebuilds); no WebGL 2 (the constructor refuses, and the words stand alone); reduced motion (settled pictures).
+    - **Controls:** "Hear it" plays; the header links land on their beats.
+  - **Not checked yet:** whole-page frame times with the pane visible (the pane was hidden, which throttles animation frames), Edge, and Docker over Funnel. Those are P5.
+- **2026-11-26, P4 done.** Every beat's words checked against its record:
+  - **Speak:** no longer says a whistle is "a letter"; a whistle carries six bits, a letter five.
+  - **Hide:** "about a third" now counts whistles only.
+  - **Learn:** says the whistles come from one encounter.
+  - **Listen:** says its whistle was recorded off Hawai‘i in 2017.
+  - **The line before the beats:** now asks whether a whistle can carry a message.
+  - Each line is in `project/TRACEABILITY.md`.
+- **2026-11-26, P5 done, except two items.** Headless Chrome and Edge, on the Radeon 610M at 2560 × 1600, driven over the DevTools protocol:
+  - **Edge:** every beat shows its words, and screenshots of Speak and Hear are right.
+  - **Chrome:**
+    - WebGL turned off: the words stand alone.
+    - No server: Encode says how to start it.
+    - Reduced motion, set through the browser's own media setting: settled pictures.
+    - On `whistlecode serve`: Encode is ready; a send and decode round trip reads "SEE YOU AT NOON" with the key and finds no message with a wrong key; `model.html` offers Nyx and Delphi.
+  - **Console errors:** none, apart from Encode's expected 404 on the static server.
+  - **Frame times:** a 10 s scroll through the film at 720p, alternating against the page on `main`. In the clean second round there were no frames over 33 ms on either page; the 95th percentile was 21.0 ms against 20.9; the film's own work was 0.4 ms against 1.1 ms. Headless frame times are not a screen's, so the 6 ms target on a visible 240 Hz screen remains unmeasured.
+  - **Still open:** that visible-screen measurement, and Docker over Funnel. Funnel puts the page on the internet, so it needs your go-ahead, in P6.
+- **2026-11-26, P6 (deployment) done; the release waits for the freeze.** With the owner's go-ahead, the page went live through Docker and Tailscale Funnel from the branch at `e983ad4`. Every step of the deployment checklist in `project/RELEASES.md` passed:
+  - the full check and the model checksums;
+  - healthy in 14 s;
+  - `repo.py health` UP at v0.10.0;
+  - over the public address, the film loads its 720p copies and its data, with the scene ready and no console errors;
+  - Try it analysed an example (30 whistles);
+  - Encode sent "HI" and Decode read it back.
+
+  Left for after the v1.0.0 freeze: merge the branch, release it as v1.1.0 (`project/RELEASES.md`), and deploy that tag. Still unmeasured: frame times on a visible 240 Hz screen.

@@ -58,6 +58,7 @@ Every arrow that produces a file also writes its lineage: the configuration and 
 | `detect.py`, `classify.py`, `receiver.py` | audio to tracks (the whistle model's detector), tracks to symbols, symbols to text, with drift correction |
 | `baseline.py` | the chirp-alphabet baseline modem |
 | `web.py` | Encode and Decode routes, jobs, `/healthz`, `serve` and `serve --lan` |
+| `film.py` | `export-film`: the page film's data from real records (one send decoded in sea noise, every latent, the codebook, one training image) to `web/film/` (`web/PLAN.md`) |
 
 `whistlecode/experiments/` holds the scripts behind each experiment (`project/EXPERIMENTS.md`); they import `wcode` but nothing imports them.
 
@@ -67,7 +68,7 @@ Every arrow that produces a file also writes its lineage: the configuration and 
 
 ```mermaid
 flowchart LR
-    B["Browser<br/>web/index.html, app.js,<br/>message.js, scene.js"] --> APP
+    B["Browser<br/>index.html: app.js, gl.js, scene.js,<br/>water.js, message.js<br/>model.html: water.js, lab.js"] --> APP
     subgraph APP["FastAPI app · wcode/web.py create_app"]
         H["GET /healthz"]
         WC["/api/wc/*<br/>status, frame, send, sea,<br/>decode, decode-job, check,<br/>jobs, files"]
@@ -85,7 +86,7 @@ flowchart LR
 | `GET /healthz` | monitoring: `ok`, `starting` or `down`, with the version (`project/RELEASES.md`) |
 | `/api/wc/...` | Encode, the sea, Decode and the comparison (route list in `whistlecode/wcode/web.py`) |
 | `/api/...` | Try it: analyse an upload or an example, generate, job state and results (`src/whistlepipe/server.py`); `POST /api/reload-model` only with `allow_reload = true` |
-| `/` | the page itself, from `web/` |
+| `/` | the page itself, from `web/`: `index.html` (the film, then Encode and Decode), `model.html` (Try it), and the film's static data in `web/film/` (no route of its own) |
 
 ## 4. Deployment
 

@@ -43,7 +43,8 @@ src/whistlepipe/       audio.py(S1) dsp.py(S2-S4) detector/(S5) tracking.py(S6) 
                        checks.py plotting.py cli.py
                        synth/(synthetic training data)  train.py  evaluate.py  vaegmm/(VAE-GMM)
                        infer.py(inference engine) sonify.py(image -> sound) server.py(web API) webexport.py ratecheck.py
-web/                   the project webpage (scroll film, Try it, Encode, Decode); web/media4k/*.mp4 and web/data/ are not in git
+web/                   the project webpage: index.html (scroll film, Encode, Decode), model.html (Try it), film/ (the film's data,
+                       from export-film, in git); web/media4k/*.mp4 and web/data/ are not in git
 whistlecode/           WhistleCode: hiding text in whistles (its own CLI, config, tests, plan and paper results)
 deploy/                Docker + Tailscale Funnel deployment of the whole page
 colab/                 Colab notebook for the main VAE training + make_colab_bundle.py (its output colab/dist/ is not in git)
@@ -405,9 +406,10 @@ the page's Channel box, default 0), up to 120 s.
 python whistle.py model-status              # are the trained files where inference looks for them? (--all: every model on offer)
 python whistle.py infer recording.wav       # -> runs/infer/<id>/: result.json, overview.png, per-whistle PNG + WAV
 python whistle.py generate --n 8            # new whistles from the GMM; --condition 1..13 = Table 3, --fc 9000 fixes the pitch
-python whistle.py serve                     # the page + API on http://127.0.0.1:8000 ("Try it" section)
+python whistle.py serve                     # the page + API on http://127.0.0.1:8000 (Try it is model.html)
 python whistlecode/whistlecode.py serve     # the same, plus WhistleCode's Encode and Decode places
 python whistle.py export-web                # example excerpts + pre-rendered results -> web/data/ (static hosting)
+python whistlecode/whistlecode.py export-film   # the film's data from real records -> web/film/ (in git; web/PLAN.md)
 python whistle.py check-rates               # detector on 96 / 48 kHz copies of real files vs the 500 kHz originals
                                             #   (--rates 96000 48000 44100 adds 44.1 kHz)
 ```

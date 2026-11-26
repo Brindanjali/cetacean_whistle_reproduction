@@ -37,7 +37,7 @@ Project-level choices: what was decided, why, what else was considered, and what
 | [D-022](#d-022) | 2026-11-22 | The code is licensed under Apache 2.0 | in force |
 | [D-023](#d-023) | 2026-11-23 | How the public README presents the project: unofficial, a course project, written with an AI assistant | in force; the reproduction framing replaced by D-024 |
 | [D-024](#d-024) | 2026-11-23 | The project is the message system, under the temporary name Falsetto | in force |
-| [D-025](#d-025) | 2026-11-26 | The page is retold as Falsetto: a real-data 3D film in WebGL, then Encode and Decode; Try it gets its own page | in force; work not started (WEB-5, after the freeze) |
+| [D-025](#d-025) | 2026-11-26 | The page is retold as Falsetto: a real-data 3D film in WebGL, then Encode and Decode; Try it gets its own page | in force; work started 2026-11-26 on the branch `web-retelling` (WEB-5), merges after the freeze |
 
 ## Whistle model
 
@@ -124,6 +124,10 @@ Project-level choices: what was decided, why, what else was considered, and what
 - Work starts after the v1.0.0 freeze and ships as v1.1.0.
 - The data-whistle share (WC-R7) must be settled first.
 - The plan's other `[DECISION]` tags stay inline in `web/PLAN.md`.
+
+*Update 2026-11-26:* at the owner's request, the work started before the freeze, on the branch `web-retelling`. `main` stays ready to freeze as v1.0.0, and the branch merges after it. The prerequisite is met: the data-whistle share is reconciled (WC-R7).
+
+*Update 2026-11-26 (P6):* the owner approved deploying the retold page before its release. It is live from the branch `web-retelling` (`e983ad4`), untagged and still numbered 0.10.0, because v1.1.0 can only follow the v1.0.0 freeze release. This is an exception to "deploy tagged releases" (`project/RELEASES.md`, What is live). After the freeze, the branch merges into `main` and is released as v1.1.0, and that tag is deployed.
 
 ## Engineering
 

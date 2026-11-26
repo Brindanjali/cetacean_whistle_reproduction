@@ -225,7 +225,7 @@ out_dir             = "whistlecode/outputs/codebook"   # relative to the reposit
 gallery_fc_hz       = 8000.0       # [DECISION] centre frequency of the gallery WAVs
 seed                = 20261118     # [DECISION]
 
-[web]                        # 05 · Encode and 06 · Decode on the project page (wcode/web.py, web/message.js)
+[web]                        # Encode and Decode on the project page (wcode/web.py, web/message.js)
 out_dir           = "whistlecode/outputs/web"   # one folder per job, relative to the repository root
 keep_jobs         = 60             # [DECISION] newest job folders kept
 max_chars         = 60             # [DECISION] about 160 s of sound; longer messages make the visitor wait minutes
@@ -250,3 +250,14 @@ play_fs_hz        = 48000          # [DECISION] the page plays a 16-bit 48 kHz c
 play_peak         = 0.89           # [DECISION] the copy is scaled to this peak
 tls_dir           = "whistlecode/outputs/web_tls"   # serve --lan: the self-signed certificate and its key (never committed)
 tls_days          = 365            # [DECISION] how long the certificate lasts
+
+[film]                       # the page's film (web/PLAN.md, WEB-5): real records exported once by export-film (wcode/film.py)
+out_dir           = "web/film"     # relative to the repository root; small files, in git, so the film runs without a server
+text              = "MEET AT DAWN" # [DECISION] the example message; the same text Encode starts with
+key               = "reef-42"      # [DECISION] a fixed, public demonstration key (Encode keeps drawing random keys)
+nonce             = 0              # [DECISION]
+snr_db            = 10.0           # [DECISION] as the campaign's final run
+noise_encounter   = 214            # [DECISION] development noise (D-009); 276 stays for the campaigns
+max_seeds         = 20             # [DECISION] the noise seed is the first from 0 whose decode is exact; give up after this many
+alone_margin_s    = 0.05           # [DECISION] "Hear it" plays a data whistle with no other sound this close to it
+contour_points    = 16             # [DECISION] points kept per whistle in the Hide and Hear beats (shapes keep every frame)

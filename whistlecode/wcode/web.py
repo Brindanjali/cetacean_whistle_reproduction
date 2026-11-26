@@ -1,9 +1,9 @@
-"""WhistleCode on the project page: 05 · Encode and 06 · Decode (web/message.js).
+"""WhistleCode on the project page: Encode and Decode, right after the film (web/message.js).
 
     python whistlecode/whistlecode.py serve          ->  http://127.0.0.1:8000
     python whistlecode/whistlecode.py serve --lan    ->  https://<this computer's address>:8000, for other computers too
 
-Another computer can record a played message with its microphone (06 · Decode, Record). Browsers allow the microphone only on
+Another computer can record a played message with its microphone (Decode, Record). Browsers allow the microphone only on
 https pages or on localhost, so --lan serves https with a certificate this computer makes for itself (tls_files). The other
 browser warns once that nobody vouches for it; after "Advanced, Proceed" the page works as usual.
 

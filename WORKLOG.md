@@ -11,7 +11,7 @@ The single place for what is planned, what is waiting, and what has been done in
 | Whistle model (VAE-GMM) | Complete. Dataset built; model V1 trained to epoch 150; Gaussian mixtures for epochs 101 and 150; paper evaluation done on epoch 101 | Nothing required (epoch-150 evaluation is optional: REP-1) |
 | Message system (WhistleCode) | v1 built and tested (campaign v1). Second round: R0, R1 and R2 (drift correction, adopted) done | **WC-R3** shape covertness |
 | Detector paper | A draft exists (`docs/private/Mentor_Review_1.pdf`, never in git); its to-do file is older than the draft | DET-1, DET-2 |
-| Web page and deployment | Film, Try it (models Nyx and Delphi), Encode, Decode and Record; self-hosted with Docker and Tailscale; `/healthz` and a Docker healthcheck. The 2026-11-23 audit's public-page bugs BUG-2 to BUG-7 and BUG-13 are fixed and live (rebuilt and redeployed 2026-11-24, `1613c18`). The page still tells the whistle model's story | WEB-5 retelling as Falsetto, approved (`web/PLAN.md`, D-025), starts after the freeze; WEB-1 static examples are out of date |
+| Web page and deployment | Film, Try it (models Nyx and Delphi), Encode, Decode and Record; self-hosted with Docker and Tailscale; `/healthz` and a Docker healthcheck. The 2026-11-23 audit's public-page bugs BUG-2 to BUG-7 and BUG-13 are fixed and live (rebuilt and redeployed 2026-11-24, `1613c18`). The page still tells the whistle model's story | WEB-5 retelling as Falsetto (`web/PLAN.md`, D-025): on the branch `web-retelling`, live on the public page from the branch (untagged, D-025); after the freeze: merge, v1.1.0; WEB-1 static examples are out of date |
 | Engineering | 25 systems in place ([`project/README.md`](project/README.md)): tracker, Definition of Done, review, lint, tests, CI, lock file, releases, monitoring, registers, security. v0.9.0 and v0.10.0 tagged (CI green on v0.10.0); code licensed under Apache 2.0; no pin has a known advisory, and the server image installs exactly the pins. Whole-project audit 2026-11-23 ([`project/AUDIT_2026-11-23.md`](project/AUDIT_2026-11-23.md)): records and numbers sound; 11 bugs recorded | Audit bugs still open: BUG-8, BUG-10 to BUG-12; OPS-10 to OPS-13 |
 | Course | Week 7 of 8 | Final review at the end of Week 8 |
 
@@ -83,8 +83,8 @@ The plan, pass marks and rules are frozen in `whistlecode/PLAN.md` section 8.7.
   - new title; done 2026-11-23 (temporary name Falsetto, D-024);
   - README leads with WhistleCode; done 2026-11-23;
   - page story Listen → Learn → Speak → Hide → Hear;
-  - correct `TEST_PROTOCOL.md`'s outdated "epoch 150 was not completed";
-  - reconcile the data-whistle share (one in four vs a third).
+  - correct `TEST_PROTOCOL.md`'s outdated "epoch 150 was not completed"; done 2026-11-26;
+  - reconcile the data-whistle share (one in four vs a third); done 2026-11-26 (one in four can carry data, about a third of a played message does).
 - [ ] **WC-R7a** Claim wording from the 2026-11-23 audit (`project/AUDIT_2026-11-23.md`), each as a dated revision, not an edited row:
   - C4 "never accepts a false message": state what was measured (0 in 7,900; 95 % bounds 0.08 % and 0.6 %) and the design's worst case, up to 384 CRC-16 checks per decode, about 0.6 % per decode of noise;
   - `THREAT_MODEL.md` "What may be said today": the timing passes only on its own, not inside sea noise (C6 failed);
@@ -108,7 +108,7 @@ The plan, pass marks and rules are frozen in `whistlecode/PLAN.md` section 8.7.
 - [ ] **WEB-2** Replace the film's hand-made research illustration (Listen → Learn → Imagine) with real model output. This is the page's Phase 4; it overlaps WC-R7.
 - [x] **WEB-3** Decide what to do with the untracked `cluster/` kit (running the demo on the college cluster): commit it, or ignore it. Decided: commit it (D-021).
 - [ ] **WEB-4** From the 2026-11-23 audit: hide Try it's `/api/docs` and `/api/openapi.json` on the public page, and list every route (with `/api/reload-model`) in `docs/ARCHITECTURE.md` and the exposure table of `.github/SECURITY.md`; point model 1 at `final.pt` instead of `last.pt` (byte-identical today) in `configs/inference.toml`, so a resume in that folder cannot change Nyx.
-- [ ] **WEB-5** Retell the page as Falsetto, after the v1.0.0 freeze, following `web/PLAN.md`. The film becomes Listen → Learn → Speak → Hide → Hear, built from real data exported by a new `export-film` and drawn as one 3D scene in WebGL (all 63,490 whistles in Learn); Encode and Decode follow the film directly; Try it moves to its own `model.html`; the footer states the limits. This carries out WC-R7's page story and includes WEB-2. Needs first: the data-whistle share settled (WC-R7). Phases P1-P6, about 7½ days. Ships as v1.1.0.
+- [ ] **WEB-5** Retell the page as Falsetto, after the v1.0.0 freeze, following `web/PLAN.md`. The film becomes Listen → Learn → Speak → Hide → Hear, built from real data exported by a new `export-film` and drawn as one 3D scene in WebGL (all 63,490 whistles in Learn); Encode and Decode follow the film directly; Try it moves to its own `model.html`; the footer states the limits. This carries out WC-R7's page story and includes WEB-2. Needs first: the data-whistle share settled (WC-R7). Phases P1-P6, about 7½ days. Ships as v1.1.0. Progress 2026-11-26: started on the branch `web-retelling`; P1-P5 done and deployed to the public page from the branch (2026-11-26, P6); left: merge after the v1.0.0 freeze, release v1.1.0, deploy the tag; frame times on a visible screen.
 
 ### Repository housekeeping
 
@@ -145,6 +145,29 @@ Newest first. Older history is grouped by stage. Commit hashes are given where t
 - **Web (plan)**: the page reviewed as Falsetto. The message system sits at the bottom; the header mark still reads "Whistle VAE-GMM"; the research beats and Try it tell the whistle model's story; the page never states its limits. Plan for the full retelling written: `web/PLAN.md` (new; listed in `docs/INDEX.md`); to-do WEB-5. No page file changed.
 - **Web (plan)**: `web/PLAN.md` gains "The 3D scene". The research beats are drawn with WebGL 2, hand-written with no library, so Learn shows all 63,490 whistles (exported as `learn.bin`). Plus fallbacks for reduced motion and missing WebGL, and checks for them. No computer-made whales and no pre-rendered video. P3 grows to 4 days; WEB-5 is now about 7½ days.
 - **Web (plan) approved**: you approved `web/PLAN.md`. Its main choices are recorded as D-025 in `project/DECISIONS.md` (index row, entry, and the plan's 14 inline tags in the tag table). The plan's status line is now "approved"; so is its row in `docs/INDEX.md`. Work starts after the v1.0.0 freeze.
+- **WhistleCode docs (WC-R7)**: the data-whistle share reconciled. One in four bank whistles *can* carry data (19,432 of 73,791). The sender uses every eligible whistle its spacing allows, so about a third of a played message *does* (33-36 % in `RESULTS.md` section 6). `whistlecode/paper/TEST_PROTOCOL.md` gets dated corrections of that row and of its outdated "epoch 150 was not completed"; `whistlecode/RELATED_WORK.md` gets a dated reconciliation note; `docs/INDEX.md` lists the protocol as current.
+- **Web (WEB-5 started)**: at your request the retelling started before the freeze, on the new branch `web-retelling`, so `main` stays ready to freeze as v1.0.0. The branch merges after the freeze; whether its structure phase (P2) goes into v1.0.0 is your call at the freeze.
+- **WhistleCode (WEB-5 P1)**: new `export-film` writes the page film's data from real records to `web/film/`, about 600 KB, in git:
+  - New code: `whistlecode/wcode/film.py`, the `[film]` section of `whistlecode/config.toml`, the command in `whistlecode/whistlecode.py`, `.gitignore` letting `web/film/*.wav` through, and `.gitattributes` marking `web/film/*.bin` and `*.wav` binary.
+  - Sender: `whistlecode/wcode/sender.py` now records each cover whistle as played and the click times (`Transmission.covers`, `clicks_s`). The audio is unchanged.
+  - Tests: new `whistlecode/tests/test_wc_film.py` (8 tests), and one new test in `test_wc_pipeline.py`.
+  - Export result: seed 0 decoded "MEET AT DAWN" exactly in encounter-214 noise at 10 dB, with 1 wrong whistle repaired. 31 data and 51 cover whistles (38 % data). All 63,490 latents, with 60 % of their variance on three axes.
+- **Web (WEB-5 P2)**: the page restructured, then checked in the browser on `whistlecode serve`:
+  - `web/index.html` (title, header, opening question, last line of the film, the lab opening on 04 · Encode, footer with the limits and a link to the model page);
+  - new `web/model.html` (Try it);
+  - new `web/water.js` (tide and sea moved out of `web/lab.js`);
+  - `web/app.js` and `web/message.js` (the `#lab` anchor, header marking);
+  - `web/styles.css`.
+  - Records: `web/README.md`, `README.md`, `docs/ARCHITECTURE.md`, `docs/TECHNICAL_REFERENCE.md`, `docs/INDEX.md`, `deploy/README.md`, `deploy/docker-compose.yml` (comment), `project/TRACEABILITY.md` (where the page states C7 and C10), `CHANGELOG.md` `[Unreleased]`, `web/PLAN.md` (Progress).
+  - Stale section numbers removed from comments in `whistlecode/wcode/web.py`, `whistlecode/tests/test_wc_web.py`, `whistlecode/config.toml` and `web/message.js`.
+- **Web (WEB-5 P3)**: the film's research section is one WebGL 2 scene, drawn only from `web/film/`:
+  - Code: new `web/gl.js`; `web/scene.js` rewritten (five beats: Listen, Learn, Speak, Hide, Hear); `web/shots.js` (timings, 6 screens, header stops); `web/index.html` (five beats and their words, header links, the `#gl` canvas, numbering 06 · Encode and 07 · Decode); `web/app.js` ("Hear it" plays `film/hear_it.wav`, the scene's readiness and both canvases); `web/styles.css`; `web/audio-engine.js` removed.
+  - Checked in the in-app browser on the Radeon 610M: every beat by screenshot; the scene costs a median 0.8 ms per frame, 1.9 ms at the 95th percentile, at 3840 × 2400; the fallbacks for a lost context, no WebGL 2 and reduced motion; "Hear it"; the header links. Details in `web/PLAN.md` (Progress).
+  - Records: `web/PLAN.md`, `web/README.md`, `web/CREDITS.md` (the film's sound is now a real data whistle), `docs/ARCHITECTURE.md`, `project/TRACEABILITY.md` (every number and claim in the film's words, with its record), `CHANGELOG.md`.
+- **Deploy (WEB-5 P6)**: with your go-ahead, the retold page is live: `docker compose -f deploy/docker-compose.yml up -d --build` from the branch `web-retelling` at `e983ad4`. The full check and checksums passed; the app was healthy in 14 s; `repo.py health` was UP at v0.10.0 over Funnel; the public page loads its 720p videos and the film's data with no console errors; Try it found 30 whistles in an example; Encode and Decode round-tripped "HI". Untagged by exception (D-025 update), because v1.1.0 follows the v1.0.0 freeze. Records: `project/RELEASES.md` (What is live), `project/DECISIONS.md`, `web/PLAN.md`. Note: the container serves the checked-out tree, so switching to `main` puts the old page back.
+- **Web (WEB-5 P4 and P5)**:
+  - P4: the words of `web/index.html` were checked against the records and corrected where they said more (Speak, Hide, Learn, Listen); `project/TRACEABILITY.md` and `CHANGELOG.md` follow.
+  - P5: headless Chrome and Edge on the Radeon 610M; Edge, no WebGL, no server, reduced motion, the message server with a send and decode round trip, and frame times alternated against `main`. Results and what is still open are in `web/PLAN.md` (Progress). No code changed.
 
 ### 2026-11-25
 
