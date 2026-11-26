@@ -127,6 +127,8 @@ Project-level choices: what was decided, why, what else was considered, and what
 
 *Update 2026-11-26:* at the owner's request, the work started before the freeze, on the branch `web-retelling`. `main` stays ready to freeze as v1.0.0, and the branch merges after it. The prerequisite is met: the data-whistle share is reconciled (WC-R7).
 
+*Update 2026-11-26 (P6):* the owner approved deploying the retold page before its release. It is live from the branch `web-retelling` (`e983ad4`), untagged and still numbered 0.10.0, because v1.1.0 can only follow the v1.0.0 freeze release. This is an exception to "deploy tagged releases" (`project/RELEASES.md`, What is live). After the freeze, the branch merges into `main` and is released as v1.1.0, and that tag is deployed.
+
 ## Engineering
 
 ### D-016

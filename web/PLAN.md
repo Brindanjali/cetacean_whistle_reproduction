@@ -189,3 +189,12 @@ Dated lines, newest last. Details are in `WORKLOG.md`.
   - **Console errors:** none, apart from Encode's expected 404 on the static server.
   - **Frame times:** a 10 s scroll through the film at 720p, alternating against the page on `main`. In the clean second round there were no frames over 33 ms on either page; the 95th percentile was 21.0 ms against 20.9; the film's own work was 0.4 ms against 1.1 ms. Headless frame times are not a screen's, so the 6 ms target on a visible 240 Hz screen remains unmeasured.
   - **Still open:** that visible-screen measurement, and Docker over Funnel. Funnel puts the page on the internet, so it needs your go-ahead, in P6.
+- **2026-11-26, P6 (deployment) done; the release waits for the freeze.** With the owner's go-ahead, the page went live through Docker and Tailscale Funnel from the branch at `e983ad4`. Every step of the deployment checklist in `project/RELEASES.md` passed:
+  - the full check and the model checksums;
+  - healthy in 14 s;
+  - `repo.py health` UP at v0.10.0;
+  - over the public address, the film loads its 720p copies and its data, with the scene ready and no console errors;
+  - Try it analysed an example (30 whistles);
+  - Encode sent "HI" and Decode read it back.
+
+  Left for after the v1.0.0 freeze: merge the branch, release it as v1.1.0 (`project/RELEASES.md`), and deploy that tag. Still unmeasured: frame times on a visible 240 Hz screen.

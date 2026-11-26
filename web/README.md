@@ -8,8 +8,9 @@ design.
 Status: being retold as Falsetto ([`PLAN.md`](PLAN.md), WEB-5), on the branch `web-retelling`. Done: the film's data
 from real records (`film/`, `export-film`, P1); the page structure (P2): identity, Encode and Decode straight after
 the film, Try it on its own page, the limits in the footer; and the research section as one WebGL 2 scene drawn only
-from `film/` (P3): Listen → Learn → Speak → Hide → Hear. Still to come: the words' final pass (P4) and the full
-checks and release (P5, P6).
+from `film/` (P3): Listen → Learn → Speak → Hide → Hear; the words checked against the records (P4); the checks (P5);
+and live on the public page from the branch (P6, 2026-11-26). Still to come: merge after the v1.0.0 freeze and release
+as v1.1.0.
 
 ## Run it
 
