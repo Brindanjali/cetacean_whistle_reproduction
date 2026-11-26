@@ -36,7 +36,8 @@ body.cam-on .still-fallback{display:none}
    for research. Opacity from JS; nothing else is laid over the footage. */
 .veil{position:absolute;inset:0;opacity:0;visibility:hidden;will-change:opacity;background:
   radial-gradient(120% 70% at 0% 100%,rgba(3,16,29,.62) 0%,rgba(3,16,29,.28) 45%,transparent 70%)}
-#sig{position:absolute;inset:0;width:100%;height:100%;visibility:hidden}
+/* the research scene: the 3D on #gl (WebGL 2, scene.js), its labels and letters on #sig above it */
+#gl,#sig{position:absolute;inset:0;width:100%;height:100%;visibility:hidden}
 
 /* ---- the index: a faint scrim keeps it legible over the sunlit surface ---- */
 .bar{position:fixed;z-index:5;top:0;left:0;right:0;padding:28px var(--gutter) 56px;display:flex;justify-content:space-between;align-items:baseline;pointer-events:none;

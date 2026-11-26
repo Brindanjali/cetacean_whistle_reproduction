@@ -47,12 +47,15 @@ class Film {
       this.blocks = [...document.querySelectorAll('[data-t]')].map(el => ({ el, t: window.TEXT[el.dataset.t], o: -1 }));
       this.veilEl = $('#veil'); this.bar = $('#progress-bar');
       this.links = [...document.querySelectorAll('[data-stop]')];
-      this.cv = $('#sig'); this.cx = this.cv.getContext('2d');
+      this.cv = $('#sig'); this.cx = this.cv.getContext('2d'); this.glcv = $('#gl');
       this.target = this.cur = this.cam1 = scrollY; this.run = false; this.playT = null; this.last = 0;
       this.buildShots(); this.prepare();
-      try { this.engine = new CetaceanAudioEngine(); } catch (e) { console.error('[film] audio engine failed:', e); this.engine = null; }
       this.bindListen();
-      try { this.scene = new ResearchScene(); } catch (e) { console.error('[film] scene build failed:', e); this.scene = null; }
+      // the research scene (WebGL 2): without it, or until its data arrives, the words stand over still water
+      try {
+        this.scene = new ResearchScene();
+        this.scene.onready = () => { this.dirty = true; this.wake(); };
+      } catch (e) { console.warn('[film] no 3D scene, the words stand alone:', e); this.scene = null; }
       this.measure(); this.bind(); this.read(); this.wake();
       // canvas text uses the web fonts: redraw once they are ready
       if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { this.dirty = true; this.wake(); });
@@ -287,7 +290,7 @@ class Film {
 
   /* index: the research beat on screen (timings from TEXT); over the lab, message.js marks Encode and Decode itself */
   markIndex(pos) {
-    const T = window.TEXT, order = ['signal', 'model', 'generate'];
+    const T = window.TEXT, order = ['signal', 'model', 'speak', 'hide', 'hear'];
     let cur = null;
     order.forEach((id, k) => { const end = order[k + 1] ? T[order[k + 1]][0] : T[id][3] + .09; if (pos >= T[id][0] - .03 && pos < end) cur = id; });
     if (this.target >= this.labTop - this.vh / 2) cur = null;
@@ -315,44 +318,46 @@ class Film {
     }
   }
 
-  /* ---- Listen → Learn → Imagine: the 3D scene (scene.js), drawn on the full-screen canvas ---- */
+  /* ---- Listen → Learn → Speak → Hide → Hear: the 3D scene (scene.js) on #gl, its labels on #sig ---- */
   drawSignal(pos) {
     if (!this.scene) return;
-    const cx = this.cx, A = win(window.VIZ.on, pos);
-    // the canvas is a full-screen layer: hidden whenever nothing is drawn on it
-    if (A < .004) { if (this.cvOn) { cx.clearRect(0, 0, this.W, this.H); this.cv.style.visibility = 'hidden'; this.cvOn = false; } return; }
-    if (!this.cvOn) { this.cv.style.visibility = 'visible'; this.cvOn = true; }
+    const cx = this.cx, A = this.scene.ready && !this.scene.lost ? win(window.VIZ.on, pos) : 0;
+    // both canvases are full-screen layers: hidden whenever nothing is drawn on them
+    if (A < .004) {
+      if (this.cvOn) { cx.clearRect(0, 0, this.W, this.H); this.cv.style.visibility = this.glcv.style.visibility = 'hidden'; this.cvOn = false; }
+      return;
+    }
+    if (!this.cvOn) { this.cv.style.visibility = this.glcv.style.visibility = 'visible'; this.cvOn = true; }
     cx.clearRect(0, 0, this.W, this.H);
     this.scene.draw(cx, pos, A, this.playT);
   }
 
-  /* exactly one tone, the new whistle of the scene; user-gated, stoppable, never automatic */
+  /* one sound: a data whistle of the example message, cut from the real send (film/hear_it.wav, export-film);
+     user-gated, stoppable, never automatic. While it plays, the scene follows it along its shape */
   bindListen() {
     const btn = $('#btn-listen'); if (!btn) return;
     const lbl = btn.querySelector('.lbl'), fill = btn.querySelector('.ring .fill');
-    const note = btn.parentElement && btn.parentElement.querySelector('.note');
     const setFill = f => { if (fill) fill.style.strokeDashoffset = (106.8 * (1 - clamp(f))).toFixed(1); };
-    const E = this.engine;
-    if (!E) { btn.disabled = true; lbl.textContent = 'Unavailable'; if (note) note.textContent = 'Audio engine unavailable'; return; }
+    const au = new Audio(); au.preload = 'none'; au.src = 'film/hear_it.wav';
+    let raf = 0;
     const ui = st => {
       btn.setAttribute('aria-pressed', st === 'playing' ? 'true' : 'false');
       if (st === 'playing') btn.removeAttribute('aria-busy'); else btn.setAttribute('aria-busy', st === 'busy' ? 'true' : 'false');
-      lbl.textContent = st === 'playing' ? 'Stop' : st === 'busy' ? 'Preparing…' : 'Hear it';
-      if (st !== 'playing') { this.playT = null; setFill(0); this.dirty = true; this.wake(); }
+      lbl.textContent = st === 'playing' ? 'Stop' : st === 'busy' ? 'Loading…' : 'Hear it';
+      if (st !== 'playing') { cancelAnimationFrame(raf); this.playT = null; setFill(0); this.dirty = true; this.wake(); }
     };
-    const DUR = 1.0;   // the scene's new whistle, played at a listenable length
-    E.onPlaybackProgress = t => { this.playT = clamp(t / DUR); setFill(t / DUR); this.wake(); };
-    E.onPlaybackEnd = () => ui('idle');
-    let ready = false, busy = false;
+    const follow = () => {
+      if (au.paused) return;
+      const t = au.duration ? clamp(au.currentTime / au.duration) : 0;
+      this.playT = t; setFill(t); this.wake();
+      raf = requestAnimationFrame(follow);
+    };
+    au.addEventListener('ended', () => ui('idle'));
+    au.addEventListener('error', () => { ui('idle'); btn.disabled = true; lbl.textContent = 'Unavailable'; });
     btn.addEventListener('click', async () => {
-      if (busy) return;
-      if (E.isPlaying) { E.stop(); ui('idle'); return; }
-      busy = true; ui('busy');
-      try {
-        if (!ready) { await E.synthesizeFromContour(this.scene ? this.scene.newWhistleHz(400) : [8000, 12000], DUR); ready = true; }
-        E.play(); ui('playing');
-      } catch (e) { ui('idle'); }
-      busy = false;
+      if (!au.paused) { au.pause(); au.currentTime = 0; ui('idle'); return; }
+      ui('busy');
+      try { await au.play(); ui('playing'); follow(); } catch (e) { ui('idle'); }
     });
   }
 }

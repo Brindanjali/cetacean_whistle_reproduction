@@ -45,6 +45,17 @@ Source: [`whistlecode/THREAT_MODEL.md`](../whistlecode/THREAT_MODEL.md) section 
 
 *Where the page states these (added 2026-11-26, WEB-5):* the footer of `web/index.html` says the system was "tested in simulation only: no message has been played into water yet" (C10, not tested) and that "a trained classifier can still tell the coded whistle shapes from real ones" (C7, not supported; shape AUC 0.944). The film's demonstration decode is one run, not a rate. Its record is `web/film/film.json` (`hear`; the seed rule and skipped seeds are in `provenance`).
 
+*The film's words (added 2026-11-26, WEB-5 P3)*, each with what holds it:
+
+| Words in `web/index.html` | Record |
+|---|---|
+| "63,490" whistles (02 · Learn) | `latents_mu.json` `n`; `film.json` `learn.n`; README "At a glance" |
+| "3,000 families" (02, 03) | `gmm.json` `n_components` (K = 3,000, D-005); `film.json` `learn.n_components` |
+| "keeps 16 … at one of four pitches: 64 whistles, six bits each" (03 · Speak) | `whistlecode/outputs/codebook/codebook.json` (16 types and verification); `whistlecode/PLAN.md` section 4.6 (the four candidate pitches per slot, two bits; 16 shapes, four bits); `film.json` `speak.pitches_hz` |
+| "About a third of what you hear carries the message" (04 · Hide) | `whistlecode/paper/RESULTS.md` section 6 (median 66 of 198; 33-36 % across payload sets; reconciled 2026-11-26, WC-R7); this send: 31 of 82, `film.json` `hide.data_share` |
+| "Without it, there is no message" (05 · Hear) | C4: no wrong-key message accepted, 0 in 3,700 (`t5_false_messages.csv`) |
+| "Spare whistles repair what the sea broke" (05 · Hear) | C2 and Reed–Solomon (`whistlecode/PLAN.md` section 4.2); in this send 1 wrong whistle repaired, `film.json` `hear.repair` |
+
 ### WhistleCode pass marks v2
 
 Source: [`whistlecode/PLAN.md`](../whistlecode/PLAN.md) section 8.7, frozen 2026-11-21. All are measured once, by campaign v2 (EXP-024).

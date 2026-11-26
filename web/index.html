@@ -13,8 +13,9 @@
   <link rel="stylesheet" href="styles.css" />
   <!-- Footage: Pixabay 244188 (Pixabay Content License) and Pexels 5743314,
        Daniel Torobekov (Pexels License); full sources and terms are in
-       CREDITS.md. Sound in the film: one illustrative tone, generated in the
-       browser on request; it is not model output. -->
+       CREDITS.md. Sound in the film: one data whistle of the example message,
+       cut from a real send (film/hear_it.wav, written by export-film), played
+       only on request. -->
 </head>
 <body>
   <!-- The water: fixed, one camera. Shot planes are built from shots.js. -->
@@ -23,6 +24,7 @@
       <img class="still-fallback" src="media4k/whale.jpg" alt="" />
     </div>
     <div class="veil" id="veil"></div>
+    <canvas id="gl"></canvas>
     <canvas id="sig"></canvas>
   </div>
 
@@ -31,7 +33,9 @@
     <nav class="index" aria-label="Sections">
       <a href="#signal" data-stop="signal">Listen</a>
       <a href="#model" data-stop="model">Learn</a>
-      <a href="#generate" data-stop="generate">Imagine</a>
+      <a href="#speak" data-stop="speak">Speak</a>
+      <a href="#hide" data-stop="hide">Hide</a>
+      <a href="#hear" data-stop="hear">Hear</a>
       <a href="#encode">Encode</a>
       <a href="#decode">Decode</a>
     </nav>
@@ -59,29 +63,40 @@
       </div>
     </section>
 
-    <!-- Listen → Learn → Imagine: one 3D scene on #sig (scene.js), explained in plain words. -->
-    <section class="sec" id="research" style="--s:4">
+    <!-- Listen → Learn → Speak → Hide → Hear: one 3D scene (scene.js on #gl, labels on #sig), drawn only from real records
+         (web/film/, export-film; web/PLAN.md), explained in plain words. -->
+    <section class="sec" id="research" style="--s:6">
       <div class="block block-top" id="signal" tabindex="-1" data-t="signal">
         <p class="step">01 · Listen</p>
         <h2>Slow a whistle down,<br /><i>and it rises like a reef.</i></h2>
-        <p class="body">Spread a recording out over time and pitch, and every whistle rises out of the hiss of the sea like a ridge on the seafloor. Look down on it from above, and it becomes a single line: the whistle’s shape.</p>
+        <p class="body">Spread one whistle out over time and pitch, and it rises from the seafloor like a ridge. Look down on it from above, and it becomes a single line: the whistle’s shape.</p>
       </div>
       <div class="block block-top" id="model" tabindex="-1" data-t="model">
         <p class="step">02 · Learn</p>
-        <h2>Thousands of voices.<br /><i>They swim together in schools.</i></h2>
-        <p class="body">The machine listens to about 63,000 whistles of false killer whales and gives each one a place in its memory. Whistles that sound alike drift together, the way fish gather into schools.</p>
+        <h2>63,490 voices.<br /><i>They swim together in schools.</i></h2>
+        <p class="body">The machine listened to 63,490 whistles of false killer whales and gave each one a place in its memory. Whistles that sound alike drift together, into 3,000 families.</p>
       </div>
-      <div class="block block-top" id="generate" tabindex="-1" data-t="generate">
-        <p class="step">03 · Imagine</p>
-        <h2>Swim between the schools,<br /><i>and a new voice surfaces.</i></h2>
-        <p class="body">Pick a place among whistles it knows, and the machine turns it back into a shape, then into sound: a whistle no animal has made, in the voice of the ones that have.</p>
+      <div class="block block-top" id="speak" tabindex="-1" data-t="speak">
+        <p class="step">03 · Speak</p>
+        <h2>Sixteen voices it can say clearly.<br /><i>Each one is a letter.</i></h2>
+        <p class="body">From its 3,000 families, the sender keeps 16 whose whistles the receiver can tell apart, and sings each at one of four pitches: 64 whistles, six bits each.</p>
         <div class="hear-row">
           <button id="btn-listen" class="hear" type="button" aria-pressed="false" aria-describedby="listen-note">
             <span class="ring"><svg viewBox="0 0 40 40" aria-hidden="true"><circle class="track" cx="20" cy="20" r="17" /><circle class="fill" cx="20" cy="20" r="17" /><path class="p" d="M17 13l10 7-10 7z" /><path class="s" d="M15.5 13h3.4v14h-3.4zM21.6 13h3.4v14h-3.4z" /></svg></span>
             <span class="lbl">Hear it</span>
           </button>
-          <span class="note" id="listen-note">Illustration · drawn by hand, not by the model</span>
+          <span class="note" id="listen-note">One whistle of the message, as it was sent</span>
         </div>
+      </div>
+      <div class="block block-top" id="hide" tabindex="-1" data-t="hide">
+        <p class="step">04 · Hide</p>
+        <h2>The message swims with the school.<br /><i>It sings when they sing.</i></h2>
+        <p class="body">Each whistle of “MEET AT DAWN” is sung at a moment real animals called, among cover whistles and recorded clicks. About a third of what you hear carries the message.</p>
+      </div>
+      <div class="block block-top" id="hear" tabindex="-1" data-t="hear">
+        <p class="step">05 · Hear</p>
+        <h2>Only the key knows where to listen.<br /><i>Without it, there is no message.</i></h2>
+        <p class="body">The receiver finds where the key says the message begins, through the noise of the sea, and reads each whistle’s shape and pitch. Spare whistles repair what the sea broke.</p>
       </div>
     </section>
 
@@ -111,7 +126,7 @@
          alone. Both need `python whistlecode/whistlecode.py serve`; without it they say so and stay still. -->
     <section class="wc" id="encode" tabindex="-1" aria-labelledby="enc-title">
       <div class="wc-head lab-head">
-        <p class="step">04 · Encode</p>
+        <p class="step">06 · Encode</p>
         <h2 id="enc-title">Write a message.<br /><i>Hide it in a school of whistles.</i></h2>
         <p class="body">Type a few words and a key. Each letter becomes bits, a checksum and spare whistles guard them, the key scrambles them, and every six bits become one whistle, sung among real whistles at the moments real animals called.</p>
         <div class="lab-status" id="wc-status" role="status"><span class="dot"></span><span class="txt">Checking the message server…</span></div>
@@ -162,7 +177,7 @@
 
     <section class="wc" id="decode" tabindex="-1" aria-labelledby="dec-title">
       <div class="wc-head">
-        <p class="step">05 · Decode</p>
+        <p class="step">07 · Decode</p>
         <h2 id="dec-title">Bring a recording.<br /><i>Only the key can find the message.</i></h2>
         <p class="body">Drop in a recording and type the key. The decoder gets nothing else: no text, no timings, no record of what was sent. It listens for whistles, finds where the key says the message begins, reads each whistle’s shape and pitch, repairs what the sea broke, and checks the result.</p>
       </div>
@@ -233,6 +248,6 @@
   </section>
 
   <div class="progress" aria-hidden="true"><b id="progress-bar"></b></div>
-  <script src="audio-engine.js"></script><script src="shots.js"></script><script src="scene.js"></script><script src="app.js"></script><script src="water.js"></script><script src="message.js"></script>
+  <script src="shots.js"></script><script src="gl.js"></script><script src="scene.js"></script><script src="app.js"></script><script src="water.js"></script><script src="message.js"></script>
 </body>
 </html>

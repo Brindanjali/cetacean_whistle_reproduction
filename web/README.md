@@ -6,9 +6,10 @@ found, hear the model's recreation and new whistles of the same type, or generat
 design.
 
 Status: being retold as Falsetto ([`PLAN.md`](PLAN.md), WEB-5), on the branch `web-retelling`. Done: the film's data
-from real records (`film/`, `export-film`, P1) and the page structure (P2): identity, Encode and Decode straight after
-the film, Try it on its own page, the limits in the footer. Still to come (P3): the film's research section
-(Listen → Learn → Imagine) is a hand-made illustration, labelled as such, until it is redrawn in WebGL from `film/`.
+from real records (`film/`, `export-film`, P1); the page structure (P2): identity, Encode and Decode straight after
+the film, Try it on its own page, the limits in the footer; and the research section as one WebGL 2 scene drawn only
+from `film/` (P3): Listen → Learn → Speak → Hide → Hear. Still to come: the words' final pass (P4) and the full
+checks and release (P5, P6).
 
 ## Run it
 
@@ -155,15 +156,15 @@ fails if the model or codebook changed since the export. Settings: `whistlecode/
 - `index.html`: the four movements (Ocean, Listen, Research, Return), their copy, then the lab: Encode and Decode
 - `model.html`: Try it, the whistle model on its own page
 - `shots.js`: the edit: shot windows, depth curve, text and visualisation timings (all in scroll position)
-- `app.js`: the film controller: playback, cross-fades, the text layer, the "Hear it" tone; drives the research scene
-  and parks the film (videos paused, layer hidden) while the lab covers the screen
+- `app.js`: the film controller: playback, cross-fades, the text layer, "Hear it" (plays `film/hear_it.wav`); drives the
+  research scene and parks the film (videos paused, layer hidden) while the lab covers the screen
 - `water.js`: the water below the film on both pages: the tide the film ends under, and the sea (one WebGL shader)
-- `scene.js`: the research section's 3D scene on the `#sig` canvas (Listen → Learn → Imagine, one continuous camera;
-  hand-made, not model output)
+- `scene.js`: the research section as one WebGL 2 scene on `#gl`, labels and letters on `#sig` (Listen → Learn → Speak →
+  Hide → Hear, one continuous camera), drawn only from `film/`; without WebGL 2 the words stand over still water
+- `gl.js`: the scene's small WebGL 2 helpers (programs, matrices, thick lines as instanced quads); no library
 - `styles.css`: all styling; `serve.py`: the film-only server with HTTP Range support
 - `lab.js`: Try it (`model.html`): model selector, upload, job progress, overview with clickable whistle boxes, per-whistle cards, generation;
   "Slow ×2" and the pitch shift re-synthesise the contour in the browser with sonify.py's rules
-- `audio-engine.js`: the illustrative whistle contours and tone of the film (not the model)
 - `message.js`: Encode and Decode (WhistleCode): stations, whistle tiles, close-up spectrograms, playback
 - `media4k/`, `fonts/`: local assets (see `CREDITS.md`); `data/`: exported examples for Try it; `film/`: the film's data
 

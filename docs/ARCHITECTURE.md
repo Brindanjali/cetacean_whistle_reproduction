@@ -68,7 +68,7 @@ Every arrow that produces a file also writes its lineage: the configuration and 
 
 ```mermaid
 flowchart LR
-    B["Browser<br/>index.html: app.js, scene.js,<br/>water.js, message.js<br/>model.html: water.js, lab.js"] --> APP
+    B["Browser<br/>index.html: app.js, gl.js, scene.js,<br/>water.js, message.js<br/>model.html: water.js, lab.js"] --> APP
     subgraph APP["FastAPI app · wcode/web.py create_app"]
         H["GET /healthz"]
         WC["/api/wc/*<br/>status, frame, send, sea,<br/>decode, decode-job, check,<br/>jobs, files"]

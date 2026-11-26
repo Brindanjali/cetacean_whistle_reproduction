@@ -156,3 +156,19 @@ Dated lines, newest last. Details are in `WORKLOG.md`.
     - the header links Listen and Decode land and mark themselves;
     - `model.html` offers Nyx and Delphi, shows its three examples, and its Imagine made two whistles.
   - Numbering until P3: the film's beats stay 01-03, so Encode and Decode are 04 and 05; they become 06 and 07 with the new beats.
+- **2026-11-26, P3 done.** The research section is one WebGL 2 scene, written by hand with no library: `web/gl.js` (programs, matrices, thick lines as instanced quads) and `web/scene.js`, rewritten.
+  - **The five beats:** Listen → Learn → Speak → Hide → Hear, drawn only from `film/`. `shots.js` gives the research section 6 screens.
+  - **"Hear it"** moved to Speak and plays `film/hear_it.wav`. `audio-engine.js` is removed.
+  - **Header links:** Listen · Learn · Speak · Hide · Hear · Encode · Decode. Encode and Decode are now 06 and 07.
+  - **Display choices, each with its reason:**
+    - **Listen crop:** Listen shows a crop of the 0.68 s × 12 kHz image around its whistle.
+    - **Ridge smoothing:** the ridge line takes a five-frame average of the image's crest, because the contour falls between pixel rows. The landscape keeps every pixel.
+    - **Cloud scale:** the cloud is scaled by its 98th-percentile radius, not its largest point, so outliers do not squeeze the bulk.
+    - **Clicks:** short ticks on the riverbed.
+  - **Checked in the in-app browser on this laptop's Radeon 610M:**
+    - **Every beat:** a screenshot of each.
+    - **Speed:** at 3840 × 2400 device pixels (more than the laptop's screen), the scene alone costs a median 0.8 ms per frame, 1.9 ms at the 95th percentile and 2.4 ms at most, measured with a one-pixel read-back to wait for the GPU. That leaves room within the 6 ms target for the rest of the page, which was not measured here.
+    - **Warm-up:** first draws cost up to 13 ms until the shaders were warmed at load; after the warm-up, every first draw is under 5 ms.
+    - **Fallbacks:** a forced lost context (the words stand alone, then the scene rebuilds); no WebGL 2 (the constructor refuses, and the words stand alone); reduced motion (settled pictures).
+    - **Controls:** "Hear it" plays; the header links land on their beats.
+  - **Not checked yet:** whole-page frame times with the pane visible (the pane was hidden, which throttles animation frames), Edge, and Docker over Funnel. Those are P5.
