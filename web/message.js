@@ -772,14 +772,14 @@
     $('#dec-wrong').addEventListener('click', () => { const k = newKey($('#dec-key').value); decode(k, `Read with a wrong key, “${k}”`); });
   }
 
-  /* the index: app.js marks the film's beats; below the film, these two places mark their own links */
+  /* the index: app.js marks the film's beats; below the film, Encode, Decode and Try it mark their own links */
   function setupIndex() {
-    const links = { encode: $('a[href="#encode"]'), decode: $('a[href="#decode"]') };
+    const links = { encode: $('a[href="#encode"]'), decode: $('a[href="#decode"]'), try: $('a[href="#try"]') };
     let raf = 0;
     const mark = () => {
       raf = 0;
       let cur = null;
-      for (const id of ['encode', 'decode']) if ($(`#${id}`).getBoundingClientRect().top <= innerHeight * 0.5) cur = id;
+      for (const id of Object.keys(links)) if ($(`#${id}`) && $(`#${id}`).getBoundingClientRect().top <= innerHeight * 0.5) cur = id;
       for (const [id, a] of Object.entries(links)) if (a) id === cur ? a.setAttribute('aria-current', 'step') : a.removeAttribute('aria-current');
     };
     addEventListener('scroll', () => { if (!raf) raf = requestAnimationFrame(mark); }, { passive: true });
@@ -787,6 +787,7 @@
     for (const [id, a] of Object.entries(links)) if (a) a.addEventListener('click', e => {
       e.preventDefault();
       const el = $(`#${id}`);
+      if (!el) return;
       el.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' });
       el.focus({ preventScroll: true });
     });

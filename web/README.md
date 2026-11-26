@@ -1,14 +1,14 @@
 # Webpage — Falsetto
 
-Two pages. `index.html`: a scroll-driven film about whistles, then **Encode** (hide a message in whistles) and **Decode**
-(read it back with the key). `model.html`: **Try it**, the whistle model on its own: upload a recording, see every whistle
-found, hear the model's recreation and new whistles of the same type, or generate without a recording. Desktop only, by
-design.
+One page, `index.html`: a scroll-driven film about whistles, then **Encode** (hide a message in whistles), **Decode**
+(read it back with the key) and **Try it**, the whistle model on its own (Nyx or Delphi): upload a recording, see every
+whistle found, hear the model's recreation and new whistles of the same type, or generate without a recording. Desktop
+only, by design. (`model.html`, Try it's own page during WEB-5, now leads to `#try`.)
 
 Status: retold as Falsetto ([`PLAN.md`](PLAN.md), WEB-5, done 2026-11-26, in v1.0.0). The film's data comes from real
 records (`film/`, `export-film`); the research section is one WebGL 2 scene drawn only from `film/`
-(Listen → Learn → Speak → Hide → Hear); Encode and Decode follow the film; Try it is on its own page; the footer states
-the limits.
+(Listen → Learn → Speak → Hide → Hear); Encode and Decode follow the film; Try it follows them (back on the page since
+2026-11-26); the footer states the limits.
 
 ## Run it
 
@@ -18,7 +18,7 @@ With the inference API (from the project root):
 python whistle.py serve
 ```
 
-Then open http://127.0.0.1:8000 in Chrome or Edge on a desktop (Try it: http://127.0.0.1:8000/model.html). The film
+Then open http://127.0.0.1:8000 in Chrome or Edge on a desktop (Try it: http://127.0.0.1:8000/#try). The film
 alone (no API) still runs with `python web/serve.py` (http://localhost:5178); Try it then shows only the pre-rendered
 examples, and Encode and Decode say how to start their server.
 
@@ -38,7 +38,7 @@ Right after the film (the tide brings in Encode), two places hide a text message
   the decoder (with the key already typed, it reads it at once). The microphone's sound is kept as it is: no echo cancelling,
   noise suppression or automatic gain.
 
-They need the WhistleCode server, which also serves everything else, Try it (`model.html`) included:
+They need the WhistleCode server, which also serves everything else, Try it included:
 
 ```
 python whistlecode/whistlecode.py serve
@@ -152,17 +152,18 @@ fails if the model or codebook changed since the export. Settings: `whistlecode/
 
 ## What's where
 
-- `index.html`: the four movements (Ocean, Listen, Research, Return), their copy, then the lab: Encode and Decode
-- `model.html`: Try it, the whistle model on its own page
+- `index.html`: the four movements (Ocean, Listen, Research, Return), their copy, then the lab: Encode, Decode, Try it
+- `model.html`: a redirect to Try it (`#try`), its own page during WEB-5
 - `shots.js`: the edit: shot windows, depth curve, text and visualisation timings (all in scroll position)
 - `app.js`: the film controller: playback, cross-fades, the text layer, "Hear it" (plays `film/hear_it.wav`); drives the
   research scene and parks the film (videos paused, layer hidden) while the lab covers the screen
-- `water.js`: the water below the film on both pages: the tide the film ends under, and the sea (one WebGL shader)
+- `water.js`: the water below the film: the tide the film ends under, and the sea (one WebGL shader)
 - `scene.js`: the research section as one WebGL 2 scene on `#gl`, labels and letters on `#sig` (Listen → Learn → Speak →
   Hide → Hear, one continuous camera), drawn only from `film/`; without WebGL 2 the words stand over still water
-- `gl.js`: the scene's small WebGL 2 helpers (programs, matrices, thick lines as instanced quads); no library
+- `gl.js`: the scene's small WebGL 2 helpers (programs, matrices, fine lines with mitred joins, thick lines as instanced
+  quads, a GPU timer); no library
 - `styles.css`: all styling; `serve.py`: the film-only server with HTTP Range support
-- `lab.js`: Try it (`model.html`): model selector, upload, job progress, overview with clickable whistle boxes, per-whistle cards, generation;
+- `lab.js`: Try it (`#try`): model selector, upload, job progress, overview with clickable whistle boxes, per-whistle cards, generation;
   "Slow ×2" and the pitch shift re-synthesise the contour in the browser with sonify.py's rules
 - `message.js`: Encode and Decode (WhistleCode): stations, whistle tiles, close-up spectrograms, playback
 - `media4k/`, `fonts/`: local assets (see `CREDITS.md`); `data/`: exported examples for Try it; `film/`: the film's data

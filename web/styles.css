@@ -127,9 +127,6 @@ h2{font-size:clamp(2.9rem,4vw,6.4rem);line-height:.98}
 .lab.anim.in .tide .crest{stroke-dashoffset:0}
 .lab:focus{outline:none}
 .lab [hidden]{display:none!important}
-/* the whistle model's own page: no film above it, so no tide to make room for */
-body.model-page .lab{padding-top:24vh}
-body.model-page .lab::before{display:none}
 .lab .results,.lab .gen,.lab #detail{scroll-margin-top:110px}
 /* over the page the index needs a solid band: content scrolls beneath it (app.js sets lab-on) */
 body.lab-on .bar{background:rgba(6,30,52,.94);padding-bottom:22px;box-shadow:0 1px 0 rgba(169,207,224,.12);transition:background .3s}

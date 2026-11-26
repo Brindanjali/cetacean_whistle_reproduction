@@ -37,8 +37,9 @@ Every document in the repository: what it is the authority on, and its state. Wh
 
 | Document | Authority on | State |
 |---|---|---|
-| [`web/README.md`](../web/README.md) | running the two pages (the film with Encode, Decode and Record; Try it on `model.html`); the film's data; video files | static examples out of date (WEB-1) |
+| [`web/README.md`](../web/README.md) | running the page (the film, then Encode, Decode and Record, then Try it); the film's data; video files | static examples out of date (WEB-1) |
 | [`web/PLAN.md`](../web/PLAN.md) | the plan to retell the page as Falsetto (WEB-5): story beats, the 3D scene, data export, changes by file, checks | done (D-025): P1-P6, merged into `main` 2026-11-26, in v1.0.0 |
+| [`web/PLAN-SCENE.md`](../web/PLAN-SCENE.md) | the plan to redraw the film's 3D scene (WEB-6): direction, how it is drawn, beat by beat, the graphics chip, steps and checks | done 2026-11-27 (D-026, D-027); on the branch `web-scene-v2`, to be merged |
 | [`web/CREDITS.md`](../web/CREDITS.md) | footage and font sources and licences | current |
 | [`deploy/README.md`](../deploy/README.md) | self-hosting with Docker and Tailscale Funnel | current |
 | [`cluster/node/README_CLUSTER.md`](../cluster/node/README_CLUSTER.md) | course lab: running the demo on the college's teaching cluster | current |

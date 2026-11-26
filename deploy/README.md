@@ -1,6 +1,6 @@
 # Self-hosting: Docker + Tailscale Funnel
 
-Serves the whole project page (the film, Encode, Decode, and Try it on model.html) from your own computer in Docker, and puts
+Serves the whole project page (the film, Encode, Decode and Try it) from your own computer in Docker, and puts
 it on the internet at a fixed https address, `https://whistle.<your tailnet>.ts.net`. Free, with no card: Tailscale's
 Personal plan is free for non-commercial use. Because the address is https, Record (the microphone) works on other
 computers too. The steps are written for Windows with Docker Desktop, where they were tested.

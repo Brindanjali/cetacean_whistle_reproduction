@@ -50,7 +50,7 @@ The code and older documents call the message system WhistleCode, its first work
 | Whistle model: VAE training (run V1) | **Complete** | 150 / 150 epochs on encounter 191 (Colab A100 80 GB); epochs 102–150 resumed on 2026-11-20 |
 | Whistle model: Gaussian mixture, K = 3,000 | **Fitted for both checkpoints** | Post-fit checks passed |
 | Whistle model checked against Park *et al.* | **Complete for epoch 101** | Tables 1, 3 and 6; Figs. 7–10 and 12. Fig. 11 and Tables 2, 4, 5 not computed (maintainer's decision) |
-| Web demo | **Runs locally** | Encode, Decode and Record, plus Try it for the whistle model on its own page; can be self-hosted with Docker and Tailscale Funnel. Retold as Falsetto: the film is drawn from real records in WebGL ([plan](web/PLAN.md)) |
+| Web demo | **Runs locally** | Encode, Decode and Record, then Try it for the whistle model (Nyx or Delphi); can be self-hosted with Docker and Tailscale Funnel. Retold as Falsetto: the film is drawn from real records in WebGL ([plan](web/PLAN.md)) |
 
 ## How it works
 
@@ -305,7 +305,7 @@ GMM refits from the same dataset are bit-identical.
 
 **Raw audio** (about 190 MB per 60 s file) comes from NOAA's DCLDE 2022 release, ship 1705, at `gs://noaa-passive-bioacoustic/dclde/2022/dclde_2022_1705/audio/`. [`metadata/whale_encounters_1705.csv`](metadata/whale_encounters_1705.csv) gives each encounter's first and last file. Place each encounter in `encounter_<id>_audio/` at the project root. Every file is checked against the SHA-256 manifest in [`metadata/manifest_all.csv`](metadata/manifest_all.csv), and files that are not in it are refused.
 
-**Run the web demo** (the illustrated introduction, then Encode and Decode; Try it is on its own page, `model.html`):
+**Run the web demo** (the illustrated introduction, then Encode, Decode and Try it):
 
 ```bash
 python whistle.py model-status --all          # which trained files each model has
@@ -364,7 +364,7 @@ python whistle.py generate --n 8 --condition 2                         # new whi
 │   └── vaegmm/             training runs, GMM fits, evaluation records and figures
 ├── post_training/          checks after training; comparison records against the paper
 ├── colab/                  Colab notebook and code bundle for the VAE training run
-├── web/                    project web page: illustrated introduction, Encode, Decode; Try it (model.html); the film's data (film/)
+├── web/                    project web page: illustrated introduction, Encode, Decode, Try it; the film's data (film/)
 ├── deploy/                 self-hosting with Docker + Tailscale Funnel
 ├── cluster/                course lab: running the demo on the college's teaching cluster
 ├── mod_detector_5_24/      5–24 kHz detector variant for the DCLDE 2011 benchmark
