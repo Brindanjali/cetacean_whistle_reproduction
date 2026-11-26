@@ -1,6 +1,6 @@
 # Page retelling plan (WEB-5)
 
-**Status:** approved by the owner 2026-11-26 (D-025). Started 2026-11-26, at the owner's request, on the branch `web-retelling`, so `main` stays ready for the v1.0.0 code freeze (29 Nov 2026). The branch merges after the freeze and ships as v1.1.0 (`project/RELEASES.md`: new features, old results still hold). It carries out the page story of WC-R7 (Listen → Learn → Speak → Hide → Hear) and includes WEB-2 (real model output in the film). Desktop only (D-015); controls stay minimal, with no explanatory panels.
+**Status:** approved by the owner 2026-11-26 (D-025). Started 2026-11-26, at the owner's request, on the branch `web-retelling`; done (P1-P6) and merged into `main` the same day (`f5b794e`), so it ships in the v1.0.0 freeze release (29 Nov 2026) instead of a later v1.1.0 (D-025, update 2026-11-26). It carries out the page story of WC-R7 (Listen → Learn → Speak → Hide → Hear) and includes WEB-2 (real model output in the film). Desktop only (D-015); controls stay minimal, with no explanatory panels.
 
 `[DECISION]` marks a choice this plan makes. The main ones are recorded together as [D-025](../project/DECISIONS.md#d-025); the rest stay here.
 
@@ -198,3 +198,4 @@ Dated lines, newest last. Details are in `WORKLOG.md`.
   - Encode sent "HI" and Decode read it back.
 
   Left for after the v1.0.0 freeze: merge the branch, release it as v1.1.0 (`project/RELEASES.md`), and deploy that tag. Still unmeasured: frame times on a visible 240 Hz screen.
+- **2026-11-26, merged.** The owner merged `web-retelling` into `main` (`f5b794e`) before the freeze and deleted the branch. The retold page is part of v1.0.0, and the live page now runs from `main`. Still open: frame times on a visible 240 Hz screen.

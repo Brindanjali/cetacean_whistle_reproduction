@@ -20,7 +20,7 @@ One version for the whole repository, in [`pyproject.toml`](../pyproject.toml) (
 |---|---|---|
 | 0.9.0 | 2026-11-21 | First versioned release: the reproduction, WhistleCode campaign v1 and R0-R2, the page, and the engineering systems |
 | 0.10.0 | 2026-11-22 | Apache 2.0 licence; CI fixes and `ci-report`; eight vulnerable packages upgraded (also in the server image) |
-| 1.0.0 | 2026-11-29 | Code freeze for the final review (milestone M8) |
+| 1.0.0 | 2026-11-29 | Code freeze for the final review (milestone M8), with the retold page (WEB-5, merged 2026-11-26) |
 
 ## Release procedure
 
@@ -58,7 +58,7 @@ The page runs in Docker on the project laptop and reaches the internet through T
 | Field | Value |
 |---|---|
 | Address | `https://whistle.<tailnet>.ts.net` (Tailscale Funnel, project laptop) and http://localhost:8000 |
-| Version | Whatever is checked out: the container mounts the working tree read-only. Since 2026-11-26: the branch `web-retelling` at `e983ad4` (version number 0.10.0), with the retold page (WEB-5 P1-P5: the film drawn from real records in WebGL, Encode and Decode after it, Try it on `model.html`). Deployed untagged by exception (D-025, update 2026-11-26); it becomes v1.1.0 after the v1.0.0 freeze release and the merge. Switching the checkout to `main` puts the old page back at once. Before: `1613c18` (2026-11-24), v0.10.0 plus the security fixes BUG-2 to BUG-7 and BUG-13 |
+| Version | Whatever is checked out: the container mounts the working tree read-only. Since 2026-11-26: `main` at `f5b794e` (version number 0.10.0), with the retold page (WEB-5: the film drawn from real records in WebGL, Encode and Decode after it, Try it on `model.html`); first live from the branch `web-retelling` at `e983ad4` the same day, untagged (D-025). It becomes v1.0.0 at the freeze. Before: `1613c18` (2026-11-24), v0.10.0 plus the security fixes BUG-2 to BUG-7 and BUG-13 |
 | Models | Try it: Nyx (epoch 101) and Delphi (epoch 150). Encode/Decode: Nyx, codebook `cd322a02` |
 | Access | Anyone with the address ("AllowFunnel": true) |
 | Uptime | Only while the laptop is on, awake and running Docker Desktop |

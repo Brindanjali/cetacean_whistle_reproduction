@@ -50,7 +50,7 @@ The code and older documents call the message system WhistleCode, its first work
 | Whistle model: VAE training (run V1) | **Complete** | 150 / 150 epochs on encounter 191 (Colab A100 80 GB); epochs 102–150 resumed on 2026-11-20 |
 | Whistle model: Gaussian mixture, K = 3,000 | **Fitted for both checkpoints** | Post-fit checks passed |
 | Whistle model checked against Park *et al.* | **Complete for epoch 101** | Tables 1, 3 and 6; Figs. 7–10 and 12. Fig. 11 and Tables 2, 4, 5 not computed (maintainer's decision) |
-| Web demo | **Runs locally** | Encode, Decode and Record, plus Try it for the whistle model on its own page; can be self-hosted with Docker and Tailscale Funnel. Being retold as Falsetto on the branch `web-retelling` ([plan](web/PLAN.md)) |
+| Web demo | **Runs locally** | Encode, Decode and Record, plus Try it for the whistle model on its own page; can be self-hosted with Docker and Tailscale Funnel. Retold as Falsetto: the film is drawn from real records in WebGL ([plan](web/PLAN.md)) |
 
 ## How it works
 

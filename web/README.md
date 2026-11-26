@@ -5,12 +5,10 @@ Two pages. `index.html`: a scroll-driven film about whistles, then **Encode** (h
 found, hear the model's recreation and new whistles of the same type, or generate without a recording. Desktop only, by
 design.
 
-Status: being retold as Falsetto ([`PLAN.md`](PLAN.md), WEB-5), on the branch `web-retelling`. Done: the film's data
-from real records (`film/`, `export-film`, P1); the page structure (P2): identity, Encode and Decode straight after
-the film, Try it on its own page, the limits in the footer; and the research section as one WebGL 2 scene drawn only
-from `film/` (P3): Listen → Learn → Speak → Hide → Hear; the words checked against the records (P4); the checks (P5);
-and live on the public page from the branch (P6, 2026-11-26). Still to come: merge after the v1.0.0 freeze and release
-as v1.1.0.
+Status: retold as Falsetto ([`PLAN.md`](PLAN.md), WEB-5, done 2026-11-26, in v1.0.0). The film's data comes from real
+records (`film/`, `export-film`); the research section is one WebGL 2 scene drawn only from `film/`
+(Listen → Learn → Speak → Hide → Hear); Encode and Decode follow the film; Try it is on its own page; the footer states
+the limits.
 
 ## Run it
 
