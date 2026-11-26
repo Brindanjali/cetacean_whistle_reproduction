@@ -19,7 +19,7 @@ Sources: [`resources/PREPROCESSING_SPECIFICATION.md`](../resources/PREPROCESSING
 | R-05 | Training resumes bit-identically at an epoch boundary | `tests/test_vaegmm_model.py::test_resume_at_epoch_boundary_is_bit_identical`; gate G3 | Met |
 | R-06 | The GMM's EM matches scikit-learn from the same start, and GPU matches CPU | `tests/test_vaegmm_gmm_eval.py` | Met |
 | R-07 | Every run, dataset and fit records its configuration hash, inputs' hashes, software and commit, and none is overwritten | `train_info.json`, `dataset_info.json`, `gmm.json` fields; `src/whistlepipe/storage.py` | Met |
-| R-08 | Paper evaluation: Tables 1, 3, 6 and Figs. 7-10, 12 | EXP-008 | Met for Nyx (epoch 101); Delphi not evaluated (REP-1) |
+| R-08 | Paper evaluation: Tables 1, 3, 6 and Figs. 7-10, 12 | EXP-008, EXP-025 | Met for Nyx (epoch 101, EXP-008) and Delphi (epoch 150, EXP-025) |
 | R-09 | Fig. 11 and Tables 2, 4, 5 | — | Not done, by decision ([D-006](DECISIONS.md#d-006)) |
 
 ### WhistleCode claims
@@ -95,6 +95,10 @@ Every number the README, the review slides or a paper reports, and the record th
 | Figs. 7-10 | **`.../E191/figures/`** | EXP-008 |
 | Table 6: decoder 368,097 parameters, 557.3 MFLOPs, timing | **`.../E191/eval/table6_cost.json`**, **`post_training/out/table6_warm.json`** | EXP-008 |
 | GMM: 111 iterations, converged; post-fit check | **`.../E191/gmm_K3000/gmm.json`**, **`post_training/out/gmm_check_K3000.json`** | EXP-006 |
+| Delphi (epoch 150) Table 1: MSE 5.42, PSNR 34.81 dB, SSIM 0.9934, KL 757.7 | **`.../E191_epoch150/eval/table1_recon.json`**, **`post_training/out/paper_comparison_V1_L64_b1e-4_critic_E191_epoch150.csv`** | EXP-025 |
+| Delphi Table 3 rows (recall 84.7-96.9 %, precision 74.5-79.7 %, F1 79.3-85.8 %); Fig. 12 diagonal 13 of 13 | **`.../E191_epoch150/eval/table3_fig12_K3000.json`**, **`.../E191_epoch150/figures/fig12_lnFFD.png`** | EXP-025 |
+| Delphi Figs. 7-10 | **`.../E191_epoch150/figures/`** | EXP-025 |
+| Delphi Table 6 timing (warm B = 16: 0.114 ms per image) | **`.../E191_epoch150/eval/table6_cost.json`**, **`post_training/out/table6_warm_V1_L64_b1e-4_critic_E191_epoch150.json`** | EXP-025 |
 | Delphi GMM: 150 iterations; check | **`.../E191_epoch150/gmm_K3000/gmm.json`**, **`post_training/out/gmm_check_V1_L64_b1e-4_critic_E191_epoch150_K3000.json`** | EXP-011 |
 | Detector v2c: 14,209 weights; node precision 0.675, recall 0.715, F1 0.695 | **`models/detector/ridgenet-v2c/train_info.json`**, `preprocessed/dataset_info.json` | EXP-001 |
 | Learning curves, epochs 1-150 | **`.../E191/train_log.jsonl`**, **`.../E191_epoch150/train_log.jsonl`** | EXP-005, EXP-010 |

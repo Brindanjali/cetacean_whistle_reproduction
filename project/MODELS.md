@@ -12,7 +12,7 @@ Every trained model and derived model file: what it is, where it came from, its 
 |---|---|---|---|---|---|
 | **Nyx** | `models/vaegmm/V1_L64_b1e-4_critic_E191/checkpoints/final.pt` | 101 | `fcb1a2e69324` | yes | **final, live** (paper results, WhistleCode, Try it model 1) |
 | Nyx (copy) | `.../V1_L64_b1e-4_critic_E191/checkpoints/last.pt` | 101 | `fcb1a2e69324` | yes | kept (identical to `final.pt`) |
-| **Delphi** | `models/vaegmm/V1_L64_b1e-4_critic_E191_epoch150/checkpoints/final.pt` | 150 | `1db44d81e03c` | yes | **live** (Try it model 2); no paper evaluation yet (REP-1) |
+| **Delphi** | `models/vaegmm/V1_L64_b1e-4_critic_E191_epoch150/checkpoints/final.pt` | 150 | `1db44d81e03c` | yes | **live** (Try it model 2); paper evaluation done 2026-11-27 (EXP-025) |
 | all-data run | `models/vaegmm/V1_L64_b1e-4_critic/` | 7 | — | records only | kept: stopped at epoch 7 when the scope was cut to encounter 191 |
 
 Lineage: each folder's `train_info.json` records the configuration and its hash, the dataset hash, software versions, device and git commit; `train_log.jsonl` holds every epoch. Training: Colab A100, batch 5,772, learning rates scaled linearly ([D-004](DECISIONS.md#d-004)). Nyx is the epoch-101 checkpoint of the run that later resumed to 150 ([D-007](DECISIONS.md#d-007)).

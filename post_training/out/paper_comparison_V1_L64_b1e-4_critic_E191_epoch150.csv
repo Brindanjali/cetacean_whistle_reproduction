@@ -1,0 +1,97 @@
+table,row,metric,ours,paper
+1,L=64,MSE,5.417012808950121,0.5778
+1,L=64,PSNR_dB,34.80660076784078,44.5274
+1,L=64,SSIM,0.9934001937665833,0.9861
+1,L=64,KL_latent,757.7033010622482,43.1929
+3,condition 1 (L 30-40),N,8988,30593
+3,condition 1 (L 30-40),W1_ms,1.803293279928794,1.0075
+3,condition 1 (L 30-40),FFD,2.0217052756206613,0.0899
+3,condition 1 (L 30-40),recall_pct,96.01691143747219,98.94
+3,condition 1 (L 30-40),precision_pct,75.16688918558077,83.95
+3,condition 1 (L 30-40),F1_pct,84.32214398434448,90.83
+3,condition 2 (L 75-80),N,2018,8202
+3,condition 2 (L 75-80),W1_ms,0.4836471754212091,1.7744
+3,condition 2 (L 75-80),FFD,15.061684979761594,1.4866
+3,condition 2 (L 75-80),recall_pct,96.6798810703667,99.33
+3,condition 2 (L 75-80),precision_pct,74.92566897918731,83.19
+3,condition 2 (L 75-80),F1_pct,84.42389845705715,90.54
+3,condition 3 (L 88-108),N,4416,21409
+3,condition 3 (L 88-108),W1_ms,1.9830917874396135,1.2985
+3,condition 3 (L 88-108),FFD,9.553354152636757,0.7703
+3,condition 3 (L 88-108),recall_pct,96.875,99.18
+3,condition 3 (L 88-108),precision_pct,76.53985507246377,87.31
+3,condition 3 (L 88-108),F1_pct,85.51514755810918,92.87
+3,condition 4 (f_min 34-55),N,8720,33972
+3,condition 4 (f_min 34-55),W1_Hz,61.08553669321428,5.9156
+3,condition 4 (f_min 34-55),FFD,13.472022117108281,1.1677
+3,condition 4 (f_min 34-55),recall_pct,93.49770642201834,98.71
+3,condition 4 (f_min 34-55),precision_pct,78.61238532110092,88.07
+3,condition 4 (f_min 34-55),F1_pct,85.41135094921853,93.09
+3,condition 5 (f_min 40-53),N,5370,21056
+3,condition 5 (f_min 40-53),W1_Hz,45.437782569970494,3.4688
+3,condition 5 (f_min 40-53),FFD,7.306354821078003,1.2994
+3,condition 5 (f_min 40-53),recall_pct,92.75605214152701,98.81
+3,condition 5 (f_min 40-53),precision_pct,79.72067039106146,89.03
+3,condition 5 (f_min 40-53),F1_pct,85.74576964324706,93.66
+3,condition 6 (f_max 62-66),N,9454,28503
+3,condition 6 (f_max 62-66),W1_Hz,4.747990298931912,3.3562
+3,condition 6 (f_max 62-66),FFD,4.8319685540832324,0.2531
+3,condition 6 (f_max 62-66),recall_pct,84.70488682039348,99.07
+3,condition 6 (f_max 62-66),precision_pct,74.45525703405966,85.37
+3,condition 6 (f_max 62-66),F1_pct,79.25004297584232,91.71
+3,condition 7 (f_max 68-71),N,20381,58918
+3,condition 7 (f_max 68-71),W1_Hz,7.33276623328671,1.4625
+3,condition 7 (f_max 68-71),FFD,2.8564084333086157,0.0599
+3,condition 7 (f_max 68-71),recall_pct,90.88857269025073,99.01
+3,condition 7 (f_max 68-71),precision_pct,78.25916294588097,85.08
+3,condition 7 (f_max 68-71),F1_pct,84.10238060042346,91.51
+3,condition 8 (df 10-20),N,16337,59624
+3,condition 8 (df 10-20),W1_Hz,26.68017350730562,2.8969
+3,condition 8 (df 10-20),FFD,1.0330751753192544,0.1105
+3,condition 8 (df 10-20),recall_pct,93.07706433249679,99.04
+3,condition 8 (df 10-20),precision_pct,78.5517536879476,84.96
+3,condition 8 (df 10-20),F1_pct,85.19975509675317,91.46
+3,condition 9 (df 20-30),N,5575,22851
+3,condition 9 (df 20-30),W1_Hz,29.965846698914945,2.9156
+3,condition 9 (df 20-30),FFD,10.067376159994183,0.3384
+3,condition 9 (df 20-30),recall_pct,94.20627802690584,98.69
+3,condition 9 (df 20-30),precision_pct,78.7085201793722,84.93
+3,condition 9 (df 20-30),F1_pct,85.7628937722122,91.29
+3,condition 10 (f_start 40-55),N,3745,19354
+3,condition 10 (f_start 40-55),W1_Hz,57.63547824762851,3.9938
+3,condition 10 (f_start 40-55),FFD,4.968164385938053,0.6993
+3,condition 10 (f_start 40-55),recall_pct,93.45794392523365,98.71
+3,condition 10 (f_start 40-55),precision_pct,75.70093457943925,84.55
+3,condition 10 (f_start 40-55),F1_pct,83.64744152424227,91.08
+3,condition 11 (f_start 70-80),N,7930,27062
+3,condition 11 (f_start 70-80),W1_Hz,28.489769512287154,3.5906
+3,condition 11 (f_start 70-80),FFD,1.548957464300429,0.2902
+3,condition 11 (f_start 70-80),recall_pct,93.65699873896595,98.74
+3,condition 11 (f_start 70-80),precision_pct,76.91046658259772,86.04
+3,condition 11 (f_start 70-80),F1_pct,84.46163467528514,91.95
+3,condition 12 (f_end 40-55),N,3026,10712
+3,condition 12 (f_end 40-55),W1_Hz,43.16931060821271,5.6063
+3,condition 12 (f_end 40-55),FFD,5.4167902861790935,1.1084
+3,condition 12 (f_end 40-55),recall_pct,92.59748843357568,98.17
+3,condition 12 (f_end 40-55),precision_pct,78.22207534699272,90.84
+3,condition 12 (f_end 40-55),F1_pct,84.80489654566593,94.36
+3,condition 13 (f_end 70-80),N,10715,48642
+3,condition 13 (f_end 70-80),W1_Hz,12.836633505133674,3.5156
+3,condition 13 (f_end 70-80),FFD,1.2314956743075527,0.1313
+3,condition 13 (f_end 70-80),recall_pct,93.73775081661223,98.93
+3,condition 13 (f_end 70-80),precision_pct,78.81474568362108,82.66
+3,condition 13 (f_end 70-80),F1_pct,85.63094874209425,90.07
+6,VAE-GMM L=64 decoder only,decoder_params,368097,368000.0
+6,VAE-GMM L=64 decoder only,decoder_FLOPs,557318144,557000000.0
+6,VAE-GMM L=64 decoder only,B1_latency_ms,1.311100000202714,1.7
+6,VAE-GMM L=64 GMM sampling + decoder,B1_latency_ms,2.0714659997611307,1.7
+6,VAE-GMM L=64 decoder only,B16_per_image_ms,1.8385277500033226,0.11
+6,VAE-GMM L=64 GMM sampling + decoder,B16_per_image_ms,1.9099430312462573,0.11
+6,VAE-GMM L=64 decoder only,B32_per_image_ms,0.564441093753203,0.054
+6,VAE-GMM L=64 GMM sampling + decoder,B32_per_image_ms,0.4650761406173842,0.054
+6,"VAE-GMM L=64 decoder only, warm",B1_latency_ms,0.41159749998769257,1.7
+6,"VAE-GMM L=64 GMM sampling + decoder, warm",B1_latency_ms,0.6763954998314148,1.7
+6,"VAE-GMM L=64 decoder only, warm",B16_per_image_ms,0.11423859371689105,0.11
+6,"VAE-GMM L=64 GMM sampling + decoder, warm",B16_per_image_ms,0.134765624998181,0.11
+6,"VAE-GMM L=64 decoder only, warm",B32_per_image_ms,0.11036362500362884,0.054
+6,"VAE-GMM L=64 GMM sampling + decoder, warm",B32_per_image_ms,0.11685234374681386,0.054

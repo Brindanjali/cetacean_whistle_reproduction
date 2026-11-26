@@ -8,7 +8,7 @@ The single place for what is planned, what is waiting, and what has been done in
 
 | Area | Where it stands | Next |
 |---|---|---|
-| Whistle model (VAE-GMM) | Complete. Dataset built; model V1 trained to epoch 150; Gaussian mixtures for epochs 101 and 150; paper evaluation done on epoch 101 | Nothing required (epoch-150 evaluation is optional: REP-1) |
+| Whistle model (VAE-GMM) | Complete. Dataset built; model V1 trained to epoch 150; Gaussian mixtures for epochs 101 and 150; paper evaluation done on both checkpoints (epoch 150: REP-1, 2026-11-27) | Nothing required |
 | Message system (WhistleCode) | v1 built and tested (campaign v1). Second round: R0, R1 and R2 (drift correction, adopted) done | **WC-R3** shape covertness |
 | Detector paper | A draft exists (`docs/private/Mentor_Review_1.pdf`, never in git); its to-do file is older than the draft | DET-1, DET-2 |
 | Web page and deployment | The page retold as Falsetto (WEB-5, done 2026-11-26): the film drawn from real records in WebGL (Listen, Learn, Speak, Hide, Hear), then Encode, Decode and Record; Try it (Nyx and Delphi) on `model.html`. Self-hosted with Docker and Tailscale, live from `main` (`f5b794e`); `/healthz` and a Docker healthcheck. Audit bugs BUG-2 to BUG-7 and BUG-13 fixed | **WEB-6** done and merged into `main` (`9f91c3b`, 2026-11-27): Listen redrawn, Learn and Speak bolder, Try it back on the page; in v1.0.0; Try it back on the page after Decode (D-028); WEB-4 (hide the API docs, list the routes); WEB-1 static examples are out of date |
@@ -101,7 +101,7 @@ The plan, pass marks and rules are frozen in `whistlecode/PLAN.md` section 8.7.
 
 ### Whistle model
 
-- [ ] **REP-1** Optional: paper evaluation (Tables 1, 3, 6; Figs. 7-10, 12) for the epoch-150 model, in its own folder so model 1 is untouched.
+- [x] **REP-1** Optional: paper evaluation (Tables 1, 3, 6; Figs. 7-10, 12) for the epoch-150 model, in its own folder so model 1 is untouched. Done 2026-11-27 (EXP-025).
 
 ### Web page and deployment
 
@@ -144,6 +144,9 @@ Newest first. Older history is grouped by stage. Commit hashes are given where t
 
 ### 2026-11-27
 
+- **Whistle model (REP-1 done, EXP-025)**: the paper evaluation run on the epoch-150 checkpoint (Delphi) only, at your request; nothing was rerun on epoch 101. `vae-eval recon`, `conditional`, `figures` and `cost` with `--experiment V1_L64_b1e-4_critic_E191_epoch150`, then `table6_warm.py` and `compare_paper.py` with `--run-id` (about 15 minutes on the RTX 5060). Table 1: MSE 5.42, PSNR 34.81 dB, SSIM 0.9934, KL 757.7 against the paper's 0.578 / 44.53 / 0.9861 / 43.19, so only SSIM is reproduced; Table 3: recall 84.7-96.9 %, precision 74.5-79.7 %, F1 79.3-85.8 % (paper F1 90.1-94.4 %); Fig. 12 diagonal is the row minimum in 13 of 13 rows; decoder 368,097 parameters, 557.3 MFLOPs; warm B = 16 0.114 ms per image (paper 0.11). New: `models/vaegmm/V1_L64_b1e-4_critic_E191_epoch150/eval/`, `.../figures/`, `post_training/out/paper_comparison_V1_L64_b1e-4_critic_E191_epoch150.csv`, `post_training/out/table6_warm_V1_L64_b1e-4_critic_E191_epoch150.json`.
+- **Whistle model (scripts)**: `post_training/compare_paper.py` and `post_training/table6_warm.py` take `--run-id` [DECISION: outputs for another run are named after it, as `gmm_check.py` does, so epoch 101's files stay as they are]; `table6_warm.py` now refuses to overwrite an earlier result. `compare_paper.py` without options rewrites epoch 101's CSV byte for byte.
+- **Records (REP-1)**: `project/EXPERIMENTS.md` (EXP-025 moved from Planned and filled in), `project/TRACEABILITY.md` (R-08 and four Delphi rows), `project/MODELS.md`, `docs/TECHNICAL_REFERENCE.md` (an epoch-150 evaluation record, commands), `README.md` (status row, one epoch-150 paragraph, the limitation line; the headline tables stay on epoch 101 per D-007 [DECISION]), `CHANGELOG.md` [Unreleased].
 - **Repository (WEB-6 merged)**: you committed WEB-6 on `web-scene-v2` (`0abb2b3`, 19 files), merged it into `main` (`9f91c3b`) and pushed; YOU-15 ticked. The live page (Docker, serving this folder) serves it: `/healthz` ok, Try it at `#try`, the new scene, `model.html` leading to `#try`. CI run 45907128190 on `9f91c3b` started; its result is not yet in. Records: `project/RELEASES.md` (what is live), D-027 and D-028 status in `project/DECISIONS.md`, `web/PLAN-SCENE.md` status, `docs/INDEX.md` row.
 - **Web (WEB-6, Hide and Hear left as they are)**: you chose to leave Hide and Hear as in WEB-5, so step S3 is dropped. Step S4 (smoothing the camera between beats) is left out too: you asked for small changes only, and the camera keeps its WEB-5 moves apart from Listen's new opening. Recorded in `web/PLAN-SCENE.md` (steps table and "Progress") and a dated update on D-027 in `project/DECISIONS.md`. Next: the checks (S5), then the commit.
 - **Web (WEB-6 done)**: `python tools/repo.py check` passes (lint, configs, secrets, links, checksums, both test suites); the Definition of Done walked (no page test suite exists: the page was checked in Chrome and Edge, see S5). WEB-6 ticked; the commit and the merge into `main` are YOU-15. `web/gl.js` header comment updated.

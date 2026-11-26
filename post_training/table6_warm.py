@@ -6,10 +6,13 @@ batch against 1.9 ms back to back. [DECISION] This script repeats the measuremen
 exclusion, same two modes) and reports it next to the protocol result; it is a supplement, not a replacement.
 Writes post_training/out/table6_warm.json.
 
-    python post_training/table6_warm.py
+    python post_training/table6_warm.py [--run-id V1_L64_b1e-4_critic_E191_epoch150]
+
+--run-id times another run (default: V1's). Its output is named table6_warm_<run_id>.json, so V1's stays as it is.
 """
 from __future__ import annotations
 
+import argparse
 import json
 import sys
 import time
@@ -32,15 +35,25 @@ RUN_ID = EXPERIMENTS["V1"]["run_id"]
 OUT = ROOT / "post_training" / "out"
 
 
+def out_name(run_id: str) -> str:
+    return "table6_warm.json" if run_id == RUN_ID else f"table6_warm_{run_id}.json"
+
+
 def main() -> int:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--run-id", default=RUN_ID, help="another run (default: V1's main run)")
+    run_id = ap.parse_args().run_id
+    out = OUT / out_name(run_id)
+    if out.exists():
+        raise FileExistsError(f"{out} exists; move it aside to time again")
     cfg = load_vaegmm_config()
     K = main_k(cfg)
     dev = resolve_device(cfg["train"]["device"])
-    vae, _ = load_trained_vae(resolve(cfg["paths"]["runs_dir"]) / RUN_ID, dev)
-    gmm = load_gmm(cfg, RUN_ID, K)
+    vae, _ = load_trained_vae(resolve(cfg["paths"]["runs_dir"]) / run_id, dev)
+    gmm = load_gmm(cfg, run_id, K)
     g = torch.Generator(device=dev)
     g.manual_seed(0)
-    res = {"run_id": RUN_ID, "K": K, "device": str(dev),
+    res = {"run_id": run_id, "K": K, "device": str(dev),
            "gpu_name": torch.cuda.get_device_name(dev) if dev.type == "cuda" else None,
            "protocol": "250 back-to-back trials (no pause), first 50 excluded; per-image latency = batch time / B",
            "software": software_versions()}
@@ -64,8 +77,8 @@ def main() -> int:
             res[f"B{B}_{what}_per_image_s"] = float(kept.mean()) / B
             print(f"B {B:2d} {what:26s} {1e3 * kept.mean():7.3f} ms per batch, {1e3 * kept.mean() / B:6.3f} ms per image", flush=True)
     OUT.mkdir(parents=True, exist_ok=True)
-    (OUT / "table6_warm.json").write_text(json.dumps(res, indent=2), encoding="utf-8")
-    print("wrote", (OUT / "table6_warm.json").relative_to(ROOT))
+    out.write_text(json.dumps(res, indent=2), encoding="utf-8")
+    print("wrote", out.relative_to(ROOT))
     return 0
 
 

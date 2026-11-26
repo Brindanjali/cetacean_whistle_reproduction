@@ -333,10 +333,10 @@ learning rates scaled linearly, lr × B / 896, K = 3,000 instead of 10,000, and 
   | Model (page name) | Folder | Checkpoint | GMM K = 3,000 | Used for |
   |---|---|---|---|---|
   | `model1` (Nyx) | `models/vaegmm/V1_L64_b1e-4_critic_E191/` | epoch 101 (`fcb1a2e6…`) | 111 iterations, mean ll 221.71, `gmm.npz` `d8087ed2…`; check passed (FFD 4.63, NN ratio 1.02) | paper evaluation, WhistleCode, Try it (default) |
-  | `model2` (Delphi) | `models/vaegmm/V1_L64_b1e-4_critic_E191_epoch150/` | epoch 150 (`1db44d81…`) | 150 iterations, mean ll 211.04, `gmm.npz` `4354547e…`; check passed (FFD 4.47, NN ratio 1.04) | Try it |
+  | `model2` (Delphi) | `models/vaegmm/V1_L64_b1e-4_critic_E191_epoch150/` | epoch 150 (`1db44d81…`) | 150 iterations, mean ll 211.04, `gmm.npz` `4354547e…`; check passed (FFD 4.47, NN ratio 1.04) | paper evaluation (EXP-025), Try it |
 
-  The paper evaluation (Tables 1, 3, 6; Figs. 7–10, 12) and the WhistleCode campaign are frozen on epoch 101. To evaluate
-  epoch 150, work in the `_epoch150` folder (`--experiment V1_L64_b1e-4_critic_E191_epoch150`). Refreshing the main
+  The paper evaluation (Tables 1, 3, 6; Figs. 7–10, 12) and the WhistleCode campaign are frozen on epoch 101; epoch 150
+  was evaluated as well, in its own folder (below). To evaluate epoch 150 further, work in the `_epoch150` folder (`--experiment V1_L64_b1e-4_critic_E191_epoch150`). Refreshing the main
   folder instead would silently turn `model1` into epoch 150, and stale outputs block it: `encode` reuses an existing
   `latents_mu.npy` and `fit_gmm` refuses an existing `gmm_K3000/gmm.npz`.
 * **Fallback and earlier runs:** `V1_L64_b1e-4_critic_E191_B896` (never started) uses the paper's batch and learning
@@ -364,6 +364,20 @@ Side by side with the paper: `post_training/out/paper_comparison.csv` (`python p
 * **Not computed**, by the owner's decision (2026-11-09): Fig. 11 (no GMM fits at other K) and Tables 2, 4 and 5 (FID and
   precision/recall need the Inception-V3 / VGG-16 weights, which are not downloaded).
 
+### Evaluation record (epoch 150, Delphi)
+
+Side by side with the paper: `post_training/out/paper_comparison_V1_L64_b1e-4_critic_E191_epoch150.csv`
+(`python post_training/compare_paper.py --run-id V1_L64_b1e-4_critic_E191_epoch150`), EXP-025, 2026-11-27.
+
+* **Table 1** (L = 64): MSE 5.42, PSNR 34.81 dB, SSIM 0.9934, KL 757.7, against the paper's 0.5778, 44.53 dB, 0.9861,
+  43.19; only SSIM is reproduced.
+* **Table 3 / Fig. 12:** every diagonal entry of Fig. 12 is its row's minimum (13 of 13); recall 84.7–96.9 %, precision
+  74.5–79.7 %, F1 79.3–85.8 %, against the paper's 98.2–99.3 %, 82.7–90.8 %, 90.1–94.4 %.
+* **Figs. 7–10** are made (`.../E191_epoch150/figures/`).
+* **Table 6:** the same decoder (368,097 parameters, 557.3 MFLOPs). Paper protocol: B = 1 1.31 ms (paper 1.7 ms); warm
+  GPU (`table6_warm.py --run-id`): B = 16 0.114 ms and B = 32 0.110 ms per image (paper 0.11 and 0.054). The web
+  server's container was running during the timing.
+
 ### Commands
 
 Every run's actual values are in its `train_info.json` (`spec`, `deviations`, `runtime`).
@@ -378,6 +392,9 @@ python whistle.py fit-gmm --experiment V1 --K 3000        # encode unrotated mea
 python post_training/gmm_check.py                         # post-fit check of that fit (--tag for the ridge-sensitivity fits)
 python whistle.py fit-gmm --experiment V1_L64_b1e-4_critic_E191_epoch150             # model 2's own GMM
 python post_training/gmm_check.py --run-id V1_L64_b1e-4_critic_E191_epoch150
+python whistle.py vae-eval recon --experiment V1_L64_b1e-4_critic_E191_epoch150   # model 2's Table 1 (also conditional, cost, figures)
+python post_training/table6_warm.py --run-id V1_L64_b1e-4_critic_E191_epoch150
+python post_training/compare_paper.py --run-id V1_L64_b1e-4_critic_E191_epoch150
 python whistle.py vae-eval recon --experiment V1          # Table 1
 python whistle.py fetch-eval-weights --approved           # Inception-V3 + VGG-16 weights (only after approval)
 python whistle.py vae-eval gen --experiment V1 --K 10000  # Table 2 (FID1, FID2, P/R/F1); --source prior for Table 4 (1)
@@ -463,6 +480,7 @@ Observed, not hidden.
 * Single channel (index 0, arbitrary); channel fusion is not implemented.
 * The VAE is trained on one encounter with about 46× fewer optimiser updates than the paper (1,650 vs ≈ 76,800); Table 1
   reproduces only SSIM, and Table 3 trails the paper in value while matching its structure.
-* The paper evaluation and WhistleCode use epoch 101; epoch 150 has its own GMM but no paper evaluation yet.
+* WhistleCode uses epoch 101. The paper evaluation was run on both checkpoints (epoch 150 on 2026-11-27); epoch 150
+  has not been used for messages.
 * WhistleCode is tested in simulation only: drift correction (WC-R2) is measured on encounter-214 development noise only, shape covertness fails (discriminator AUC 0.944),
   and no message has been played through a speaker and recorded ([`whistlecode/paper/RESULTS.md`](../whistlecode/paper/RESULTS.md)).

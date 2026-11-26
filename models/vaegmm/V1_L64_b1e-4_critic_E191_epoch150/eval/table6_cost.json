@@ -1,0 +1,42 @@
+{
+  "run_id": "V1_L64_b1e-4_critic_E191_epoch150",
+  "decoder_params": 368097,
+  "decoder_table6_flops": 557318144,
+  "device": "cuda",
+  "gpu_name": "NVIDIA GeForce RTX 5060 Laptop GPU",
+  "torch_flags": {
+    "cudnn_benchmark": false,
+    "cudnn_deterministic": false,
+    "deterministic_algorithms": false,
+    "matmul_tf32": false
+  },
+  "software": {
+    "python": "3.11.0",
+    "platform": "Windows-10-10.0.26300-SP0",
+    "numpy": "2.4.4",
+    "scipy": "1.17.1",
+    "soundfile": "0.13.1",
+    "libsndfile": "1.2.2",
+    "git_commit": "51daac1285afb5107b57e926e3c1f06e966a09b6",
+    "git_uncommitted_code_changes": false,
+    "torch": "2.14.0+cu130",
+    "cuda_available": true,
+    "tf32_conv_allowed": true,
+    "tf32_matmul_allowed": false,
+    "deterministic_algorithms": false,
+    "cuda_device": "NVIDIA GeForce RTX 5060 Laptop GPU"
+  },
+  "protocol": "250 trials, first 50 excluded, 0.5 s between trials; per-image latency = batch time / B",
+  "B1_decoder_only_batch_s": 0.001311100000202714,
+  "B1_decoder_only_per_image_s": 0.001311100000202714,
+  "B1_gmm_sampling_plus_decoder_batch_s": 0.002071465999761131,
+  "B1_gmm_sampling_plus_decoder_per_image_s": 0.002071465999761131,
+  "B16_decoder_only_batch_s": 0.029416444000053162,
+  "B16_decoder_only_per_image_s": 0.0018385277500033226,
+  "B16_gmm_sampling_plus_decoder_batch_s": 0.030559088499940115,
+  "B16_gmm_sampling_plus_decoder_per_image_s": 0.0019099430312462572,
+  "B32_decoder_only_batch_s": 0.018062115000102495,
+  "B32_decoder_only_per_image_s": 0.000564441093753203,
+  "B32_gmm_sampling_plus_decoder_batch_s": 0.014882436499756296,
+  "B32_gmm_sampling_plus_decoder_per_image_s": 0.00046507614061738425
+}

@@ -5,9 +5,13 @@ and prints both tables. The paper's Table 3 uses K = 10,000 and 228,673 images (
 63,490 images of encounter 191, so N differs by design. Our primary Table 3 weights are eq. 10 (configs/vaegmm.toml).
 
     python post_training/compare_paper.py
+    python post_training/compare_paper.py --run-id V1_L64_b1e-4_critic_E191_epoch150
+
+--run-id compares another run (default: V1's); its CSV is named paper_comparison_<run_id>.csv, so V1's stays as it is.
 """
 from __future__ import annotations
 
+import argparse
 import csv
 import json
 import sys
@@ -36,10 +40,17 @@ PAPER_T6 = {"decoder_params": 368e3, "decoder_FLOPs": 557e6, "B1_latency_ms": 1.
             "B32_per_image_ms": 0.054}
 
 
-def main() -> int:
-    cfg = load_vaegmm_config()
-    K = main_k(cfg)
-    ev = resolve(cfg["paths"]["runs_dir"]) / RUN_ID / "eval"
+def out_name(run_id: str) -> str:
+    return "paper_comparison.csv" if run_id == RUN_ID else f"paper_comparison_{run_id}.csv"
+
+
+def warm_name(run_id: str) -> str:
+    return "table6_warm.json" if run_id == RUN_ID else f"table6_warm_{run_id}.json"
+
+
+def compare(cfg, run_id: str, K: int) -> list[dict]:
+    """The run's rows next to the paper's, printed as tables."""
+    ev = resolve(cfg["paths"]["runs_dir"]) / run_id / "eval"
     rows = []
     t1 = json.loads((ev / "table1_recon.json").read_text(encoding="utf-8"))
     print("Table 1, L = 64          ours        paper")
@@ -79,7 +90,7 @@ def main() -> int:
             if b is not None:
                 rows.append({"table": "6", "row": "VAE-GMM L=64 GMM sampling + decoder", "metric": key, "ours": b,
                              "paper": PAPER_T6[key]})
-        wp = OUT / "table6_warm.json"
+        wp = OUT / warm_name(run_id)
         if wp.exists():
             w6 = json.loads(wp.read_text(encoding="utf-8"))
             print("  warm GPU, no pause (post_training/table6_warm.py):")
@@ -89,12 +100,24 @@ def main() -> int:
                 print(f"  {key:22s} {a:12.4g}   {b:22.4g}   {PAPER_T6[key]:.4g}")
                 for row, v in (("decoder only, warm", a), ("GMM sampling + decoder, warm", b)):
                     rows.append({"table": "6", "row": f"VAE-GMM L=64 {row}", "metric": key, "ours": v, "paper": PAPER_T6[key]})
+    return rows
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--run-id", default=RUN_ID, help="the run to compare (default: V1's main run)")
+    args = ap.parse_args()
+    cfg = load_vaegmm_config()
+    K = main_k(cfg)
+    print(f"run {args.run_id}")
+    rows = compare(cfg, args.run_id, K)
     OUT.mkdir(parents=True, exist_ok=True)
-    with open(OUT / "paper_comparison.csv", "w", newline="", encoding="utf-8") as f:
+    out = OUT / out_name(args.run_id)
+    with open(out, "w", newline="", encoding="utf-8") as f:
         wr = csv.DictWriter(f, fieldnames=["table", "row", "metric", "ours", "paper"])
         wr.writeheader()
         wr.writerows(rows)
-    print("wrote", (OUT / "paper_comparison.csv").relative_to(ROOT))
+    print("wrote", out.relative_to(ROOT))
     return 0
 
 

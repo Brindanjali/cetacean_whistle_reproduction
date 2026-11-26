@@ -24,6 +24,7 @@ Every training run, fit, gate, benchmark and test campaign: the question it answ
 | EXP-009 | 2026-11-18 | Resume V1 from epoch 101 on another Colab GPU | Colab notebook, resume | none kept | **diverged twice; discarded** ([INC-001](INCIDENTS.md#inc-001)) | — |
 | EXP-010 | 2026-11-20 | Resume V1 to epoch 150 on a Colab A100 | notebook with pre-flight check and rollback guard | `models/vaegmm/V1_L64_b1e-4_critic_E191_epoch150/` | completed at epoch 150; **Delphi** (`1db44d81`) | `65ab4c9` |
 | EXP-011 | 2026-11-20 | Fit the GMM on Delphi's latents | `fit-gmm --experiment V1_L64_b1e-4_critic_E191_epoch150` | `.../E191_epoch150/gmm_K3000/`, `post_training/out/gmm_check_V1_..._epoch150_K3000.json` | converged in 150 iterations; check passed | `cd0797d` |
+| EXP-025 | 2026-11-27 | How close is Delphi (epoch 150) to the paper? (REP-1) | `vae-eval recon`, `conditional`, `figures`, `cost` with `--experiment V1_L64_b1e-4_critic_E191_epoch150`; `post_training/table6_warm.py --run-id`, `compare_paper.py --run-id`; Table 3 seed 20261025, figures 7, cost 0; RTX 5060; code `51daac1` (the two scripts' new `--run-id` uncommitted) | `.../E191_epoch150/eval/`, `.../E191_epoch150/figures/`, `post_training/out/paper_comparison_V1_L64_b1e-4_critic_E191_epoch150.csv`, `table6_warm_V1_L64_b1e-4_critic_E191_epoch150.json` | Table 1: MSE 5.42, PSNR 34.81 dB, SSIM 0.9934 (paper 0.9861), KL 757.7: only SSIM reproduced; Table 3: recall 84.7-96.9 %, precision 74.5-79.7 %, F1 79.3-85.8 % (paper 90.1-94.4 %); Fig. 12 diagonal the row minimum in 13 of 13 rows; decoder size identical, warm B = 16 0.114 ms per image (paper 0.11) | — |
 | EXP-012 | 2026-10-28 to 10-31 | Does a 5-24 kHz detector work on another public benchmark? | `mod_detector_5_24/` (Colab training; `dclde2011.py`) | `mod_detector_5_24/models/detector/ridgenet-5-24/`; scores on Google Drive (DET-2) | trained; DCLDE 2011 comparison with Silbido reported in the detector draft | `29b444e`, `f388805` |
 
 ## WhistleCode
@@ -47,7 +48,6 @@ Every training run, fit, gate, benchmark and test campaign: the question it answ
 | EXP-022 | WC-R4 | Matched-filter modem, listening test, whistle-against-noise classifier, species likelihood | 214 (develop), 276 (campaign) | listening test needs YOU-5 |
 | EXP-023 | WC-R5 | In-air test between two laptops | room recording | pass: ≥ 18 / 20 exact, no wrong text |
 | EXP-024 | WC-R6 | **Campaign v2**, once, overnight | 276 (and 308 if YOU-4) | seed 20261205; pass marks v2 frozen in PLAN.md 8.7 |
-| EXP-025 | REP-1 | Paper evaluation of Delphi (epoch 150) | 191 | in its own folder; optional |
 
 Outputs under `whistlecode/outputs/` are not in git (5.9 GB). What matters for the paper is copied into `whistlecode/paper/`.
 
