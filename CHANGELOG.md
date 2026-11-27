@@ -4,6 +4,8 @@ Notable changes to this project, release by release. The format follows [Keep a 
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-11-27
+
 ### Added
 
 - **Real frequency wobble in the sender** (WC-R3, D-032): each drawn data shape gets the fine frequency wander of a real encounter-191 whistle before the sender's self-check, because the whistle model's shapes were too smooth. On encounter 214 the shape discriminator's score fell from 0.914 to 0.872, with 49 of 50 messages still exact at 10 dB. The receiver and message format are unchanged; `[realism] wobble_scale = 0` gives campaign v1's sender. New command `python whistlecode/whistlecode.py build-wobble` (also run by `build-realism`).
@@ -19,7 +21,7 @@ Notable changes to this project, release by release. The format follows [Keep a 
 
 ### Changed
 
-- **The film's 3D scene, redrawn (in progress, WEB-6, `web/PLAN-SCENE.md`)**: fine lines over the page's own water, one amber accent, no glow. Listen is redrawn: the training image's pixel grid as a floor of fine dots, the contour traced on it, a hairline per frame rising to the image's level there, and the contour as one amber line along their tops; seen from above, that line is the whistle's shape. Smooth curves instead of 27 straight segments; labels in the page's own style with real spans (time 0.37 s, pitch 2.6–7.4 kHz) instead of arrows; the "loudness" label is gone (the image's height is not loudness). Learn and Speak keep their design and are bolder: the cloud's 63,490 points are crisp and stronger, and the lattice's 64 strokes are solid and thicker, with the followed shape in amber. The scene asks the browser for the faster graphics chip. Hide and Hear draw as before.
+- **The film's 3D scene, redrawn (WEB-6, `web/PLAN-SCENE.md`)**: fine lines over the page's own water, one amber accent, no glow. Listen is redrawn: the training image's pixel grid as a floor of fine dots, the contour traced on it, a hairline per frame rising to the image's level there, and the contour as one amber line along their tops; seen from above, that line is the whistle's shape. Smooth curves instead of 27 straight segments; labels in the page's own style with real spans (time 0.37 s, pitch 2.6–7.4 kHz) instead of arrows; the "loudness" label is gone (the image's height is not loudness). Learn and Speak keep their design and are bolder: the cloud's 63,490 points are crisp and stronger, and the lattice's 64 strokes are solid and thicker, with the followed shape in amber. The scene asks the browser for the faster graphics chip. Hide and Hear draw as before.
 - **The film's words, final pass** (WEB-5 P4): each beat says only what its record holds. Speak no longer calls a whistle "a letter" (a whistle carries six bits, a letter five); Hide's "about a third" now counts whistles only, not clicks; Learn says the whistles come from one encounter; Listen says where its whistle was recorded (off Hawai‘i, 2017); the line before the beats asks whether a whistle that can carry a name can carry a message.
 - **The page tells Falsetto's story first**: the header reads "Falsetto"; Encode and Decode follow the film directly, brought in by the tide; the film's last line leads to Encode; the footer states the limits (simulation only; the coded shapes can still be told from real ones). The tide and the sea moved from `lab.js` to `web/water.js`, unchanged.
 - **Data-whistle share reconciled** (WC-R7): one in four rhythm-bank whistles can carry data, and about a third of a played message does. `TEST_PROTOCOL.md` is corrected, with a dated note, and so is its outdated line on epoch 150.
@@ -91,6 +93,7 @@ The first versioned release. It covers everything up to this date.
 
 - Unused imports and unused loop variables found by the new lint settings.
 
-[Unreleased]: https://github.com/anonymus-k-dot/cetacean_whistle_reproduction/compare/v0.10.0...HEAD
+[Unreleased]: https://github.com/anonymus-k-dot/cetacean_whistle_reproduction/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/anonymus-k-dot/cetacean_whistle_reproduction/compare/v0.10.0...v1.0.0
 [0.10.0]: https://github.com/anonymus-k-dot/cetacean_whistle_reproduction/compare/v0.9.0...v0.10.0
 [0.9.0]: https://github.com/anonymus-k-dot/cetacean_whistle_reproduction/releases/tag/v0.9.0

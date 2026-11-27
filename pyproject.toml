@@ -8,7 +8,7 @@
 
 [project]
 name = "falsetto"                      # temporary project name (D-024)
-version = "0.10.0"                     # the release version; bump it only through project/RELEASES.md
+version = "1.0.0"                     # the release version; bump it only through project/RELEASES.md
 description = "Short text messages hidden in synthetic false killer whale whistles, made by a VAE-GMM whistle model"
 readme = "README.md"
 requires-python = ">=3.11"

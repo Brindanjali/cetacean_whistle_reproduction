@@ -17,7 +17,8 @@ The single place for what is planned, what is waiting, and what has been done in
 
 ## Key dates
 
-- **29 Nov 2026**: end of Week 8, final evaluation and review: report, slides, code freeze (milestone M8 of the plan in `docs/course/Review-I-Guidelines.md`). The frozen code is released as **v1.0.0** (`project/RELEASES.md`).
+- **28 Nov 2026**: project expo. The code is frozen on 27 Nov at 12:30 as **v1.0.0** (`project/RELEASES.md`).
+- **29 Nov 2026**: end of Week 8, final evaluation and review: report and slides (milestone M8 of the plan in `docs/course/Review-I-Guidelines.md`), on the code frozen as v1.0.0 on 27 Nov.
 
 ## To do
 
@@ -41,7 +42,7 @@ Only you can do these.
 - [ ] **YOU-13** Optional: add your name (or your institution) to `README.md` "About this project" and `CITATION.cff`. A named author is the strongest single sign that a repository is legitimate; it stays a handle until you decide (D-023).
 - [x] **YOU-15** Commit WEB-6 on the branch `web-scene-v2` and merge it into `main` before the v1.0.0 freeze (29 Nov), with the commands Claude gave on 2026-11-27. Until then the live page shows the branch's working tree: the Docker container serves this folder as it is. Done 2026-11-27: committed `0abb2b3`, merged into `main` as `9f91c3b`, pushed (the first attempt skipped `git add`, so nothing was committed until the second).
 - [ ] **YOU-14** Choose the project's final name (Falsetto is temporary, D-024). Then rename the GitHub repository, whose name still says "reproduction": Settings → General → Repository name, or `gh repo rename <name>` (GitHub forwards the old address). Then `git remote set-url origin https://github.com/anonymus-k-dot/<name>.git`, and ask Claude to update the links and the places D-024 lists.
-- [ ] **YOU-16** After committing WC-R3, restart the server so the page's Encode uses the sender with real wobble (D-032): `docker compose -f deploy/docker-compose.yml restart app`, then the deployment checklist in `project/RELEASES.md`. `whistlecode/outputs/realism/wobble.npz` is already built on this laptop.
+- [x] **YOU-16** After committing WC-R3, restart the server so the page's Encode uses the sender with real wobble (D-032): `docker compose -f deploy/docker-compose.yml restart app`, then the deployment checklist in `project/RELEASES.md`. `whistlecode/outputs/realism/wobble.npz` is already built on this laptop.
 - [x] **YOU-9** Delete the three local branches already merged into `main`: `git branch -d preprocessing-v2c-multi-encounter vaegmm-colab-training vaegmm-training`. Optionally the two merged remote ones: `git push origin --delete preprocessing-v2c-multi-encounter vaegmm-training`.
 
 ### Bugs
@@ -145,6 +146,9 @@ Newest first. Older history is grouped by stage. Commit hashes are given where t
 
 ### 2026-11-27
 
+- **Expo backup (never in git)**: `docs/private/expo/`: "MEET AT DAWN" as WAV files (clean; encounter-276 sea noise at 15 and 10 dB, all three decoded exactly, the wrong key reads nothing: `decoded.txt`), spectrograms (`4_spectrograms.png`) and `RUN_SHEET.md` (the live demo steps, a fallback without the page, the numbers to quote with what failed, the limits).
+- **Release v1.0.0 prepared (code freeze for the expo on 2026-11-28)**: `CHANGELOG.md` [Unreleased] moved under `[1.0.0] - 2026-11-27` (WEB-6 line no longer says "in progress"), `pyproject.toml` version 1.0.0, `project/RELEASES.md` (plan row: freeze moved forward from 29 Nov; "What is live"). You commit, run `release-check 1.0.0`, tag and push.
+- **Deployment (YOU-16, on your go-ahead)**: the app restarted on `ac7dbbf` (WC-R3's sender), healthy, `/healthz` ok. Checked before the restart from the command line: five messages through 10 dB of encounter-214 noise all read exactly, and a wrong key reads nothing. On the live page: Encode "HELLO EXPO", through encounter-276 noise at 15 dB, Decode: exact match; no console errors.
 - **WhistleCode (WC-R3, EXP-021, D-032)**: shape covertness, on encounter 214 only. Against in-range real encounter-214 whistles (1,486, from 80 recordings): campaign v1's sender scores AUC 0.914 +/- 0.006 (shape features alone 0.905, loudness 0.674, harmonics 0.609). Its shapes are too smooth: curve-fit error alone separates them (median 16 Hz against 35 Hz real), and contour roughness and slope changes are low too. WC-R3a not the main cause: within each type, coded whistles vary as much in duration and span as real members of the cluster, but wobble less in every type (12-23 against 17-34 Hz). Variants: real encounter-191 wobble at scale 1.0 AUC 0.872 +/- 0.011, 0.6 0.888, 1.4 0.880; tau 0 (which also drops the recorded voices) 0.979; the epoch-150 voice 0.920, and its codebook failed verification (worst pair 2.3 % against 2 %). Wobble 1.0 met the adoption rule (AUC -0.042; 49 of 50 messages at 10 dB against 50, no wrong text) and is **adopted** ([D-032](project/DECISIONS.md#d-032)); the built sender reproduces the prototype whistle for whistle. Remaining clues: span and duration (coded whistles shorter and narrower).
   - **Sender** (`whistlecode/wcode/realism.py` `Wobble`, `build_wobble`, `load_wobble`; `sender.py` `_vary`; hook in `transmitter.py` `_shapes`; `whistlecode.py build-wobble`; `config.toml` `[realism] wobble_*`; checks in `wcode/config.py`). `whistlecode/outputs/realism/wobble.npz` built (18,208 real whistles, median 33 Hz).
   - **Study script** `whistlecode/experiments/shape_dev.py` (seed 20261127); epoch-150 codebook and library in `outputs/codebook_epoch150/`, `outputs/realism_epoch150/` (not used).

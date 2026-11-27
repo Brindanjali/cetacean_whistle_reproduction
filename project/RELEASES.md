@@ -20,7 +20,7 @@ One version for the whole repository, in [`pyproject.toml`](../pyproject.toml) (
 |---|---|---|
 | 0.9.0 | 2026-11-21 | First versioned release: the reproduction, WhistleCode campaign v1 and R0-R2, the page, and the engineering systems |
 | 0.10.0 | 2026-11-22 | Apache 2.0 licence; CI fixes and `ci-report`; eight vulnerable packages upgraded (also in the server image) |
-| 1.0.0 | 2026-11-29 | Code freeze for the final review (milestone M8), with the retold page (WEB-5, merged 2026-11-26) |
+| 1.0.0 | 2026-11-27 | Code freeze, moved forward from 2026-11-29 for the project expo on 2026-11-28: the retold page (WEB-5, WEB-6), the epoch-150 paper evaluation (REP-1) and WC-R3's real wobble |
 
 ## Release procedure
 
@@ -58,7 +58,7 @@ The page runs in Docker on the project laptop and reaches the internet through T
 | Field | Value |
 |---|---|
 | Address | `https://whistle.<tailnet>.ts.net` (Tailscale Funnel, project laptop) and http://localhost:8000 |
-| Version | Whatever is checked out: the container mounts the working tree read-only. Since 2026-11-27: `main` at `9f91c3b` (version number 0.10.0), with the film's scene redrawn and Try it back on the page as 08 after Decode (WEB-6, D-027, D-028); from 2026-11-26 the branch `web-scene-v2` was checked out here, so its uncommitted work was live while it was being made. Before that, from 2026-11-26: `main` at `f5b794e` (version number 0.10.0), with the retold page (WEB-5: the film drawn from real records in WebGL, Encode and Decode after it, Try it on `model.html`); first live from the branch `web-retelling` at `e983ad4` the same day, untagged (D-025). It becomes v1.0.0 at the freeze. Before: `1613c18` (2026-11-24), v0.10.0 plus the security fixes BUG-2 to BUG-7 and BUG-13 |
+| Version | Whatever is checked out: the container mounts the working tree read-only. Since 2026-11-27 (about 12:00): `main` at `ac7dbbf` and then the v1.0.0 release commit (version number 1.0.0 after the next restart), with WC-R3's sender (real wobble, D-032). Before that, from 2026-11-27: `main` at `9f91c3b` (version number 0.10.0), with the film's scene redrawn and Try it back on the page as 08 after Decode (WEB-6, D-027, D-028); from 2026-11-26 the branch `web-scene-v2` was checked out here, so its uncommitted work was live while it was being made. Before that, from 2026-11-26: `main` at `f5b794e` (version number 0.10.0), with the retold page (WEB-5: the film drawn from real records in WebGL, Encode and Decode after it, Try it on `model.html`); first live from the branch `web-retelling` at `e983ad4` the same day, untagged (D-025). It becomes v1.0.0 at the freeze. Before: `1613c18` (2026-11-24), v0.10.0 plus the security fixes BUG-2 to BUG-7 and BUG-13 |
 | Models | Try it: Nyx (epoch 101) and Delphi (epoch 150). Encode/Decode: Nyx, codebook `cd322a02` |
 | Access | Anyone with the address ("AllowFunnel": true) |
 | Uptime | Only while the laptop is on, awake and running Docker Desktop |
