@@ -54,6 +54,13 @@ def test_table3_conditions_locked():
     assert conds[4] == {"no": 5, "feature": "f_min", "lo": 40, "hi": 53}       # Fig. 12 text example Z(4, 5)
 
 
+def test_fig13_14_conditions_locked():
+    conds = TRAINING_PAPER_LOCK["fig13_14_conditions"]
+    assert [(c["fig"], c["panel"], c["feature"], c["lo"], c["hi"]) for c in conds] == [
+        (13, "a", "L", 51, 60), (13, "b", "f_end", 47, 56), (13, "c", "f_start", 85, 94),
+        (14, "a", "df", 20, 23), (14, "b", "f_min", 40, 50), (14, "c", "f_max", 80, 90)]
+
+
 # ---------------------------------------------------------------- architecture (Tables 6-8)
 def test_encoder_decoder_shapes_follow_table7():
     enc, dec = Encoder(64), Decoder(64)

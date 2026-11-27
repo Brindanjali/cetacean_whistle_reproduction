@@ -14,7 +14,7 @@ flowchart LR
     DS -->|encounter 191| VAE["VAE + critic<br/>train-vae (Colab A100)"]
     VAE --> CK["checkpoints/final.pt<br/>Nyx (101) · Delphi (150)"]
     CK --> LAT["latents_mu.npy"] --> GMM["GMM K = 3,000<br/>fit-gmm"]
-    GMM --> EVAL["Paper evaluation<br/>vae-eval: Tables 1, 3, 6; Figs. 7-10, 12"]
+    GMM --> EVAL["Paper evaluation<br/>vae-eval: Tables 1, 3, 6; Figs. 7-10, 12, 13-14"]
     GMM --> TRY["Try it<br/>infer / serve"]
     GMM --> CB["WhistleCode codebook<br/>16 symbols + signature"]
     CB --> WC["WhistleCode<br/>send · channel · receive"]

@@ -99,6 +99,7 @@ Every number the README, the review slides or a paper reports, and the record th
 | Delphi Table 3 rows (recall 84.7-96.9 %, precision 74.5-79.7 %, F1 79.3-85.8 %); Fig. 12 diagonal 13 of 13 | **`.../E191_epoch150/eval/table3_fig12_K3000.json`**, **`.../E191_epoch150/figures/fig12_lnFFD.png`** | EXP-025 |
 | Delphi Fig. 11 at K = 3,000: silhouette 0.091, Davies-Bouldin 1.478, Calinski-Harabasz 398.8 | **`.../E191_epoch150/eval/fig11_clustering.json`**, **`post_training/out/paper_comparison_V1_L64_b1e-4_critic_E191_epoch150.csv`** | EXP-026 |
 | Delphi Table 2 at K = 3,000: FID₁ 29.48, FID₂ 49.03; precision / recall / F1 10.0 / 3.2 / 4.8 % (raw), 64.5 / 52.6 / 57.9 % (thresholded) | **`.../E191_epoch150/eval/gen_gmm_K3000.json`**, **`post_training/out/paper_comparison_V1_L64_b1e-4_critic_E191_epoch150.csv`** | EXP-027 |
+| Delphi Figs. 13-14 (Appendix C): acceptance per condition, feature ranges | **`.../E191_epoch150/figures/fig13_conditional.png`**, **`fig14_conditional.png`**, **`.../E191_epoch150/eval/fig13_14_conditional.json`** | EXP-028 |
 | Delphi Figs. 7-10 | **`.../E191_epoch150/figures/`** | EXP-025 |
 | Delphi Table 6 timing (warm B = 16: 0.114 ms per image) | **`.../E191_epoch150/eval/table6_cost.json`**, **`post_training/out/table6_warm_V1_L64_b1e-4_critic_E191_epoch150.json`** | EXP-025 |
 | Delphi GMM: 150 iterations; check | **`.../E191_epoch150/gmm_K3000/gmm.json`**, **`post_training/out/gmm_check_V1_L64_b1e-4_critic_E191_epoch150_K3000.json`** | EXP-011 |

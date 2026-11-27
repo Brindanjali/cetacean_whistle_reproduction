@@ -375,6 +375,11 @@ Side by side with the paper: `post_training/out/paper_comparison_V1_L64_b1e-4_cr
 * **Table 3 / Fig. 12:** every diagonal entry of Fig. 12 is its row's minimum (13 of 13); recall 84.7–96.9 %, precision
   74.5–79.7 %, F1 79.3–85.8 %, against the paper's 98.2–99.3 %, 82.7–90.8 %, 90.1–94.4 %.
 * **Figs. 7–10** are made (`.../E191_epoch150/figures/`).
+* **Figs. 13–14** (Appendix C; EXP-028; `vae-eval appendix --K 3000`): 100 whistles under each of the paper's six
+  further conditions (length 51–60, end frequency 47–56, start frequency 85–94, bandwidth 20–23, minimum frequency
+  40–50, maximum frequency 80–90). Every drawn whistle meets its condition; 70–75 % of candidates are accepted (35 % for
+  bandwidth); the shapes follow the paper's figures. Length and start-frequency contours are drawn from time step 1 and
+  end-frequency contours end at 128, as in the paper; no range lines for bandwidth (not a level) [DECISION].
 * **Fig. 11, K = 3,000 only** ([D-029](../project/DECISIONS.md#d-029), EXP-026; `vae-eval cluster --K 3000`): silhouette 0.091
   (paper 0.401), Davies-Bouldin 1.478 (paper 0.767), Calinski-Harabasz 398.8 (paper 21.2; not comparable in size, as it
   grows with the number of images). No fits at other K, so no curve and no figure.
@@ -416,6 +421,7 @@ python whistle.py vae-eval components --experiment V1     # 500 samples per comp
 python whistle.py vae-eval conditional --experiment V1    # Table 3 + Fig. 12
 python whistle.py vae-eval cost --experiment V1           # Table 6
 python whistle.py vae-eval figures --experiment V1        # Figs. 7-10
+python whistle.py vae-eval appendix --experiment V1       # Figs. 13-14 (Appendix C: six more conditions, 100 samples each)
 python whistle.py train-ldm --experiment V1 --T 250 500 1000   # Table 5 LDM baseline
 ```
 

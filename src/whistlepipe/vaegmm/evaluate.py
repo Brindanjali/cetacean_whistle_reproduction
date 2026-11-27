@@ -486,6 +486,87 @@ def make_figures(cfg, run_id: str, K: int | None = None) -> Path:
     return out
 
 
+# ---------------------------------------------------------------- Figs. 13-14 (Appendix C)
+# [DECISION] read from the paper's Figs. 9, 13 and 14: length and start-frequency contours are drawn from time step 1,
+# end-frequency contours end at time step 128, the others stay where they are in the image.
+APPENDIX_ALIGN = {"L": "start", "f_start": "start", "f_end": "end"}
+FEATURE_TITLES = {"L": "Length", "f_end": "End frequency", "f_start": "Start frequency", "df": "Bandwidth",
+                  "f_min": "Min. frequency", "f_max": "Max. frequency"}
+
+
+def align_contour(v: np.ndarray, align: str | None, width: int = 128) -> tuple[np.ndarray, np.ndarray]:
+    """Time steps (1-based) and bins of one contour vector's active span, moved to start at 1 ("start"), to end at
+    ``width`` ("end"), or left in place (None). Gaps inside the span stay NaN."""
+    act = np.nonzero(np.isfinite(v))[0]
+    seg = v[act[0]:act[-1] + 1]
+    first = {"start": 1, "end": width - len(seg) + 1}.get(align, act[0] + 1)
+    return np.arange(first, first + len(seg)), seg
+
+
+def make_appendix_figures(cfg, run_id: str, K: int | None = None, force: bool = False) -> Path:
+    """Figs. 13-14: for each Appendix C condition, 100 accepted samples (eq. 10 weights) overlaid with the condition's
+    bounds dotted, and a histogram of the conditioned feature. Writes figures/fig13_conditional.png,
+    fig14_conditional.png and eval/fig13_14_conditional.json."""
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+
+    K = K or main_k(cfg)
+    d = _run(cfg, run_id)
+    paths = {13: d / "figures" / "fig13_conditional.png", 14: d / "figures" / "fig14_conditional.png"}
+    record_path = d / "eval" / "fig13_14_conditional.json"
+    if not force and any(p.exists() for p in [*paths.values(), record_path]):
+        raise FileExistsError(f"Figs. 13-14 exist under {d} (use --force to redraw)")
+    set_deterministic()
+    dev = resolve_device(cfg["train"]["device"])
+    vae, _ = load_trained_vae(d, dev)
+    gmm = load_gmm(cfg, run_id, K)
+    cf = np.load(analyze_components(cfg, run_id, K))
+    pi = gmm.weights_.cpu().numpy()
+    thr = cfg["paper"]["contour_threshold"]
+    seed = int(cfg["decisions"]["train"]["seed"]) + 13                     # [DECISION] its own stream
+    g = torch.Generator(device=dev)
+    g.manual_seed(seed)
+    n = 100                                                                 # App. C: 100 generated whistles each
+    rec = {"run_id": run_id, "K": K, "weights": "eq10", "n_per_condition": n, "seed": seed, "threshold": thr,
+           "align": APPENDIX_ALIGN, "checkpoint_sha256": sha256_file(d / "checkpoints" / "final.pt"), "panels": []}
+    paths[13].parent.mkdir(exist_ok=True)
+    for fig_no, path in paths.items():
+        conds = [c for c in cfg["paper"]["fig13_14_conditions"] if c["fig"] == fig_no]
+        fig, axs = plt.subplots(len(conds), 2, figsize=(12, 4.2 * len(conds)), gridspec_kw={"width_ratios": [2.4, 1]})
+        for (ax_c, ax_h), c in zip(axs, conds):
+            f, lo, hi = c["feature"], c["lo"], c["hi"]
+            a = acceptance_ratios(cf, f, lo, hi)
+            s = conditional_sample(vae.decoder, gmm, weights_eq10(pi, a, a > 0), f, lo, hi, n, g, thr,
+                                   batch=int(cfg["decisions"]["eval"]["sample_batch"]), keep_images=n)
+            with torch.no_grad():
+                vs = contour_vectors(torch.from_numpy(s["images"]).to(dev), thr).cpu().numpy()
+            for v in vs:
+                ax_c.plot(*align_contour(v, APPENDIX_ALIGN.get(f)), lw=0.6)
+            if f == "L":
+                for b in (lo, hi):
+                    ax_c.axvline(b, ls=":", c="k")
+            elif f != "df":                                                 # [DECISION] a bandwidth is not a level
+                for b in (lo, hi):
+                    ax_c.axhline(b, ls=":", c="k")
+            ax_c.set(xlim=(0, 128), ylim=(0, 128), xlabel="Time (time step)", ylabel="Frequency (bin)",
+                     title=f"({c['panel']}) {FEATURE_TITLES[f]}: {lo}-{hi} {'samples' if f == 'L' else 'bins'}")
+            vals = s["features"][:, FEATURES.index(f)]
+            ax_h.hist(vals, bins=np.arange(lo, hi + 2) - 0.5)
+            ax_h.set(title=FEATURE_TITLES[f], xlabel="samples" if f == "L" else "Bin index")
+            rec["panels"].append({"fig": fig_no, "panel": c["panel"], "feature": f, "lo": lo, "hi": hi,
+                                  "n_components_in_subset": int((a > 0).sum()), "acceptance_rate": s["acceptance_rate"],
+                                  "draws": s["draws"], "feature_min": float(vals.min()), "feature_max": float(vals.max()),
+                                  "feature_median": float(np.median(vals))})
+            print(json.dumps(rec["panels"][-1]), flush=True)
+        fig.suptitle(f"Fig. {fig_no}: conditional whistle generation ({run_id}, K = {K})", fontsize=10)
+        fig.tight_layout()
+        fig.savefig(path, dpi=80)
+        plt.close(fig)
+        print("wrote", path, flush=True)
+    return _write(record_path, rec, force)
+
+
 # ---------------------------------------------------------------- LDM baseline training
 def train_ldm(cfg, vae_run_id: str, T: int, run_id: str, resume: bool = False) -> Path:
     from .ldm import LinearSchedule, UNet, latents_to_grid, ldm_loss

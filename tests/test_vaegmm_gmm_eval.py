@@ -119,6 +119,17 @@ def test_fit_gmm_sets_deterministic_mode_and_never_overwrites(tmp_path, monkeypa
         ev.fit_gmm(cfg, "R", 3)
 
 
+def test_appendix_contours_align_to_start_end_or_stay():
+    from whistlepipe.vaegmm.evaluate import align_contour
+
+    v = np.full(128, np.nan)
+    v[40:50] = np.arange(10.0)
+    v[44] = np.nan                                                   # a gap inside the span stays a gap
+    for align, first in (("start", 1), ("end", 119), (None, 41)):
+        x, y = align_contour(v, align)
+        assert x[0] == first and x[-1] == first + 9 and len(y) == 10 and np.isnan(y[4]) and y[9] == 9.0
+
+
 def test_eval_generation_writes_its_own_file_and_never_overwrites(tmp_path, monkeypatch):
     """Table 2's result goes to eval/gen_gmm_K<K>.json (a loop once renamed it FID2.json), and the temporary feature
     files are removed. The feature networks are stood in for: only the bookkeeping is tested."""

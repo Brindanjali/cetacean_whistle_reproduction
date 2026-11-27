@@ -267,7 +267,7 @@ Sweeps never start before V1 has finished and been evaluated.
 | Part | Status |
 |---|---|
 | VAE, critic, losses, training loop, resume, lineage | implemented, unit-tested (CPU) |
-| GMM (EM, MAP, sampling), whistle features, conditional sampling, all metrics, FID/P-R pipeline, Figs. 7–10, Table 6 timing | implemented, unit-tested. GMM and metrics are also tested on the GPU against the CPU. k-means++ seeding is device-independent (NumPy random numbers, float64 distances) |
+| GMM (EM, MAP, sampling), whistle features, conditional sampling, all metrics, FID/P-R pipeline, Figs. 7–10, Table 6 timing; Figs. 13–14 added 2026-11-27 (`vae-eval appendix`, conditions locked in `[paper].fig13_14_conditions`) | implemented, unit-tested. GMM and metrics are also tested on the GPU against the CPU. k-means++ seeding is device-independent (NumPy random numbers, float64 distances) |
 | LDM baseline (Table 9) | implemented, unit-tested (shapes, loss, sampler) |
 | WhistleGAN and WGAN-GP baselines | **not implemented**: the paper gives no generator architecture (only Table 6 sizes). Needs either ref. [20] for WhistleGAN or an owner-approved [DECISION] design |
 | Feature-network weights | download code present (`fetch-eval-weights --approved`); **not downloaded**: the owner declined the download (2026-11-09), so FID and precision/recall (Tables 2, 4, 5) are not computed. Update 2026-11-27: downloaded with the owner's approval (D-030), SHA-256 checked; Table 2 computed for Delphi at K = 3,000 only (EXP-027) |

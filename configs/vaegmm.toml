@@ -62,6 +62,15 @@ table3_conditions = [
     { no = 12, feature = "f_end",   lo = 40, hi = 55 },
     { no = 13, feature = "f_end",   lo = 70, hi = 80 },
 ]
+# Figs. 13-14 conditions [EXPLICIT] App. C (figure captions); 100 generated whistles each; same units as Table 3
+fig13_14_conditions = [
+    { fig = 13, panel = "a", feature = "L",       lo = 51, hi = 60 },
+    { fig = 13, panel = "b", feature = "f_end",   lo = 47, hi = 56 },
+    { fig = 13, panel = "c", feature = "f_start", lo = 85, hi = 94 },
+    { fig = 14, panel = "a", feature = "df",      lo = 20, hi = 23 },
+    { fig = 14, panel = "b", feature = "f_min",   lo = 40, hi = 50 },
+    { fig = 14, panel = "c", feature = "f_max",   lo = 80, hi = 90 },
+]
 
 # ---------------------------------------------------------------- DEVIATIONS from stated paper values
 [deviations]

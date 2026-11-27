@@ -17,6 +17,9 @@ DEFAULT_VAEGMM_CFG = PROJECT_ROOT / "configs" / "vaegmm.toml"
 _T3 = [(1, "L", 30, 40), (2, "L", 75, 80), (3, "L", 88, 108), (4, "f_min", 34, 55), (5, "f_min", 40, 53),
        (6, "f_max", 62, 66), (7, "f_max", 68, 71), (8, "df", 10, 20), (9, "df", 20, 30), (10, "f_start", 40, 55),
        (11, "f_start", 70, 80), (12, "f_end", 40, 55), (13, "f_end", 70, 80)]
+# Appendix C, captions of Figs. 13 and 14: (figure, panel, feature, lo, hi)
+_F1314 = [(13, "a", "L", 51, 60), (13, "b", "f_end", 47, 56), (13, "c", "f_start", 85, 94),
+          (14, "a", "df", 20, 23), (14, "b", "f_min", 40, 50), (14, "c", "f_max", 80, 90)]
 
 # Values copied from the specification (§3, [EXPLICIT]).
 TRAINING_PAPER_LOCK: dict[str, Any] = {
@@ -52,6 +55,7 @@ TRAINING_PAPER_LOCK: dict[str, Any] = {
     "ldm_beta_min": 1e-4,
     "ldm_beta_max": 0.02,
     "table3_conditions": [{"no": n, "feature": f, "lo": lo, "hi": hi} for n, f, lo, hi in _T3],
+    "fig13_14_conditions": [{"fig": fg, "panel": p, "feature": f, "lo": lo, "hi": hi} for fg, p, f, lo, hi in _F1314],
 }
 
 

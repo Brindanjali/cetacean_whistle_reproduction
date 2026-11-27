@@ -86,6 +86,8 @@ def cmd_vae_eval(args) -> int:
         ev.eval_cost(cfg, rid, K, args.force)
     elif args.what == "figures":
         ev.make_figures(cfg, rid, K)
+    elif args.what == "appendix":
+        ev.make_appendix_figures(cfg, rid, K, args.force)
     return 0
 
 
@@ -138,8 +140,9 @@ def add_commands(sub) -> None:
     p.set_defaults(fn=cmd_fit_gmm)
 
     p = common(sub.add_parser("vae-eval", help="evaluation of a finished run: recon (Table 1), gen (Tables 2/4/5), cluster "
-                                             "(Fig. 11), components, conditional (Table 3, Fig. 12), cost (Table 6), figures"))
-    p.add_argument("what", choices=["recon", "gen", "cluster", "components", "conditional", "cost", "figures"])
+                                             "(Fig. 11), components, conditional (Table 3, Fig. 12), cost (Table 6), figures (Figs. 7-10, 12), "
+                                             "appendix (Figs. 13-14)"))
+    p.add_argument("what", choices=["recon", "gen", "cluster", "components", "conditional", "cost", "figures", "appendix"])
     p.add_argument("--experiment", required=True, help="V1..V8 or a run id")
     p.add_argument("--K", type=int, nargs="+", default=None)
     p.add_argument("--source", default="gmm", choices=["gmm", "prior", "ldm"])

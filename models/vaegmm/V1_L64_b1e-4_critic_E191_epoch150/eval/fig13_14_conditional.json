@@ -1,0 +1,94 @@
+{
+  "run_id": "V1_L64_b1e-4_critic_E191_epoch150",
+  "K": 3000,
+  "weights": "eq10",
+  "n_per_condition": 100,
+  "seed": 20261035,
+  "threshold": 0.05,
+  "align": {
+    "L": "start",
+    "f_start": "start",
+    "f_end": "end"
+  },
+  "checkpoint_sha256": "1db44d81e03ce7156c83c880b6db5f01810853efbfa8f345225e5119b8c0145f",
+  "panels": [
+    {
+      "fig": 13,
+      "panel": "a",
+      "feature": "L",
+      "lo": 51,
+      "hi": 60,
+      "n_components_in_subset": 767,
+      "acceptance_rate": 0.748,
+      "draws": 500,
+      "feature_min": 51.0,
+      "feature_max": 60.0,
+      "feature_median": 54.0
+    },
+    {
+      "fig": 13,
+      "panel": "b",
+      "feature": "f_end",
+      "lo": 47,
+      "hi": 56,
+      "n_components_in_subset": 839,
+      "acceptance_rate": 0.728,
+      "draws": 500,
+      "feature_min": 47.0,
+      "feature_max": 56.0,
+      "feature_median": 53.0
+    },
+    {
+      "fig": 13,
+      "panel": "c",
+      "feature": "f_start",
+      "lo": 85,
+      "hi": 94,
+      "n_components_in_subset": 230,
+      "acceptance_rate": 0.7,
+      "draws": 500,
+      "feature_min": 85.0,
+      "feature_max": 94.0,
+      "feature_median": 88.0
+    },
+    {
+      "fig": 14,
+      "panel": "a",
+      "feature": "df",
+      "lo": 20,
+      "hi": 23,
+      "n_components_in_subset": 1157,
+      "acceptance_rate": 0.35,
+      "draws": 500,
+      "feature_min": 20.0,
+      "feature_max": 23.0,
+      "feature_median": 21.5
+    },
+    {
+      "fig": 14,
+      "panel": "b",
+      "feature": "f_min",
+      "lo": 40,
+      "hi": 50,
+      "n_components_in_subset": 1080,
+      "acceptance_rate": 0.726,
+      "draws": 500,
+      "feature_min": 40.0,
+      "feature_max": 50.0,
+      "feature_median": 47.0
+    },
+    {
+      "fig": 14,
+      "panel": "c",
+      "feature": "f_max",
+      "lo": 80,
+      "hi": 90,
+      "n_components_in_subset": 993,
+      "acceptance_rate": 0.742,
+      "draws": 500,
+      "feature_min": 80.0,
+      "feature_max": 90.0,
+      "feature_median": 83.0
+    }
+  ]
+}
