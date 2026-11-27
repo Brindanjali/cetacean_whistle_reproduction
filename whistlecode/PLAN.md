@@ -180,6 +180,44 @@ The tracks are then moved onto the sender's clock and read as before. The number
 - **Decoding time:** median 0.084 s before and 0.089 s after, per recording.
 - **Campaign script:** `paper_eval.py`'s oracle synchronisation and whistle counts now read at the true start and the true time scale. This changes nothing without Doppler. Each trial also records the time scale found.
 
+### Real wobble (2026-11-27, WC-R3)
+
+**What gave the shapes away** (`experiments/shape_dev.py`, results in `outputs/shape_dev/`; encounter 214 only, development seed
+20261127 `[DECISION]`). E7's features, classifier and splits, with the real side made of 1,486 in-range whistles from 80
+encounter-214 recordings. Campaign v1's sender scores 0.914 +/- 0.006 against them.
+
+- **The shapes, not the voices:** shape features alone score 0.905, loudness 0.674, harmonics 0.609.
+- **Too smooth:** the strongest single clue is the curve-fit error (the contour's spread around its own cubic fit), median
+  16 Hz against 35 Hz for real whistles. Frame-to-frame roughness and changes of slope direction are low as well. The VAE's
+  decodes lose the fine frequency wander of real whistles.
+- **Not the narrow mixture components (the audit's lead, WC-R3a):** within each type, coded whistles spread as much in
+  duration and span as the real members of that GMM component (the realism library's), but wobble less in every type (12-23
+  against 17-34 Hz).
+- **Also shorter and narrower:** median 213 against 272 ms, span 639 against 769 Hz. These are the clues left after the fix.
+
+**The change** (`realism.Wobble`, `build_wobble`; `Sender._vary`, called in `Transmitter._shapes`; settings `[realism]
+wobble_*`). `build-wobble` stores, for every well-observed encounter-191 whistle in the codebook's ranges, its contour minus
+its cubic fit (18,208 whistles, median 33 Hz). Each drawn data shape gets one from a whistle of similar length (0.8-1.25
+times), stretched to its length, before the sender's self-check; a shape that falls back to its type's mean gets one too.
+Encounter 191 trained the VAE and is never noise or the real side of a covertness test. The receiver and the message format
+are unchanged, and with `wobble_scale = 0` the sender is exactly campaign v1's.
+
+| Sender (encounter 214) | Shape AUC | Exact at 10 dB (of 50) |
+|---|---|---|
+| Campaign v1's | 0.914 +/- 0.006 | 50 |
+| **Real wobble, scale 1.0 (adopted)** | **0.872 +/- 0.011** | **49** |
+| Real wobble, scale 0.6 | 0.888 +/- 0.027 | - |
+| Real wobble, scale 1.4 | 0.880 +/- 0.030 | - |
+| Tau 0 (also drops the recorded voices) | 0.979 +/- 0.005 | - |
+| Epoch-150 voice (Delphi), own codebook | 0.920 +/- 0.021 | - |
+
+- **Verdict: adopted** (sender rule of 8.7: AUC down by at least 0.03, at most 2 of 50 messages lost at 10 dB; no wrong text).
+  The built sender reproduces the prototype whistle for whistle (1,940 whistles, the same 49 messages).
+- **The epoch-150 voice is not adopted.** Its whistles are as smooth as epoch 101's, and its codebook, built with v1's
+  settings in `outputs/codebook_epoch150/`, failed verification (worst pair 2.3 % against 2 %).
+- **Still far from the mark:** 0.872 against encounter 214, where two real encounters score about 0.70 against each other
+  (E7). What is left is span and duration, which only a different choice of types can change.
+
 ## 1. The idea
 
 A text message is turned into a sequence of synthetic false killer whale whistles. The sequence is sent through an underwater channel, and a receiver turns the whistles back into the exact text.
@@ -908,6 +946,15 @@ Drift correction (WC-R2, added 2026-11-21; `config.toml` `[receiver]` `drift_*`)
 | Whole-message fit | after each header reading: every known whistle of the frame, grid search in steps of 0.002 % (30 ms offset windows), then least squares over whistles within 40 ms of the line; at least 8 matches, else the frame search's values |
 | Reading | tracks moved onto the sender's clock, then read as before; frame starts and header readings tried are unchanged |
 
+Real wobble (WC-R3, added 2026-11-27; `config.toml` `[realism]` `wobble_*`):
+
+| Parameter | Default |
+|---|---|
+| Wobble scale | 1.0 (0 = campaign v1's sender) |
+| Source | encounter 191: well-observed whistles (observed fraction >= 0.9) of 100-450 ms, span 0.3-5 kHz, centre 5-12 kHz; contour minus cubic fit |
+| Length match | the real whistle is 0.8-1.25 times the shape's length; stretched to it |
+| When | each drawn shape before the self-check; a fallback mean shape too; none at tau 0 |
+
 ## 14. Revision history
 
 - **2026-11-17, first version.**
@@ -989,3 +1036,9 @@ Drift correction (WC-R2, added 2026-11-21; `config.toml` `[receiver]` `drift_*`)
     - no false message.
     Details under "Drift correction" at the top of this plan.
   - `paper_eval.py`: oracle synchronisation reads at the true time scale as well as the true start.
+- **2026-11-27, R3 shape covertness (real wobble adopted):**
+  - Diagnosed on encounter 214 with the new `experiments/shape_dev.py`: the coded shapes are too smooth (curve-fit error
+    16 Hz against 35 Hz real); the audit's narrow-component lead is not the main cause.
+  - Each drawn data shape now gets a real encounter-191 whistle's wobble (`[realism] wobble_*`, `build-wobble`). Shape AUC
+    0.914 -> 0.872, 49 of 50 messages at 10 dB (was 50). The epoch-150 voice scored 0.920 and its codebook failed
+    verification; not adopted. Details under "Real wobble" at the top of this plan.

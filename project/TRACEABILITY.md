@@ -34,7 +34,7 @@ Source: [`whistlecode/THREAT_MODEL.md`](../whistlecode/THREAT_MODEL.md) section 
 | C4 | Never accepts a false message | 0 in 7,900 tries (`t5_false_messages.csv`) | Supported (simulated channel) |
 | C5 | The timing passes as real whistling, stream on its own | rhythm AUC 0.440 (`t7b_covert_rhythm.csv`) | Supported |
 | C6 | The timing passes as real whistling inside sea noise | rhythm AUC 0.684 (`t7b_covert_rhythm.csv`) | Not supported |
-| C7 | The whistle shapes pass as real | shape AUC 0.944 (`t7a_covert_shapes.csv`) | Not supported; WC-R3 works on it |
+| C7 | The whistle shapes pass as real | shape AUC 0.944 (`t7a_covert_shapes.csv`) | Not supported; WC-R3 works on it. 2026-11-27: real wobble adopted (EXP-021): 0.914 -> 0.872 against encounter 214, still above the 0.75 mark; to be tested in campaign v2 |
 | C8 | It survives the sea channel (echoes and Doppler) | `t3a_range.csv`, `t3b_doppler.csv`, `t3c_random_sea.csv` | Not supported in v1. R2 drift correction fixes Doppler on encounter 214 (EXP-020); to be tested in campaign v2 |
 | C9 | More noise-robust than an artificial chirp alphabet | `t2_snr_sweep.csv` (baseline rows) | Supported, with a caveat (WC-R4 adds the fair modem) |
 | C10 | Works over a physical acoustic link | — | Not tested (WC-R5) |
@@ -128,5 +128,6 @@ All campaign-v1 numbers come from one frozen run (git `ea18d032`, config `5576d7
 | Normal conditions: 90 / 90 (214), 87 / 90 (276) | `whistlecode/outputs/e2e_*`; summary in **`whistlecode/PLAN.md`** ("Normal conditions proved") | EXP-015 |
 | SNR gap 22.3 dB (214), 25.3 dB (276) | `whistlecode/outputs/snr_inband/results.json`; summary in **`PLAN.md`** 8.7 | EXP-019 |
 | R2: Doppler 49-50 / 50; random sea 18 / 42 / 39 of 50; adoption 10 / 50 / 49 / 50 | `whistlecode/outputs/drift_dev/`; summary in **`PLAN.md`** ("Drift correction") | EXP-020 |
+| R3: shape AUC 0.914 (v1 sender) -> 0.872 (real wobble) against encounter 214; 49 / 50 at 10 dB; epoch-150 voice 0.920, codebook worst pair 2.3 % | `whistlecode/outputs/shape_dev/`, `outputs/codebook_epoch150/codebook.json`; summary in **`PLAN.md`** ("Real wobble") | EXP-021 |
 
-**Gap:** the records of EXP-015, EXP-019 and EXP-020 are only on the project laptop (`whistlecode/outputs/` is not in git). OPS-5 copies their summaries (a few kB of JSON) into `whistlecode/paper/records/`, so every reported number has a record in git.
+**Gap:** the records of EXP-015, EXP-019, EXP-020 and EXP-021 are only on the project laptop (`whistlecode/outputs/` is not in git). OPS-5 copies their summaries (a few kB of JSON) into `whistlecode/paper/records/`, so every reported number has a record in git.

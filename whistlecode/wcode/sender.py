@@ -9,7 +9,8 @@ Every whistle of the walked bank stretches is played at its real time:
 
 With the realism library (realism.py), data whistles take the shape of a real whistle of their type, every whistle has a recorded
 voice and belongs to one of a few virtual animals, and the clicks recorded during the walked stretches are played at their real
-times. No sea background is ever added: the file is silent between sounds.
+times. Each drawn data shape also gets the fine frequency wobble of a real whistle ([realism] wobble_scale; WC-R3) before the
+sender's self-check. No sea background is ever added: the file is silent between sounds.
 
 All the randomness comes from the key and nonce, so the same message, key and nonce always give the same audio.
 """
@@ -100,11 +101,16 @@ class Sender(transmitter.Transmitter):
     """Uses the v1 transmitter's codebook loading and shape drawing, with the format v2 frame and the rhythm bank."""
 
     def __init__(self, cfg: dict | None = None, codebook_path=None, check_model: bool = True, rhythm_bank: bank.Bank | None = None,
-                 library: realism.Library | None = None):
+                 library: realism.Library | None = None, wobble: realism.Wobble | None = None):
         super().__init__(cfg, codebook_path, check_model)
         self.bank = rhythm_bank if rhythm_bank is not None else bank.load(self.cfg)
         wanted = bool(self.cfg["realism"]["enabled"]) and codebook_path is None      # a test codebook has no library of its own
         self.library = library if library is not None else (realism.load(self.cfg, self.codebook_sha256) if wanted else None)
+        shaky = wanted and float(self.cfg["realism"]["wobble_scale"]) > 0
+        self.wobble = wobble if wobble is not None else (realism.load_wobble(self.cfg) if shaky else None)
+
+    def _vary(self, c: Contour, rng: np.random.Generator) -> Contour:
+        return self.wobble.apply(c, rng) if self.wobble is not None else c
 
     def _real_shapes(self, idx: np.ndarray, tau: float, rng: np.random.Generator):
         """One shape per slot: a real whistle of the type, not repeated until the type's real whistles run out."""

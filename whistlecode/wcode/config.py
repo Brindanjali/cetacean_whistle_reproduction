@@ -82,6 +82,10 @@ def validate(cfg: dict, check_library: bool = True) -> None:
     need(float(tx.get("tau", 0.0)) >= 0.0, "transmit.tau must be >= 0")
     need(int(tx.get("self_check_redraws", 0)) >= 0, "transmit.self_check_redraws must be >= 0")
     need(float(tx.get("peak_dbfs", -3.0)) <= 0.0, "transmit.peak_dbfs must be <= 0")
+    rl = cfg.get("realism", {})
+    need(float(rl.get("wobble_scale", 0.0)) >= 0.0, "realism.wobble_scale must be >= 0")
+    wr = rl.get("wobble_length_ratio", [1.0, 1.0])
+    need(len(wr) == 2 and 0 < float(wr[0]) <= 1.0 <= float(wr[1]), "realism.wobble_length_ratio must be [lo <= 1, hi >= 1]")
     if "schedule" in cfg and "codebook" in cfg:
         need(float(cfg["schedule"]["interval_s"][0]) * 1000 > float(cfg["codebook"]["duration_ms"][1]),
              "the shortest start-to-start interval must exceed the longest whistle, or whistles would overlap")

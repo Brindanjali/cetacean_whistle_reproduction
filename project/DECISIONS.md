@@ -43,6 +43,7 @@ Project-level choices: what was decided, why, what else was considered, and what
 | [D-028](#d-028) | 2026-11-26 | Try it, with its model selector (Nyx, Delphi), is back on the page as section 08, after Decode; `model.html` leads there | in force; merged into `main` 2026-11-27 (`9f91c3b`), in v1.0.0 |
 | [D-029](#d-029) | 2026-11-27 | Fig. 11's clustering scores are computed for Delphi (epoch 150) at K = 3,000 only; no fits at other K | in force |
 | [D-030](#d-030) | 2026-11-27 | Table 2 is computed for Delphi (epoch 150) at K = 3,000 only; the Inception-V3 and VGG-16 weights are downloaded | in force |
+| [D-032](#d-032) | 2026-11-27 | Real frequency wobble is adopted in the sender (WC-R3); the epoch-150 voice is not | in force |
 | [D-031](#d-031) | 2026-11-27 | Table 4's supplementary row (the β = 1e-4 VAE sampled from N(0, I)) is computed for Delphi (epoch 150) | in force |
 
 ## Whistle model
@@ -114,6 +115,10 @@ Project-level choices: what was decided, why, what else was considered, and what
 ### D-013
 
 **Present the project as covert biomimetic communication**, with the reproduction as its foundation. *Why:* WhistleCode is the project's own contribution. *Status:* needs the mentor's and team's agreement (YOU-1); the documents are reframed in WC-R7. *Update 2026-11-23:* decided by the owner ([D-024](#d-024)); the documents are reframed, the page's story is still to do (WC-R7).
+
+### D-032
+
+**Real frequency wobble is adopted in the sender; the epoch-150 voice is not** (WC-R3). Each drawn data shape gets the contour-minus-cubic-fit of a real encounter-191 whistle of similar length, stretched to its length, before the sender's self-check (`[realism] wobble_scale = 1.0`; `build-wobble`). On encounter 214 only, it lowered the shape AUC from 0.914 to 0.872 and kept 49 of 50 messages at 10 dB (50 before; no wrong text), which meets the sender adoption rule of PLAN.md 8.7 (EXP-021). *Alternatives:* scales 0.6 (0.888, short of the rule) and 1.4 (0.880); the epoch-150 voice (0.920, and its codebook failed verification); tau 0 (0.979). *Why encounter 191:* it trained the VAE and is never noise or the real side of a covertness test, so no encounter-214 or 276 material reaches the coded side. *Consequence:* the receiver and the message format are unchanged; `wobble_scale = 0` gives exactly campaign v1's sender. The epoch-150 codebook is kept in its own folder and not used.
 
 ## Page and deployment
 

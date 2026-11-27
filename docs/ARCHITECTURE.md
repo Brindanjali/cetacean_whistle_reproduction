@@ -52,7 +52,7 @@ Every arrow that produces a file also writes its lineage: the configuration and 
 | `repro.py`, `model.py` | imports the whistle model read-only; checks the checkpoint → latents → GMM chain |
 | `keys.py`, `framing.py`, `format2.py`, `fec.py` | key and nonce streams; text to symbols (format v2); Reed-Solomon with erasures |
 | `codebook.py`, `contour.py`, `synth.py` | the 16-symbol alphabet from GMM components; contours; contour to whistle audio |
-| `bank.py`, `layout.py`, `schedule.py`, `realism.py` | real rhythms; where a message sits in them; slot times and pitches; real voices and clicks |
+| `bank.py`, `layout.py`, `schedule.py`, `realism.py` | real rhythms; where a message sits in them; slot times and pitches; real voices, clicks and frequency wobble (`build-realism`, `build-wobble`) |
 | `sender.py`, `transmitter.py` | message to WAV |
 | `channel.py`, `sea.py` | real ocean noise at a set SNR; echoes, absorption, Doppler |
 | `detect.py`, `classify.py`, `receiver.py` | audio to tracks (the whistle model's detector), tracks to symbols, symbols to text, with drift correction |

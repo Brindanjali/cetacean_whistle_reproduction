@@ -125,6 +125,7 @@ class Transmitter:
             still = []
             for p, ti, img in zip(pending, t, model.decode(self.vae, z, int(self.cfg["model"]["decode_batch"]))):
                 c, gap = contour.from_image(img, self.pcfg, thr)
+                c = self._vary(c, rng) if c is not None else None
                 if self.accepted(c, gap, int(ti)):
                     shapes[p] = c
                     redraws[p] = attempt
@@ -134,7 +135,13 @@ class Transmitter:
         fell = np.zeros(n, dtype=bool)
         fell[pending] = True
         redraws[pending] = tries
+        for p in pending:
+            shapes[p] = self._vary(shapes[p], rng)
         return shapes, redraws, fell
+
+    def _vary(self, c: contour.Contour, rng: np.random.Generator) -> contour.Contour:
+        """A drawn shape as played; the format v2 sender adds real wobble here (sender.py). Checked before it is used."""
+        return c
 
     def send(self, message: bytes | str, key: str, nonce: int | None = None, tau: float | None = None) -> Transmission:
         cfg = self.cfg

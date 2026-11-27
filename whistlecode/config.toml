@@ -93,6 +93,10 @@ real_shapes           = false      # [DECISION] true = data whistles take the sh
 min_observed_fraction = 0.9       # [DECISION] the tracker saw at least this share of the whistle's frames
 shape_margin          = 0.7        # [DECISION] classifier A's closest / second-closest distance must be below this
 min_members           = 8          # [DECISION] with fewer real shapes than this, the type keeps its VAE shapes
+# real wobble: the fine frequency wander of real whistles, which the VAE's decodes lack (WC-R3, EXP-021, D-032)
+wobble_scale          = 1.0        # [DECISION] each drawn data shape gets a real whistle's contour minus its cubic fit, times this, before the self-check; 0 = campaign v1's sender. Encounter 214: shape AUC 0.914 -> 0.872, 49 of 50 messages at 10 dB (was 50)
+wobble_encounter      = 191        # [DECISION] the encounter that trained the VAE: never noise, never the real side of a covertness test
+wobble_length_ratio   = [0.8, 1.25]   # [DECISION] the real whistle's length is within these multiples of the shape's
 # real voices: loudness patterns and harmonics of clean recorded whistles
 voice_min_snr_db      = 20.0       # [DECISION] median level of the whistle above the noise in its frequency bin
 voice_frame_snr_db    = 10.0       # [DECISION] at least 90 % of its frames reach this level

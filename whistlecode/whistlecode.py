@@ -172,6 +172,13 @@ def cmd_build_realism(args) -> int:
     return 0
 
 
+def cmd_build_wobble(args) -> int:
+    from wcode import realism
+
+    realism.build_wobble(default_config(), log=lambda m: print(m, flush=True))
+    return 0
+
+
 def cmd_send(args) -> int:
     from wcode import format2, sender
 
@@ -273,6 +280,8 @@ def main(argv=None) -> int:
         s.set_defaults(fn=fn)
     s = sub.add_parser("build-realism", help="collect the real shapes, voices and clicks the sender plays")
     s.set_defaults(fn=cmd_build_realism)
+    s = sub.add_parser("build-wobble", help="collect the real frequency wobble added to drawn data shapes (also run by build-realism)")
+    s.set_defaults(fn=cmd_build_wobble)
     s = sub.add_parser("send", help="turn a message into a WAV of whistles")
     s.add_argument("message", help="text to send")
     s.add_argument("--key", required=True, help="shared key")

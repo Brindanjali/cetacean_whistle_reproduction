@@ -1,4 +1,6 @@
 """realism.py and the upgraded sender: real shapes, recorded voices, virtual animals and recorded clicks."""
+import copy
+
 import numpy as np
 import pytest
 from test_wc_pipeline import HOP, KEY, fake_bank, tracks_of
@@ -261,3 +263,68 @@ def test_library_for_another_codebook_is_refused(real_library):
     _, cfg = real_library
     with pytest.raises(realism.RealismError):
         realism.load(cfg, "0" * 64)
+
+
+# ---------------------------------------------------------------------------------------------- real wobble (WC-R3)
+def toy_wobble(scale: float = 1.0) -> realism.Wobble:
+    """Four 'real' wobbles of 20, 30, 50 and 80 frames."""
+    rng = np.random.default_rng(1)
+    res = tuple((40.0 * rng.standard_normal(n)).astype(np.float32) for n in (20, 30, 50, 80))
+    return realism.Wobble(res, np.array([len(r) for r in res]), scale, (0.8, 1.25), {})
+
+
+def test_wobble_keeps_length_and_mid_range_and_repeats():
+    c = Contour(np.linspace(-500, 500, 48), HOP)
+    w = toy_wobble()
+    a, b = w.apply(c, np.random.default_rng(5)), w.apply(c, np.random.default_rng(5))
+    assert a.n_frames == 48 and a.hop_s == HOP and np.array_equal(a.offset_hz, b.offset_hz)
+    assert a.offset_hz.max() + a.offset_hz.min() == pytest.approx(0.0, abs=1e-6)
+    assert not np.allclose(a.offset_hz, c.offset_hz)
+
+
+def test_wobble_comes_from_a_real_whistle_of_similar_length():
+    w = toy_wobble()
+    got = w.apply(Contour(np.zeros(48), HOP), np.random.default_rng(0)).offset_hz
+    r = np.interp(np.linspace(0, 1, 48), np.linspace(0, 1, 50), w.residuals[2])   # 50 frames: the only one in 38.4-60
+    assert np.allclose(got, r - 0.5 * (r.max() + r.min()))
+
+
+def test_zero_wobble_only_centres_the_shape():
+    c = Contour(np.linspace(-300, 500, 40), HOP)
+    assert np.allclose(toy_wobble(0.0).apply(c, np.random.default_rng(0)).offset_hz, c.offset_hz - 100.0)
+
+
+@pytest.mark.localdata
+def test_sender_checks_its_shapes_after_the_wobble_and_still_reads_back(book, small_bank, lib):
+    plain = sender.Sender(codebook_path=book, check_model=False, rhythm_bank=small_bank, library=lib)
+    assert plain.wobble is None                                   # a test codebook never loads the wobble from disk
+    tx = sender.Sender(codebook_path=book, check_model=False, rhythm_bank=small_bank, library=lib, wobble=toy_wobble())
+    varied, checked = set(), []
+    vary, accepted = tx._vary, tx.accepted
+
+    def spy_vary(c, rng):
+        out = vary(c, rng)
+        varied.add(id(out))
+        return out
+
+    def spy_accepted(c, gap, t):
+        checked.append(c is None or id(c) in varied)
+        return accepted(c, gap, t)
+
+    tx._vary, tx.accepted = spy_vary, spy_accepted
+    sent = tx.send("MEET AT DAWN", KEY, 11)
+    assert checked and all(checked)                               # every shape the self-check saw had its wobble
+    assert all(d.contour is not tx.templates[d.type_index] for d in sent.data if d.type_index < 16)
+    rx = receiver.Receiver(codebook_path=book, check_model=False, rhythm_bank=small_bank)
+    got = rx.decode_tracks(tracks_of(sent, small_bank, 5.5), KEY)
+    assert got.ok and got.text == "MEET AT DAWN"
+
+
+def test_wobble_settings_are_checked(cfg):
+    from wcode.config import ConfigError, validate
+
+    for key, bad in (("wobble_scale", -0.1), ("wobble_length_ratio", [1.2, 1.25])):
+        c = copy.deepcopy(cfg)
+        c["realism"][key] = bad
+        with pytest.raises(ConfigError):
+            validate(c, check_library=False)

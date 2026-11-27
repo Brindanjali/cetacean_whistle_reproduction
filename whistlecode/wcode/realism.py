@@ -2,7 +2,9 @@
 
 - shapes: for each codebook type, real whistles of that type's GMM cluster that classifier A clearly reads as that type;
 - voices: the loudness pattern and 2nd and 3rd harmonics of clean recorded whistles;
-- clicks: 2 ms cuts of clean clicks in regular trains, with their real times on the rhythm bank's time axis.
+- clicks: 2 ms cuts of clean clicks in regular trains, with their real times on the rhythm bank's time axis;
+- wobble (wobble.npz, built beside it by `build-wobble`): the fine frequency wander of real whistles, each one's contour minus
+  its cubic fit. The VAE's decodes lack it (WC-R3, EXP-021), so each drawn data shape gets one, stretched to its length.
 
 Everything between two clicks stays silent, so no sea background enters the transmitted file. The receiver never needs this
 library: it reads the same 16 shapes as before.
@@ -303,6 +305,7 @@ def build(cfg: dict | None = None, log=print) -> dict:
     (path / "library.json").write_text(json.dumps(info, indent=1), encoding="utf-8")
     log(f"written to {path}: {info['n_shapes']} real shapes, {info['n_voices']} voices ({info['n_steady_voices']} steady), "
         f"{info['n_clicks']} clicks [{info['minutes']} min]")
+    build_wobble(cfg, log)
     return info
 
 
@@ -321,6 +324,82 @@ def load(cfg: dict | None = None, codebook_sha256: str | None = None) -> Library
     for i, kind in enumerate(kinds.tolist()):
         shapes[kind].append(Contour(hz[first[i]:first[i + 1]], hop))
     return Library(shapes, z["env_db"], z["h2_db"], z["h3_db"], z["steady"], z["click_t"], z["click_wave"], float(z["click_gain"]), info)
+
+
+# ---------------------------------------------------------------------------------------------- real wobble (WC-R3)
+@dataclass(frozen=True)
+class Wobble:
+    residuals: tuple            # per real whistle: its contour minus its cubic fit, Hz per frame
+    lengths: np.ndarray         # frames of each
+    scale: float
+    length_ratio: tuple         # a residual is used for shapes between its length / hi and its length / lo
+    info: dict
+
+    def apply(self, c: Contour, rng: np.random.Generator) -> Contour:
+        """The shape plus the wobble of a real whistle of similar length, stretched to the shape's length."""
+        n = c.n_frames
+        lo, hi = self.length_ratio
+        ok = np.flatnonzero((self.lengths >= lo * n) & (self.lengths <= hi * n))
+        r = self.residuals[int(ok[rng.integers(len(ok))])] if len(ok) else self.residuals[int(np.argmin(np.abs(self.lengths - n)))]
+        r = np.interp(np.linspace(0.0, 1.0, n), np.linspace(0.0, 1.0, len(r)), r)
+        return Contour(centred(c.offset_hz + self.scale * r), c.hop_s)
+
+
+def _wobble_limits(cfg: dict, hop_s: float) -> tuple[int, int]:
+    """Frames of the codebook's shortest and longest whistle."""
+    lo, hi = (float(v) / 1000 for v in cfg["codebook"]["duration_ms"])
+    return int(np.ceil(lo / hop_s - 1e-9)), int(np.floor(hi / hop_s + 1e-9))
+
+
+def build_wobble(cfg: dict | None = None, log=print) -> dict:
+    """Contour minus cubic fit of every well-observed encounter-191 whistle in the codebook's ranges (a few seconds)."""
+    cfg = cfg or default_config()
+    r = cfg["realism"]
+    src = PROJECT_ROOT / "preprocessed" / f"encounter_{int(r['wobble_encounter'])}" / "contours.npz"
+    if not src.exists():
+        raise RealismError(f"no {src.relative_to(PROJECT_ROOT).as_posix()}; it is made with the dataset (python whistle.py build-dataset)")
+    z = np.load(src)
+    n_frames, observed, offsets, freq = z["n_frames"], z["observed_fraction"], z["offsets"], z["freq_hz"]   # read each once
+    f_lo, f_hi = _wobble_limits(cfg, float(z["frame_s"]))
+    s_lo, s_hi = (float(v) for v in cfg["codebook"]["span_hz"])
+    c_lo, c_hi = (float(v) for v in cfg["synth"]["fc_range_hz"])
+    out = []
+    for i, n in enumerate(n_frames):
+        if not f_lo <= n <= f_hi or observed[i] < float(r["min_observed_fraction"]):
+            continue
+        f = freq[offsets[i]:offsets[i + 1]].astype(np.float64)
+        span, centre = float(f.max() - f.min()), 0.5 * float(f.max() + f.min())
+        if not (s_lo <= span <= s_hi and c_lo <= centre <= c_hi):
+            continue
+        x = np.arange(n) / n
+        out.append((f - np.polyval(np.polyfit(x, f, 3), x)).astype(np.float32))
+    if not out:
+        raise RealismError("no real whistle passed the wobble filters")
+    path = out_dir(cfg)
+    path.mkdir(parents=True, exist_ok=True)
+    np.savez(path / "wobble.npz", r=np.concatenate(out), offsets=np.r_[0, np.cumsum([len(v) for v in out])].astype(np.int64))
+    info = {"created_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), "source": src.relative_to(PROJECT_ROOT).as_posix(),
+            "source_sha256": hashlib.sha256(src.read_bytes()).hexdigest(), "n_whistles": len(out), "frames": [f_lo, f_hi],
+            "span_hz": [s_lo, s_hi], "centre_hz": [c_lo, c_hi], "min_observed_fraction": float(r["min_observed_fraction"]),
+            "median_wobble_hz": round(float(np.median([v.std() for v in out])), 1),
+            "sha256": hashlib.sha256((path / "wobble.npz").read_bytes()).hexdigest()}
+    (path / "wobble.json").write_text(json.dumps(info, indent=1), encoding="utf-8")
+    log(f"wobble of {len(out)} real whistles written to {path / 'wobble.npz'} (median {info['median_wobble_hz']} Hz)")
+    return info
+
+
+def load_wobble(cfg: dict | None = None) -> Wobble:
+    cfg = cfg or default_config()
+    path = out_dir(cfg)
+    if not (path / "wobble.npz").exists():
+        raise RealismError(f"no wobble library in {path}; run: python whistlecode/whistlecode.py build-wobble "
+                           "(or set [realism] wobble_scale = 0 for campaign v1's sender)")
+    z = np.load(path / "wobble.npz")
+    r, offsets = z["r"], z["offsets"]
+    res = tuple(r[offsets[i]:offsets[i + 1]] for i in range(len(offsets) - 1))
+    info = json.loads((path / "wobble.json").read_text(encoding="utf-8"))
+    lo, hi = (float(v) for v in cfg["realism"]["wobble_length_ratio"])
+    return Wobble(res, np.array([len(v) for v in res]), float(cfg["realism"]["wobble_scale"]), (lo, hi), info)
 
 
 # ---------------------------------------------------------------------------------------------- at transmit time
