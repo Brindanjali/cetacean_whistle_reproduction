@@ -380,6 +380,11 @@ Side by side with the paper: `post_training/out/paper_comparison_V1_L64_b1e-4_cr
   40–50, maximum frequency 80–90). Every drawn whistle meets its condition; 70–75 % of candidates are accepted (35 % for
   bandwidth); the shapes follow the paper's figures. Length and start-frequency contours are drawn from time step 1 and
   end-frequency contours end at 128, as in the paper; no range lines for bandwidth (not a level) [DECISION].
+* **Table 4, supplementary row** ([D-031](../project/DECISIONS.md#d-031), EXP-029; `vae-eval gen --source prior`): the
+  same decoder fed z ~ N(0, I) instead of mixture samples, Table 2's measures and seed. FID₁ 443.0, FID₂ 499.4,
+  precision / recall / F1 0.0 / 2.4 / 0.0 % (raw), against the mixture's FID₁ 29.5 and the paper's standard VAE (row 1,
+  β = 1, a different model) at FID₁ 91.8, F1 29.1 %. The images are blobs, not whistles: the latent means lie far from
+  N(0, I) (median length 30.6 against 8), so with β = 1e-4 the mixture is what lets the model generate.
 * **Fig. 11, K = 3,000 only** ([D-029](../project/DECISIONS.md#d-029), EXP-026; `vae-eval cluster --K 3000`): silhouette 0.091
   (paper 0.401), Davies-Bouldin 1.478 (paper 0.767), Calinski-Harabasz 398.8 (paper 21.2; not comparable in size, as it
   grows with the number of images). No fits at other K, so no curve and no figure.

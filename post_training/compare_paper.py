@@ -1,5 +1,5 @@
-"""Our V1 results next to the paper's (Table 1 row L = 64, Table 3, Table 6 and, where the run has them, Table 2 and
-Fig. 11; transcribed from the paper PDF, pages 10-12 and 14).
+"""Our V1 results next to the paper's (Table 1 row L = 64, Table 3, Table 6 and, where the run has them, Table 2,
+Fig. 11 and Table 4's prior-sampling row; transcribed from the paper PDF, pages 10-14).
 
 Reads models/vaegmm/<run_id>/eval/table1_recon.json and table3_fig12_K<K>.json; writes post_training/out/paper_comparison.csv
 and prints both tables. The paper's Table 3 uses K = 10,000 and 228,673 images (all encounters); ours K = 3,000 and the
@@ -42,6 +42,10 @@ PAPER_T6 = {"decoder_params": 368e3, "decoder_FLOPs": 557e6, "B1_latency_ms": 1.
 # Table 2 (page 10), L = 64, beta = 1e-4: K -> (FID1, FID2, recall %, precision %, F1 %). It has no K = 3,000 row.
 PAPER_T2 = {1000: (4.37, 72.81, 86.52, 89.58, 88.02), 5000: (3.04, 69.99, 86.92, 91.33, 89.07),
             10000: (2.68, 68.74, 87.21, 91.99, 89.54), 15000: (2.64, 68.45, 87.54, 92.34, 89.88)}
+# Table 4 (page 13), ablation: row -> (FID1, FID2, recall %, precision %, F1 %); rows 3 and 4 at L = 64, K = 10,000
+PAPER_T4 = {"(1) standard VAE": (91.83, 502.41, 23.70, 37.51, 29.05), "(2) WGAN-GP": (13.82, 202.51, 61.47, 83.17, 70.70),
+            "(3) VAE-GMM w/o WGAN-GP": (7.37, 182.84, 80.58, 92.96, 86.33),
+            "(4) VAE-GMM w/ WGAN-GP": (2.68, 68.74, 87.21, 91.99, 89.54)}
 # Fig. 11 (page 11), values printed at the points: K -> (silhouette, Davies-Bouldin, Calinski-Harabasz)
 PAPER_F11 = {1000: (0.167, 1.07, 17.8), 3000: (0.401, 0.767, 21.2), 5000: (0.517, 0.621, 24.9), 7000: (0.638, 0.547, 24.9),
              10000: (0.745, 0.448, 31.3), 12000: (0.78, 0.455, 29.8), 15000: (0.798, 0.425, 29.0)}
@@ -132,6 +136,25 @@ def compare(cfg, run_id: str, K: int) -> list[dict]:
             for name, o, pv in (("silhouette", r["silhouette"], ps), ("davies_bouldin", r["davies_bouldin"], pd),
                                 ("calinski_harabasz", r["calinski_harabasz"], pc)):
                 rows.append({"table": "Fig. 11", "row": f"K={r['K']}", "metric": name, "ours": o, "paper": pv})
+    t4p = ev / "gen_prior.json"
+    if t4p.exists():
+        t4 = json.loads(t4p.read_text(encoding="utf-8"))
+        names = ("FID1", "FID2", "recall_pct", "precision_pct", "F1_pct")
+        pr = t4[t4.get("primary_PR", "PR_raw")]
+        ours = (t4["FID1"], t4["FID2"], 100 * pr["recall"], 100 * pr["precision"], 100 * pr["f1"])
+        print("\nTable 4, supplementary row: this VAE decoded from z ~ N(0, I), no mixture (the paper's row 1 is a "
+              "standard VAE, beta = 1)")
+        print(f"  {'':26s} {'FID1':>7s} {'FID2':>7s} {'recall %':>9s} {'precision %':>12s} {'F1 %':>7s}")
+        print(f"  {'ours, N(0, I)':26s} {ours[0]:7.2f} {ours[1]:7.2f} {ours[2]:9.2f} {ours[3]:12.2f} {ours[4]:7.2f}")
+        if t2p.exists():
+            g = (t2["FID1"], t2["FID2"], 100 * t2["PR_raw"]["recall"], 100 * t2["PR_raw"]["precision"],
+                 100 * t2["PR_raw"]["f1"])
+            print(f"  {'ours, mixture K=' + str(K):26s} {g[0]:7.2f} {g[1]:7.2f} {g[2]:9.2f} {g[3]:12.2f} {g[4]:7.2f}")
+        for row, pv in PAPER_T4.items():
+            print(f"  {'paper ' + row:26s} {pv[0]:7.2f} {pv[1]:7.2f} {pv[2]:9.2f} {pv[3]:12.2f} {pv[4]:7.2f}")
+        for name, o, v in zip(names, ours, PAPER_T4["(1) standard VAE"]):
+            rows.append({"table": "4", "row": "ours N(0, I) vs paper (1) standard VAE", "metric": name, "ours": o,
+                         "paper": v})
     return rows
 
 

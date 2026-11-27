@@ -1,0 +1,51 @@
+{
+  "run_id": "V1_L64_b1e-4_critic_E191_epoch150",
+  "source": "prior",
+  "K": null,
+  "gmm_tag": "",
+  "ldm_run": null,
+  "n_real": 63490,
+  "n_generated": 63490,
+  "generation_seed": 20261023,
+  "feature_batch": 64,
+  "checkpoint_sha256": "1db44d81e03ce7156c83c880b6db5f01810853efbfa8f345225e5119b8c0145f",
+  "weights_sha256": {
+    "inception_v3": "0cc3c7bd75056d25e46cba549dc184522069b81e9787eff6df84f397bd52a5ef",
+    "vgg16": "397923af8e79cdbb6a7127f12361acd7a2f83e06b05044ddf496e83de57a5bf0"
+  },
+  "software": {
+    "python": "3.11.0",
+    "platform": "Windows-10-10.0.26300-SP0",
+    "numpy": "2.4.4",
+    "scipy": "1.17.1",
+    "soundfile": "0.13.1",
+    "libsndfile": "1.2.2",
+    "git_commit": "24b2f3f45801f28c469906640d6d2a918f54d49f",
+    "git_uncommitted_code_changes": false,
+    "torch": "2.14.0+cu130",
+    "cuda_available": true,
+    "tf32_conv_allowed": false,
+    "tf32_matmul_allowed": false,
+    "deterministic_algorithms": true,
+    "cuda_device": "NVIDIA GeForce RTX 5060 Laptop GPU"
+  },
+  "FID1": 442.9976544645299,
+  "FID2": 499.3682632766878,
+  "PR_raw": {
+    "precision": 0.0,
+    "recall": 0.024429043943928176,
+    "f1": 0.0,
+    "k": 3,
+    "n_real": 63490,
+    "n_fake": 63490
+  },
+  "PR_bin": {
+    "precision": 0.0,
+    "recall": 0.09757442116868799,
+    "f1": 0.0,
+    "k": 3,
+    "n_real": 63490,
+    "n_fake": 63490
+  },
+  "primary_PR": "PR_raw"
+}
