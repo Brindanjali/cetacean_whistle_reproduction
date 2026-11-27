@@ -37,10 +37,19 @@ def download_weights(root: Path) -> dict:
     out = {}
     for name, url in WEIGHT_URLS.items():
         dst = weight_path(root, name)
+        prefix = hash_prefix(name)
         if not dst.exists():
-            torch.hub.download_url_to_file(url, str(dst), progress=True)
-        out[name] = {"path": str(dst), "sha256": hashlib.sha256(dst.read_bytes()).hexdigest()}
+            torch.hub.download_url_to_file(url, str(dst), hash_prefix=prefix, progress=True)   # refuses a mismatch
+        sha = hashlib.sha256(dst.read_bytes()).hexdigest()
+        if not sha.startswith(prefix):
+            raise RuntimeError(f"{dst}: SHA-256 {sha} does not start with {prefix}")
+        out[name] = {"path": str(dst), "sha256": sha, "bytes": dst.stat().st_size}
     return out
+
+
+def hash_prefix(name: str) -> str:
+    """The SHA-256 prefix torchvision puts in its release file names (``vgg16-397923af.pth`` -> ``397923af``)."""
+    return Path(WEIGHT_URLS[name]).stem.rsplit("-", 1)[1]
 
 
 def _keys(t: torch.Tensor, a: float = -0.5) -> torch.Tensor:

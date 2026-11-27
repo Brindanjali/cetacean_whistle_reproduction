@@ -17,6 +17,15 @@ Every trained model and derived model file: what it is, where it came from, its 
 
 Lineage: each folder's `train_info.json` records the configuration and its hash, the dataset hash, software versions, device and git commit; `train_log.jsonl` holds every epoch. Training: Colab A100, batch 5,772, learning rates scaled linearly ([D-004](DECISIONS.md#d-004)). Nyx is the epoch-101 checkpoint of the run that later resumed to 150 ([D-007](DECISIONS.md#d-007)).
 
+## Evaluation weights (third party)
+
+Used only to compute Table 2's features ([D-030](DECISIONS.md#d-030)); not trained here, not in git, never redistributed ([LICENSING.md](LICENSING.md)).
+
+| File | Source | Bytes | SHA-256 | In git | Status |
+|---|---|---:|---|---|---|
+| `models/eval_weights/inception_v3_google-0cc3c7bd.pth` | torchvision, download.pytorch.org | 108,949,747 | `0cc3c7bd7505` | no | FID₁ and FID₂ features |
+| `models/eval_weights/vgg16-397923af.pth` | torchvision, download.pytorch.org | 553,433,881 | `397923af8e79` | no | precision and recall features (fc2) |
+
 ## Gaussian mixtures (K = 3,000)
 
 | File | Fitted on | Iterations | SHA-256 | In git | Status |

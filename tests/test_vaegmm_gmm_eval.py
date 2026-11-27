@@ -119,6 +119,47 @@ def test_fit_gmm_sets_deterministic_mode_and_never_overwrites(tmp_path, monkeypa
         ev.fit_gmm(cfg, "R", 3)
 
 
+def test_eval_generation_writes_its_own_file_and_never_overwrites(tmp_path, monkeypatch):
+    """Table 2's result goes to eval/gen_gmm_K<K>.json (a loop once renamed it FID2.json), and the temporary feature
+    files are removed. The feature networks are stood in for: only the bookkeeping is tested."""
+    from types import SimpleNamespace
+
+    from whistlepipe.vaegmm import evaluate as ev
+    from whistlepipe.vaegmm.config import load_vaegmm_config
+
+    run = tmp_path / "R"
+    (run / "checkpoints").mkdir(parents=True)
+    (run / "checkpoints" / "final.pt").write_bytes(b"stand-in")
+    np.save(run / "latents_mu.npy", blobs(300)[0])
+    cfg = load_vaegmm_config(overrides=[f"paths.runs_dir='{tmp_path.as_posix()}'", 'train.device="cpu"'])
+    ev.fit_gmm(cfg, "R", 3)
+    n = 12
+    real = {"mu_raw": np.zeros(4), "cov_raw": np.eye(4), "mu_bin": np.zeros(4), "cov_bin": np.eye(4),
+            "vgg_raw": np.random.default_rng(1).standard_normal((n, 8)), "vgg_bin": np.random.default_rng(2).standard_normal((n, 8))}
+
+    def fake_pass(batches, n_, nets, thr, dev, prefix):
+        for v in ("raw", "bin"):
+            np.save(f"{prefix}_{v}.npy", np.random.default_rng(3).standard_normal((n_, 8)).astype(np.float32))
+        m = ev.Moments(4)
+        m.add(np.random.default_rng(0).standard_normal((n_, 4)))
+        return {"raw": m, "bin": m}
+
+    monkeypatch.setattr(ev, "_ctx", lambda cfg: (torch.device("cpu"), np.zeros(n)))
+    monkeypatch.setattr(ev, "load_trained_vae", lambda d, dev: (SimpleNamespace(decoder=None), {"latent_dim": 4}))
+    monkeypatch.setattr(ev, "_nets", lambda cfg, dev: {})
+    monkeypatch.setattr(ev, "_real_features", lambda cfg, images, nets, dev: real)
+    monkeypatch.setattr(ev, "_feature_pass", fake_pass)
+    monkeypatch.setattr(ev, "sha256_file", lambda p: "0" * 64)
+    out = ev.eval_generation(cfg, "R", "gmm", 3)
+    assert out == run / "eval" / "gen_gmm_K3.json"
+    res = json.loads(out.read_text())
+    assert {"FID1", "FID2", "PR_raw", "PR_bin"} <= set(res)
+    assert res["feature_batch"] == cfg["decisions"]["eval"]["feature_batch"]
+    assert not list((run / "eval").glob("_vgg_*"))
+    with pytest.raises(FileExistsError):
+        ev.eval_generation(cfg, "R", "gmm", 3)
+
+
 def test_kmeanspp_seeds_are_distinct_and_deterministic():
     X, _ = blobs(500)
     t = torch.from_numpy(X)

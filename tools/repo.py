@@ -72,6 +72,7 @@ MODEL_GLOBS = [
     "whistlecode/outputs/bank/bank.npz",
     "preprocessed/dataset_info.json",
     "preprocessed/encounter_*/images.csv",
+    "models/eval_weights/*.pth",
 ]
 
 SECRET_PATTERNS = {

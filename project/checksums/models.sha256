@@ -1,6 +1,6 @@
 # SHA-256 of every model, mixture, codebook and dataset index file (project/MODELS.md, project/DATA.md).
 # Verify: python tools/repo.py checksums verify    Rewrite (only when a model is added on purpose): ... make
-# Written 2026-11-21 from the files on the project laptop.
+# Written 2026-11-27 from the files on the project laptop.
 6636c9f6728d7ecaec418f27edceb230d9adedb7e366deb35bcb265ae98021dd  mod_detector_5_24/models/detector/ridgenet-5-24/checkpoint.pt
 58798cb466320335df1eea682c2523234867948f210e8b84377e4d696bc9e4f6  models/detector/ridgenet-v1/checkpoint.pt
 6b2a9b0ca0e90cea47bf0e80e60d3068dd7b165e3a06e061c137658420d8f0de  models/detector/ridgenet-v2a/checkpoint.pt
@@ -8,6 +8,8 @@
 c00d66a0e70e5da240a9b01814ca038254c96df506b6663b8d57afb16b0d1b2e  models/detector/ridgenet-v2c/checkpoint.pt
 eb7459f43a4ffaf5914a992649be5048c890f75cb316b62751989334043a6ea6  models/detector/ridgenet-v2d/checkpoint.pt
 ae932aab54d1085be98d69477beb6a866520acdd1be073c06a30d348623af5e4  models/detector/ridgenet-v2e/checkpoint.pt
+0cc3c7bd75056d25e46cba549dc184522069b81e9787eff6df84f397bd52a5ef  models/eval_weights/inception_v3_google-0cc3c7bd.pth
+397923af8e79cdbb6a7127f12361acd7a2f83e06b05044ddf496e83de57a5bf0  models/eval_weights/vgg16-397923af.pth
 fcb1a2e69324e79c00d0dc319e25ef565499aaa785cc38ee5f02e6174a157665  models/vaegmm/V1_L64_b1e-4_critic_E191/checkpoints/final.pt
 fcb1a2e69324e79c00d0dc319e25ef565499aaa785cc38ee5f02e6174a157665  models/vaegmm/V1_L64_b1e-4_critic_E191/checkpoints/last.pt
 fc045e13d388a2d1414731d5b92feff313a0ef3f1754e135baef507dc36dae92  models/vaegmm/V1_L64_b1e-4_critic_E191/gmm_K3000/component_features.npy

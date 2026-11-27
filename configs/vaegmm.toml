@@ -132,9 +132,9 @@ recon_z             = "mean"                     # [DECISION] Table 1 reconstruc
 ssim_sigma          = 1.5                        # [DECISION] Gaussian-window SSIM (Wang et al. 2004)
 ssim_k1             = 0.01
 ssim_k2             = 0.03
-fid_weights         = "torchvision inception_v3 IMAGENET1K_V1 (download pending approval)"   # [DECISION]
+fid_weights         = "torchvision inception_v3 IMAGENET1K_V1 (inception_v3_google-0cc3c7bd.pth, downloaded 2026-11-27, D-030)"   # [DECISION]
 fid_resize          = "bicubic, MATLAB imresize convention (Keys a = -0.5, symmetric boundary), no clamping"  # [DECISION]
-pr_features         = "torchvision vgg16 IMAGENET1K_V1 fc2 (download pending approval)"     # [DECISION] per [47]
+pr_features         = "torchvision vgg16 IMAGENET1K_V1 fc2 (vgg16-397923af.pth, downloaded 2026-11-27, D-030)"     # [DECISION] per [47]
 pr_k                = 3                          # [47] default
 pr_primary_input    = "unthresholded"            # [DECISION] both variants reported
 n_generated         = "n_real"                   # [DECISION] generated set size = real set size (63,490 for encounter 191)
@@ -142,6 +142,10 @@ sample_batch        = 500                        # [DECISION] decoder batch of t
                                                  # fits an 8 GB GPU (3.4 GiB peak; 4,000 needs 7.8 GiB in one activation).
                                                  # The draws come from one seeded stream per call, so the batch decides which
                                                  # samples are drawn (not their distribution): it is part of the result hash
+feature_batch       = 64                         # [DECISION] images per Inception-V3 + VGG-16 pass at 224 x 224 (Table 2), and the
+                                                 # generation batch there: 3.7 GiB peak on the 8 GB GPU; 128 peaks at 6.8 GiB,
+                                                 # 256 runs out of memory (measured 2026-11-27). Like sample_batch, it decides
+                                                 # which samples are drawn, so the result records it
 standard_vae_beta   = 1.0                        # [IMPLIED, weak] §IV-D-1 "standard VAEs where beta = 1"
 ldm_one_training_per_T = true                    # [DECISION] beta schedule is defined over T
 

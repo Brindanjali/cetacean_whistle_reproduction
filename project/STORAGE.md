@@ -9,6 +9,8 @@ Where every kind of file lives, how many copies exist, what can be rebuilt, and 
 | Code, configs, docs, registers, records, figures | ~60 MB | project laptop, `D:\ALL\cetacean_whistle_reproduction` | **GitHub** (`origin`, public), after each push | clone again |
 | VAE checkpoints Nyx and Delphi (`final.pt`), detector checkpoints | 13 MB each | laptop (in git) | **GitHub**; Google Drive (`whistle_vaegmm_E191/`, the Colab run) | clone again. **Irreplaceable** otherwise: retraining cannot reproduce them bit for bit |
 | GMMs, latents, component features | ~300 MB | laptop (`models/vaegmm/*/gmm_*`, not in git) | none | refit with `fit-gmm`: bit-identical from the same latents |
+| Inception-V3 and VGG-16 weights (Table 2) | 662 MB | laptop (`models/eval_weights/`, not in git) | download.pytorch.org | download again: `python whistle.py fetch-eval-weights --approved` (checks each file's SHA-256); checked against [`checksums/models.sha256`](checksums/models.sha256) |
+| Real-image feature cache (Table 2) | ~2 GB | laptop (`models/vaegmm/_eval_cache/`, not in git) | none | rebuilt by the next `vae-eval gen` |
 | WhistleCode codebook and rhythm bank | 19 MB | laptop (`whistlecode/outputs/codebook/`, `bank/`) | none | rebuild: `build-codebook` (20-40 min), `build-realism`; checked against [`checksums/models.sha256`](checksums/models.sha256) |
 | WhistleCode campaign v1 raw records | part of 5.9 GB | laptop (`whistlecode/outputs/paper/`) | summaries in git (`whistlecode/paper/`) | **Irreplaceable**: the frozen campaign cannot be rerun without becoming a new campaign |
 | Built dataset | 19 GB | laptop (`preprocessed/`) | none | rebuild from raw audio with `build-dataset` (long; needs all 1,415 files) |

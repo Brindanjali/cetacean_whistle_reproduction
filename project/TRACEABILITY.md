@@ -20,7 +20,7 @@ Sources: [`resources/PREPROCESSING_SPECIFICATION.md`](../resources/PREPROCESSING
 | R-06 | The GMM's EM matches scikit-learn from the same start, and GPU matches CPU | `tests/test_vaegmm_gmm_eval.py` | Met |
 | R-07 | Every run, dataset and fit records its configuration hash, inputs' hashes, software and commit, and none is overwritten | `train_info.json`, `dataset_info.json`, `gmm.json` fields; `src/whistlepipe/storage.py` | Met |
 | R-08 | Paper evaluation: Tables 1, 3, 6 and Figs. 7-10, 12 | EXP-008, EXP-025 | Met for Nyx (epoch 101, EXP-008) and Delphi (epoch 150, EXP-025) |
-| R-09 | Fig. 11 and Tables 2, 4, 5 | — | Not done, by decision ([D-006](DECISIONS.md#d-006)) |
+| R-09 | Fig. 11 and Tables 2, 4, 5 | EXP-026, EXP-027 | Not done for Nyx, by decision ([D-006](DECISIONS.md#d-006)); for Delphi at K = 3,000 only: Fig. 11's scores ([D-029](DECISIONS.md#d-029)) and Table 2 ([D-030](DECISIONS.md#d-030)); Tables 4, 5 not done |
 
 ### WhistleCode claims
 
@@ -98,6 +98,7 @@ Every number the README, the review slides or a paper reports, and the record th
 | Delphi (epoch 150) Table 1: MSE 5.42, PSNR 34.81 dB, SSIM 0.9934, KL 757.7 | **`.../E191_epoch150/eval/table1_recon.json`**, **`post_training/out/paper_comparison_V1_L64_b1e-4_critic_E191_epoch150.csv`** | EXP-025 |
 | Delphi Table 3 rows (recall 84.7-96.9 %, precision 74.5-79.7 %, F1 79.3-85.8 %); Fig. 12 diagonal 13 of 13 | **`.../E191_epoch150/eval/table3_fig12_K3000.json`**, **`.../E191_epoch150/figures/fig12_lnFFD.png`** | EXP-025 |
 | Delphi Fig. 11 at K = 3,000: silhouette 0.091, Davies-Bouldin 1.478, Calinski-Harabasz 398.8 | **`.../E191_epoch150/eval/fig11_clustering.json`**, **`post_training/out/paper_comparison_V1_L64_b1e-4_critic_E191_epoch150.csv`** | EXP-026 |
+| Delphi Table 2 at K = 3,000: FID₁ 29.48, FID₂ 49.03; precision / recall / F1 10.0 / 3.2 / 4.8 % (raw), 64.5 / 52.6 / 57.9 % (thresholded) | **`.../E191_epoch150/eval/gen_gmm_K3000.json`**, **`post_training/out/paper_comparison_V1_L64_b1e-4_critic_E191_epoch150.csv`** | EXP-027 |
 | Delphi Figs. 7-10 | **`.../E191_epoch150/figures/`** | EXP-025 |
 | Delphi Table 6 timing (warm B = 16: 0.114 ms per image) | **`.../E191_epoch150/eval/table6_cost.json`**, **`post_training/out/table6_warm_V1_L64_b1e-4_critic_E191_epoch150.json`** | EXP-025 |
 | Delphi GMM: 150 iterations; check | **`.../E191_epoch150/gmm_K3000/gmm.json`**, **`post_training/out/gmm_check_V1_L64_b1e-4_critic_E191_epoch150_K3000.json`** | EXP-011 |

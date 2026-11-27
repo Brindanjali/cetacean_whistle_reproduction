@@ -1,5 +1,5 @@
-"""Our V1 results next to the paper's (Table 1 row L = 64, Table 3, Table 6 and, where the run has it, Fig. 11; transcribed
-from the paper PDF, pages 10-12 and 14).
+"""Our V1 results next to the paper's (Table 1 row L = 64, Table 3, Table 6 and, where the run has them, Table 2 and
+Fig. 11; transcribed from the paper PDF, pages 10-12 and 14).
 
 Reads models/vaegmm/<run_id>/eval/table1_recon.json and table3_fig12_K<K>.json; writes post_training/out/paper_comparison.csv
 and prints both tables. The paper's Table 3 uses K = 10,000 and 228,673 images (all encounters); ours K = 3,000 and the
@@ -39,6 +39,9 @@ PAPER_T3 = {1: (30593, 1.0075, 0.0899, 98.94, 83.95, 90.83), 2: (8202, 1.7744, 1
 # Table 6, VAE-GMM L = 64 (page 14): params, FLOPs, inference latency (B = 1), per-image latency at B = 16 and B = 32
 PAPER_T6 = {"decoder_params": 368e3, "decoder_FLOPs": 557e6, "B1_latency_ms": 1.7, "B16_per_image_ms": 0.11,
             "B32_per_image_ms": 0.054}
+# Table 2 (page 10), L = 64, beta = 1e-4: K -> (FID1, FID2, recall %, precision %, F1 %). It has no K = 3,000 row.
+PAPER_T2 = {1000: (4.37, 72.81, 86.52, 89.58, 88.02), 5000: (3.04, 69.99, 86.92, 91.33, 89.07),
+            10000: (2.68, 68.74, 87.21, 91.99, 89.54), 15000: (2.64, 68.45, 87.54, 92.34, 89.88)}
 # Fig. 11 (page 11), values printed at the points: K -> (silhouette, Davies-Bouldin, Calinski-Harabasz)
 PAPER_F11 = {1000: (0.167, 1.07, 17.8), 3000: (0.401, 0.767, 21.2), 5000: (0.517, 0.621, 24.9), 7000: (0.638, 0.547, 24.9),
              10000: (0.745, 0.448, 31.3), 12000: (0.78, 0.455, 29.8), 15000: (0.798, 0.425, 29.0)}
@@ -104,6 +107,19 @@ def compare(cfg, run_id: str, K: int) -> list[dict]:
                 print(f"  {key:22s} {a:12.4g}   {b:22.4g}   {PAPER_T6[key]:.4g}")
                 for row, v in (("decoder only, warm", a), ("GMM sampling + decoder, warm", b)):
                     rows.append({"table": "6", "row": f"VAE-GMM L=64 {row}", "metric": key, "ours": v, "paper": PAPER_T6[key]})
+    t2p = ev / f"gen_gmm_K{K}.json"
+    if t2p.exists():
+        t2 = json.loads(t2p.read_text(encoding="utf-8"))
+        pr = t2[t2.get("primary_PR", "PR_raw")]
+        ours = (t2["FID1"], t2["FID2"], 100 * pr["recall"], 100 * pr["precision"], 100 * pr["f1"])
+        names = ("FID1", "FID2", "recall_pct", "precision_pct", "F1_pct")
+        print(f"\nTable 2, L = 64, beta = 1e-4 (ours: K = {K}, {t2['n_generated']:,} generated; the paper has no K = {K} row)")
+        print(f"  {'':16s} {'FID1':>7s} {'FID2':>7s} {'recall %':>9s} {'precision %':>12s} {'F1 %':>7s}")
+        print(f"  {'ours K=' + str(K):16s} {ours[0]:7.2f} {ours[1]:7.2f} {ours[2]:9.2f} {ours[3]:12.2f} {ours[4]:7.2f}")
+        for pk, pv in PAPER_T2.items():
+            print(f"  {'paper K=' + str(pk):16s} {pv[0]:7.2f} {pv[1]:7.2f} {pv[2]:9.2f} {pv[3]:12.2f} {pv[4]:7.2f}")
+            for name, o, v in zip(names, ours, pv):
+                rows.append({"table": "2", "row": f"ours K={K} vs paper K={pk}", "metric": name, "ours": o, "paper": v})
     f11p = ev / "fig11_clustering.json"
     if f11p.exists():
         f11 = json.loads(f11p.read_text(encoding="utf-8"))

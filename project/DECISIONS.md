@@ -18,7 +18,7 @@ Project-level choices: what was decided, why, what else was considered, and what
 | [D-003](#d-003) | 2026-10-08 | Use hydrophone channel 0 only | in force |
 | [D-004](#d-004) | 2026-11-03 | Batch 5,772 on one GPU, learning rates scaled linearly | in force |
 | [D-005](#d-005) | 2026-11-02 | Train on encounter 191 only, 150 epochs, K = 3,000 | in force |
-| [D-006](#d-006) | 2026-11-09 | Fig. 11 and Tables 2, 4, 5 are not computed | in force for Tables 2, 4, 5; Fig. 11 superseded for Delphi by D-029 |
+| [D-006](#d-006) | 2026-11-09 | Fig. 11 and Tables 2, 4, 5 are not computed | in force for Tables 4, 5; superseded for Delphi at K = 3,000 by D-029 (Fig. 11) and D-030 (Table 2) |
 | [D-007](#d-007) | 2026-11-20 | Epoch 101 (Nyx) stays the final model; epoch 150 (Delphi) is a second model | in force |
 | [D-008](#d-008) | 2026-10-28 | Gate G4 accepted without a longer run | in force |
 | [D-009](#d-009) | 2026-11-21 | Data splits: 191 trains, 214 develops, 276 tests | in force |
@@ -42,6 +42,7 @@ Project-level choices: what was decided, why, what else was considered, and what
 | [D-027](#d-027) | 2026-11-26 | The redrawn scene keeps the page's own blue water and is drawn in fine lines: minimal, no glow | in force; merged into `main` 2026-11-27 (`9f91c3b`), in v1.0.0 |
 | [D-028](#d-028) | 2026-11-26 | Try it, with its model selector (Nyx, Delphi), is back on the page as section 08, after Decode; `model.html` leads there | in force; merged into `main` 2026-11-27 (`9f91c3b`), in v1.0.0 |
 | [D-029](#d-029) | 2026-11-27 | Fig. 11's clustering scores are computed for Delphi (epoch 150) at K = 3,000 only; no fits at other K | in force |
+| [D-030](#d-030) | 2026-11-27 | Table 2 is computed for Delphi (epoch 150) at K = 3,000 only; the Inception-V3 and VGG-16 weights are downloaded | in force |
 
 ## Whistle model
 
@@ -69,7 +70,7 @@ Project-level choices: what was decided, why, what else was considered, and what
 
 **Fig. 11 and Tables 2, 4 and 5 are not computed.** They need GMM fits at other K and the Inception-V3 and VGG-16 weights, whose download the owner declined. *Decided by:* the owner, 2026-11-09.
 
-*Superseded in part by [D-029](#d-029)* (Fig. 11's scores at K = 3,000, for Delphi only).
+*Superseded in part by [D-029](#d-029)* (Fig. 11's scores at K = 3,000, for Delphi only) *and [D-030](#d-030)* (Table 2 at K = 3,000, for Delphi only).
 
 ### D-007
 
@@ -82,6 +83,10 @@ Project-level choices: what was decided, why, what else was considered, and what
 ### D-029
 
 **Fig. 11's clustering scores are computed for Delphi (epoch 150) at K = 3,000 only.** Supersedes D-006 for that one point; Fig. 11's other K values and Tables 2, 4 and 5 stay not computed, no mixtures are fitted at other K, and Nyx gets no Fig. 11. *Decided by:* the owner, 2026-11-27: they want the epoch-150 tests only, and at K = 3,000 only. Fits at the paper's other six K were started and stopped at the owner's request (EXP-026). *Why:* the silhouette, Davies-Bouldin and Calinski-Harabasz scores at K = 3,000 need only Delphi's existing mixture. *Consequence:* Fig. 11 is one point, not a curve, so no figure is drawn; the scores are in `eval/fig11_clustering.json` and the comparison CSV.
+
+### D-030
+
+**Table 2 is computed for Delphi (epoch 150) at K = 3,000 only, and the feature-network weights are downloaded.** Supersedes D-006 for that one row; Table 2's other K and β rows and Tables 4 and 5 stay not computed (they need more fits or trainings), and Nyx gets no Table 2. *Decided by:* the owner, 2026-11-27: they asked for Table 2 at K = 3,000 on epoch 150 and approved the download of `inception_v3_google-0cc3c7bd.pth` (108.9 MB) and `vgg16-397923af.pth` (553.4 MB) from download.pytorch.org. *Why:* this row needs only Delphi's existing mixture and the two weight files. *Consequence:* the weights live in `models/eval_weights/` (gitignored, in the checksum registry); `fetch-eval-weights` now checks each file's SHA-256 against the prefix in its name. The paper's Table 2 has no K = 3,000 row (it has K = 1k, 5k, 10k, 15k), so the result is set beside those rows; K = 3,000 on our 63,490 images is closest to the paper's K = 10,000 in images per component (21.2 against 22.9).
 
 ## WhistleCode
 

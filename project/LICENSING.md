@@ -29,7 +29,7 @@ What licence covers each part of the repository, and every third-party work it u
 | DCLDE 2011 benchmark recordings | the detector paper (`mod_detector_5_24/`) | public benchmark; credit the DCLDE 2011 organisers |
 | Elsevier paper "Whistle extraction" | `docs/private/` (never in git) | copyright; personal reading copy only |
 | Reference [32] text of unknown licence | `resources/reference_32_mca_cfar.md` (gitignored) | not redistributed |
-| Inception-V3 and VGG-16 weights | not downloaded ([D-006](DECISIONS.md#d-006)) | — |
+| Inception-V3 and VGG-16 weights (`inception_v3_google-0cc3c7bd.pth`, `vgg16-397923af.pth`) | Table 2 features, local only (`models/eval_weights/`, gitignored); downloaded 2026-11-27 with the owner's approval ([D-030](DECISIONS.md#d-030)) | torchvision release files; torchvision notes that pretrained weights may carry terms from their training data (ImageNet), so they are used for evaluation only and never redistributed |
 
 ## Python dependencies
 

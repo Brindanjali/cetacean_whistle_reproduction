@@ -362,7 +362,8 @@ Side by side with the paper: `post_training/out/paper_comparison.csv` (`python p
   0.11 ms).
 * **GMM:** ridge sensitivity ×10 fitted, ×0.1 not feasible (spec §3.5).
 * **Not computed**, by the owner's decision (2026-11-09): Fig. 11 (no GMM fits at other K) and Tables 2, 4 and 5 (FID and
-  precision/recall need the Inception-V3 / VGG-16 weights, which are not downloaded).
+  precision/recall need the Inception-V3 / VGG-16 weights, which were not downloaded then; they were on 2026-11-27, for
+  Delphi's Table 2 row only, [D-030](../project/DECISIONS.md#d-030)).
 
 ### Evaluation record (epoch 150, Delphi)
 
@@ -377,6 +378,13 @@ Side by side with the paper: `post_training/out/paper_comparison_V1_L64_b1e-4_cr
 * **Fig. 11, K = 3,000 only** ([D-029](../project/DECISIONS.md#d-029), EXP-026; `vae-eval cluster --K 3000`): silhouette 0.091
   (paper 0.401), Davies-Bouldin 1.478 (paper 0.767), Calinski-Harabasz 398.8 (paper 21.2; not comparable in size, as it
   grows with the number of images). No fits at other K, so no curve and no figure.
+* **Table 2, K = 3,000 only** ([D-030](../project/DECISIONS.md#d-030), EXP-027; `vae-eval gen --K 3000`, 25 min; the
+  paper has rows at K = 1k, 5k, 10k, 15k): FID₁ 29.48 (paper 2.64–4.37), FID₂ 49.03 (paper 68.45–72.81); precision /
+  recall / F1 10.0 / 3.2 / 4.8 % on raw images and 64.5 / 52.6 / 57.9 % thresholded at 0.1, against the paper's
+  87.1–92.3 / 82.2–87.5 / 84.6–89.9 %. Two halves of the real images score about 87 % against each other, so the metric
+  works and the gap lies in the generated images, which are softer than the real ones (peak 0.91 against 1.00, no
+  exact-zero background); the cause is not tested. Features are computed 64 images at a time (`feature_batch`; 256 runs out
+  of memory on the 8 GB GPU).
 * **Table 6:** the same decoder (368,097 parameters, 557.3 MFLOPs). Paper protocol: B = 1 1.31 ms (paper 1.7 ms); warm
   GPU (`table6_warm.py --run-id`): B = 16 0.114 ms and B = 32 0.110 ms per image (paper 0.11 and 0.054). The web
   server's container was running during the timing.
@@ -396,6 +404,8 @@ python post_training/gmm_check.py                         # post-fit check of th
 python whistle.py fit-gmm --experiment V1_L64_b1e-4_critic_E191_epoch150             # model 2's own GMM
 python post_training/gmm_check.py --run-id V1_L64_b1e-4_critic_E191_epoch150
 python whistle.py vae-eval recon --experiment V1_L64_b1e-4_critic_E191_epoch150   # model 2's Table 1 (also conditional, cost, figures)
+python whistle.py vae-eval cluster --experiment V1_L64_b1e-4_critic_E191_epoch150 --K 3000   # model 2's Fig. 11 point
+python whistle.py vae-eval gen --experiment V1_L64_b1e-4_critic_E191_epoch150 --K 3000       # model 2's Table 2 row (needs the weights)
 python post_training/table6_warm.py --run-id V1_L64_b1e-4_critic_E191_epoch150
 python post_training/compare_paper.py --run-id V1_L64_b1e-4_critic_E191_epoch150
 python whistle.py vae-eval recon --experiment V1          # Table 1

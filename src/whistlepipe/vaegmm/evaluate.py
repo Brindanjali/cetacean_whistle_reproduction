@@ -172,7 +172,8 @@ def _real_features(cfg, images, nets, dev) -> dict:
     f = cache / f"real_{key}_inception_stats.npz"
     if not f.exists():
         cache.mkdir(parents=True, exist_ok=True)
-        mom = _feature_pass(_image_batches(images, 256), len(images), nets, cfg["paper"]["fid1_threshold"], dev,
+        mom = _feature_pass(_image_batches(images, int(cfg["decisions"]["eval"]["feature_batch"])), len(images), nets,
+                            cfg["paper"]["fid1_threshold"], dev,
                             cache / f"real_{key}_vgg")
         np.savez(f, **{f"mu_{k}": m.stats()[0] for k, m in mom.items()}, **{f"cov_{k}": m.stats()[1] for k, m in mom.items()})
     st = dict(np.load(f))
@@ -226,13 +227,16 @@ def eval_generation(cfg, run_id: str, source: str = "gmm", K: int | None = None,
         raise FileExistsError(f"{d / 'eval' / (name + '.json')} exists (use --force to recompute)")
     (d / "eval").mkdir(exist_ok=True)
     prefix = d / "eval" / f"_vgg_{name}"
-    mom = _feature_pass(generated_batches(vae.decoder, source, n, seed, dev, gmm, spec["latent_dim"], ldm), n, nets,
+    fb = int(cfg["decisions"]["eval"]["feature_batch"])
+    mom = _feature_pass(generated_batches(vae.decoder, source, n, seed, dev, gmm, spec["latent_dim"], ldm, batch=fb), n, nets,
                         cfg["paper"]["fid1_threshold"], dev, prefix)
     res = {"run_id": run_id, "source": source, "K": K, "gmm_tag": tag, "ldm_run": ldm_run, "n_real": n, "n_generated": n,
-           "generation_seed": seed}
-    for var, name in (("bin", "FID1"), ("raw", "FID2")):
+           "generation_seed": seed, "feature_batch": fb, "checkpoint_sha256": sha256_file(d / "checkpoints" / "final.pt"),
+           "weights_sha256": {k: sha256_file(fidmod.weight_path(resolve("models/eval_weights"), k)) for k in fidmod.WEIGHT_URLS},
+           "software": software_versions()}
+    for var, metric in (("bin", "FID1"), ("raw", "FID2")):         # not `name`: that is the output file's name
         mu, cov = mom[var].stats()
-        res[name] = frechet_distance(real[f"mu_{var}"], real[f"cov_{var}"], mu, cov)
+        res[metric] = frechet_distance(real[f"mu_{var}"], real[f"cov_{var}"], mu, cov)
     for var in ("raw", "bin"):
         fake = np.load(f"{prefix}_{var}.npy", mmap_mode="r")
         res[f"PR_{var}"] = precision_recall(real[f"vgg_{var}"], fake, cfg["decisions"]["eval"]["pr_k"], str(dev))
